@@ -1,47 +1,45 @@
 package com.cookandroid.challengers
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.cookandroid.challengers.ui.theme.ChallengersTheme
 
-class MainActivity : ComponentActivity() {
+import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
+import com.cookandroid.challengers.databinding.ActivityMainBinding
+import com.google.android.material.bottomnavigation.BottomNavigationView
+
+class MainActivity : AppCompatActivity() {
+
+    private lateinit var binding: ActivityMainBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            ChallengersTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+
+        // 뷰바인딩 초기화
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        // 앱 시작 시 홈 프래그먼트 표시
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.main_frm, HomeFragment())
+            .commitAllowingStateLoss()
+
+        // 하단 바 클릭 이벤트 처리
+        binding.mainBnv.setOnItemSelectedListener { item ->
+            val selectedFragment = when (item.itemId) {
+                R.id.homeFragment -> HomeFragment()
+                R.id.exerciseFragment -> ExerciseFragment()
+                R.id.challengeFragment -> ChallengeFragment()
+                R.id.recordFragment -> RecordFragment()
+                R.id.storeFragment -> StoreFragment()
+                else -> null
             }
+
+            selectedFragment?.let {
+                supportFragmentManager.beginTransaction()
+                    .replace(R.id.main_frm, it)
+                    .commitAllowingStateLoss()
+                true
+            } ?: false
         }
     }
 }
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    ChallengersTheme {
-        Greeting("Android")
-    }
-}

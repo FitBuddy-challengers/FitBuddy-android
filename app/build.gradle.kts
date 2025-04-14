@@ -36,6 +36,7 @@ android {
     }
     buildFeatures {
         compose = true
+        viewBinding = true //뷰바인딩을 쓰기 위함! 요즘 안드로이드 개발은 R.id안 쓰고 바인딩으로 함.
     }
 }
 
@@ -46,6 +47,9 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
+    implementation("androidx.viewpager2:viewpager2:1.0.0") //뷰페이저2추가함.
+    implementation("com.google.android.material:material:1.10.0") //하단 네비게이션
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4") //콘스트레이트.. 추가
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
