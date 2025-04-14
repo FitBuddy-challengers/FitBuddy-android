@@ -4,31 +4,31 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/homeFragment"
-        android:icon="@drawable/btn_home_nav_selector"
+        android:icon="@drawable/btn_home_not_sel_nav"
         android:title="홈"
         />
 
     <item
         android:id="@+id/exerciseFragment"
-        android:icon="@drawable/btn_exercise_nav_selector"
+        android:icon="@drawable/btn_exercise_not_sel_nav"
         android:title="운동"
         />
 
     <item
         android:id="@+id/challengeFragment"
-        android:icon="@drawable/btn_challenge_nav_selector"
+        android:icon="@drawable/btn_challenge_not_sel_nav"
         android:title="챌린지"
         />
 
     <item
         android:id="@+id/recordFragment"
-        android:icon="@drawable/btn_record_nav_selector"
+        android:icon="@drawable/btn_record_not_sel_nav"
         android:title="기록"
         />
 
     <item
         android:id="@+id/storeFragment"
-        android:icon="@drawable/btn_store_nav_selector"
+        android:icon="@drawable/btn_store_not_sel_nav"
         android:title="스토어"
         />
 </menu>
