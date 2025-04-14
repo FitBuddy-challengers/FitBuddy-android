@@ -25,4 +25,5 @@ class ChallengeFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
+    //pr 작성하기
 }
