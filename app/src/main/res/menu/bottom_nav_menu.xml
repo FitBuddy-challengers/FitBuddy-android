@@ -18,6 +18,7 @@
         android:id="@+id/challengeFragment"
         android:icon="@drawable/btn_challenge_not_sel_nav"
         android:title="챌린지"
+
         />
 
     <item
