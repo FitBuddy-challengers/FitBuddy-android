@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_margin="16dp"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    tools:context=".auth.profile.ProfileInfoFragment">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="66dp"
+        android:text="핏버디에게 회원님의 정보를\n알려주세요"
+        android:fontFamily="@font/pretendard_bold"
+        android:textSize="28dp"
+        style="@style/Theme.Challengers"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="136dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="17dp"
+        android:text="핏버디가 회원님에게 딱 맞는 운동루틴을 제공할 거예요"
+        android:fontFamily="@font/pretendard_bold"
+        android:textSize="14dp"
+        android:textColor="#7E7E7E"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="232dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="17dp"
+        android:text="이름"
+        android:fontFamily="@font/pretendard_bold"
+        android:textSize="14dp"
+        style="@style/Theme.Challengers"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="284dp" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilProfileName"
+        android:layout_width="match_parent"
+        style="@style/TextInputLayoutStyle"
+        app:endIconMode="clear_text"
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_marginTop="308dp">
+        <com.google.android.material.textfield.TextInputEditText
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            style="@style/TextInputEditTextStyle"
+            android:hint="김슈니"
+            android:inputType="text" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <LinearLayout
+        android:id="@+id/ageGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@+id/tilProfileName"
+        android:layout_marginTop="24dp"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="17dp"
+            android:text="연령대"
+            android:fontFamily="@font/pretendard_bold"
+            android:textSize="14dp"
+            style="@style/Theme.Challengers"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
+            android:gravity="start"
+            android:layoutDirection="ltr">
+
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:text="10대" />
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:layout_marginLeft="8dp"
+                android:text="20대" />
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:layout_marginLeft="8dp"
+                android:text="30대" />
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:layout_marginLeft="8dp"
+                android:text="40대" />
+
+            </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
+            android:gravity="start"
+            android:layoutDirection="ltr">
+
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:text="50대" />
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:layout_marginLeft="8dp"
+                android:text="60대 이상" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/gender"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@+id/ageGroup"
+        android:layout_marginTop="24dp"
+        android:orientation="vertical">
+<!--    android:visibility="gone">-->
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="17dp"
+            android:text="성별"
+            android:fontFamily="@font/pretendard_bold"
+            android:textSize="14dp"
+            style="@style/Theme.Challengers"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
+            android:gravity="start"
+            android:layoutDirection="ltr">
+
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:text="여성" />
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:layout_marginLeft="8dp"
+                android:text="남성" />
+
+        </LinearLayout>
+    </LinearLayout>
+
+    <android.widget.Button
+        android:id="@+id/btnNext"
+        android:layout_width="match_parent"
+        android:layout_height="43dp"
+        android:background="@drawable/btn_next_gray"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginBottom="48dp" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

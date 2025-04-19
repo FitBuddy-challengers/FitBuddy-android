@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_margin="16dp"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    tools:context=".auth.signup.SignupDoneFragment">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="100dp"
+        android:text="회원가입 완료!\n핏버디에게 회원님의 정보를\n알려주세요"
+        android:fontFamily="@font/pretendard_bold"
+        android:textSize="28dp"
+        style="@style/Theme.Challengers"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="136dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="17dp"
+        android:text="핏버디가 회원님에게 딱 맞는 운동루틴을 제공할 거예요"
+        android:fontFamily="@font/pretendard_bold"
+        android:textSize="14dp"
+        android:textColor="#7E7E7E"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="272dp" />
+
+    <android.widget.Button
+        android:id="@+id/btnNext"
+        android:layout_width="match_parent"
+        android:layout_height="43dp"
+        android:background="@drawable/btn_next_blue"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginBottom="48dp" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

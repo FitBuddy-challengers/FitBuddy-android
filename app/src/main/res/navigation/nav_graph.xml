@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/loginFragment">
+
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="com.cookandroid.challengers.auth.login.LoginFragment"
+        android:label="LoginFragment">
+        <action
+            android:id="@+id/action_login_to_email"
+            app:destination="@id/loginEmailFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/loginEmailFragment"
+        android:name="com.cookandroid.challengers.auth.login.LoginEmailFragment"
+        android:label="LoginEmailFragment">
+        <action
+            android:id="@+id/action_email_to_signupEmail"
+            app:destination="@id/signupEmailFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/signupEmailFragment"
+        android:name="com.cookandroid.challengers.auth.signup.SignupEmailFragment"
+        android:label="SignupEmailFragment">
+        <action
+            android:id="@+id/action_signupEmail_to_pw"
+            app:destination="@id/signupPwFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/signupPwFragment"
+        android:name="com.cookandroid.challengers.auth.signup.SignupPwFragment"
+        android:label="SignupPwFragment">
+        <action
+            android:id="@+id/action_pw_to_otp"
+            app:destination="@id/signupOtpFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/signupOtpFragment"
+        android:name="com.cookandroid.challengers.auth.signup.SignupOtpFragment"
+        android:label="SignupOtpFragment">
+        <action
+            android:id="@+id/action_otp_to_done"
+            app:destination="@id/signupDoneFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/signupDoneFragment"
+        android:name="com.cookandroid.challengers.auth.signup.SignupDoneFragment"
+        android:label="SignupDoneFragment">
+        <action
+            android:id="@+id/action_signupDoneFragment_to_profileInfoFragment"
+            app:destination="@id/profileInfoFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/profileInfoFragment"
+        android:name="com.cookandroid.challengers.auth.profile.ProfileInfoFragment"
+        android:label="ProfileInfoFragment">
+        <action
+            android:id="@+id/action_profileInfoFragment_to_profileHealthFragment"
+            app:destination="@id/profileHealthFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/profileHealthFragment"
+        android:name="com.cookandroid.challengers.auth.profile.ProfileHealthFragment"
+        android:label="ProfileHealthFragment">
+        <action
+            android:id="@+id/action_profileHealthFragment_to_profileWorkoutFragment"
+            app:destination="@id/profileWorkoutFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/profileWorkoutFragment"
+        android:name="com.cookandroid.challengers.auth.profile.ProfileWorkoutFragment"
+        android:label="ProfileWorkoutFragment">
+        <action
+            android:id="@+id/action_profileWorkoutFragment_to_profileDoneFragment"
+            app:destination="@id/profileDoneFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/profileDoneFragment"
+        android:name="com.cookandroid.challengers.auth.profile.ProfileDoneFragment"
+        android:label="ProfileDoneFragment"/>
+
+</navigation>

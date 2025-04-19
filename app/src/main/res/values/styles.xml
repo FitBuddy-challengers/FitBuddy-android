@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 입력창 custom -->
+    <style name="TextInputLayoutStyle" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">40dp</item>
+        <item name="android:background">@drawable/edt_auth</item>
+        <item name="boxCornerRadiusTopStart">5dp</item>
+        <item name="boxCornerRadiusTopEnd">5dp</item>
+        <item name="boxCornerRadiusBottomStart">5dp</item>
+        <item name="boxCornerRadiusBottomEnd">5dp</item>
+        <item name="boxStrokeColor">@color/til_color_selector</item>
+        <item name="boxStrokeErrorColor">#E94E4E</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="errorIconDrawable">@null</item>
+        <item name="hintEnabled">false</item>
+        <item name="hintTextAppearance">@style/HintTextStyle</item>
+        <item name="errorTextAppearance">@style/ErrorTextStyle</item>
+    </style>
+
+    <style name="HintTextStyle">
+        <item name="android:fontFamily">@font/pretendard_medium</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:textSize">14dp</item>
+        <item name="android:textColor">#A6A6A6</item>
+    </style>
+
+    <style name="ErrorTextStyle">
+        <item name="android:fontFamily">@font/pretendard_medium</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:textSize">14dp</item>
+        <item name="android:textColor">#E94E4E</item>
+    </style>
+
+    <style name="TextInputEditTextStyle">
+        <item name="android:fontFamily">@font/pretendard_semi_bold</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:textSize">14dp</item>
+        <item name="android:textColor">#292929</item>
+        <item name="android:background">@null</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingBottom">12dp</item>
+    </style>
+
+    <!-- OTP -->
+    <style name="etOTP">
+        <item name="android:layout_width">36dp</item>
+        <item name="android:layout_height">28dp</item>
+        <item name="android:layout_margin">5dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:inputType">number</item>
+        <item name="android:maxLength">1</item>
+        <item name="android:fontFamily">@font/pretendard_semi_bold</item>
+        <item name="android:textSize">24dp</item>
+        <item name="android:textColor">#292929</item>
+    </style>
+
+    <!-- profile button -->
+    <style name="Widget.Profile.SelectButton" parent="Widget.AppCompat.Button">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/btn_profile_selector</item>
+        <item name="android:fontFamily">@font/pretendard_semi_bold</item>
+        <item name="android:textColor">@color/profile_button_text_selector</item>
+        <item name="android:textSize">14dp</item>
+        <item name="android:paddingLeft">16dp</item>
+        <item name="android:paddingRight">16dp</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingBottom">8dp</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:gravity">center</item>
+    </style>
+
+</resources>
