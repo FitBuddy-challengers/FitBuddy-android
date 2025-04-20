@@ -55,7 +55,10 @@ class ProfileHealthFragment : Fragment() {
 
         // 다음 버튼
         binding.btnNext.setOnClickListener {
-            findNavController().navigate(R.id.action_profileHealthFragment_to_profileWorkoutFragment)
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.exercise_fragment_container, ProfileWorkoutFragment())
+                .addToBackStack(null)  // 뒤로가기 가능하게
+                .commit()
         }
 
         // 초기 상태 설정

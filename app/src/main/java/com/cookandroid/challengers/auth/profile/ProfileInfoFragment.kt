@@ -79,9 +79,12 @@ class ProfileInfoFragment : Fragment() {
             }
         }
 
-        // ProfileHealthFragment 이동
+        // ProfileHealthFragment로 이동
         binding.btnNext.setOnClickListener {
-            findNavController().navigate(R.id.action_profileInfoFragment_to_profileHealthFragment)
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.exercise_fragment_container, ProfileHealthFragment())
+                .addToBackStack(null)  // 뒤로가기 가능하게
+                .commit()
         }
     }
 

@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+
+
 }
 
 android {
@@ -15,6 +17,9 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        // ✅ 모든 빌드타입에 공통 적용
+        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:3000/\"")
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -27,8 +32,7 @@ android {
             )
         }
         debug {
-            // ✨ 서버 주소 BASE_URL 주입
-            buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:3000/\"")
+            // ✅ 여긴 따로 BASE_URL 안 넣어도 돼 (지금은 defaultConfig가 해줌)
         }
     }
 
@@ -59,10 +63,17 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
 
+
+    // Navigation
+    implementation("androidx.navigation:navigation-fragment-ktx:2.7.0")
+    implementation("androidx.navigation:navigation-ui-ktx:2.7.0")
+
     // ✨ 서버 통신 관련 라이브러리 추가
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
+    implementation(libs.androidx.navigation.fragment.ktx)
+    implementation(libs.androidx.navigation.ui.ktx)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

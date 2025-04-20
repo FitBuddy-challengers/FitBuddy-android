@@ -8,8 +8,8 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
-import com.cookandroid.challengers.R
 import com.cookandroid.challengers.databinding.FragmentSignupPwBinding
+import com.cookandroid.challengers.R
 
 class SignupPwFragment : Fragment() {
 
@@ -17,8 +17,7 @@ class SignupPwFragment : Fragment() {
     private val binding get() = _binding!!
 
     override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
+        inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentSignupPwBinding.inflate(inflater, container, false)
@@ -41,17 +40,15 @@ class SignupPwFragment : Fragment() {
             override fun afterTextChanged(s: Editable?) {}
         }
 
-        // pw - confirmPw 확인
         passwordEditText?.addTextChangedListener(textWatcher)
         confirmPasswordEditText?.addTextChangedListener(textWatcher)
 
         binding.btnNext.setOnClickListener {
-            // SignupOtpFragment 이동
-            findNavController().navigate(R.id.action_pw_to_otp)
+            findNavController().navigate(R.id.action_signUpPassword_to_signUpOtp)
         }
 
+        // 뒤로가기
         binding.btnBack.setOnClickListener {
-            // 이전으로
             findNavController().popBackStack()
         }
     }
@@ -62,7 +59,7 @@ class SignupPwFragment : Fragment() {
 
         val isValid = isValidPassword(password) && password == confirmPassword
 
-        // 버튼 처리
+        // 버튼 활성화/비활성화
         binding.btnNext.apply {
             isEnabled = isValid
             setBackgroundResource(
@@ -72,7 +69,7 @@ class SignupPwFragment : Fragment() {
         }
     }
 
-    // pw 규칙
+    // 비밀번호 유효성 체크
     private fun isValidPassword(password: String): Boolean {
         val regex = Regex("^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[!@#\$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?]).{8,20}\$")
         return regex.matches(password)

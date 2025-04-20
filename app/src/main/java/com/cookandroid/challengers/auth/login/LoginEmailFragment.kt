@@ -1,5 +1,6 @@
 package com.cookandroid.challengers.auth.login
 
+
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -14,30 +15,34 @@ import com.cookandroid.challengers.databinding.FragmentLoginEmailBinding
 
 class LoginEmailFragment : Fragment() {
 
-    private lateinit var binding: FragmentLoginEmailBinding
+    private var _binding: FragmentLoginEmailBinding? = null
+    private val binding get() = _binding!!
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
+        savedInstanceState: Bundle?,
+    ): View {
+        _binding = FragmentLoginEmailBinding.inflate(inflater, container, false)
+        return binding.root
+    }
 
-        binding = FragmentLoginEmailBinding.inflate(inflater, container, false)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
-        // 뒤로 가기
+        // 뒤로 가기 버튼 클릭
         binding.btnBack.setOnClickListener {
             requireActivity().onBackPressedDispatcher.onBackPressed()
         }
 
-        // 이메일 로그인
+        // 이메일 로그인 버튼 클릭
         binding.btnEmailSignin.setOnClickListener {
             val email = binding.tilLoginAddress.editText?.text.toString()
             val password = binding.tilLoginPassword.editText?.text.toString()
 
             // 입력값 검증
             if (validateInput(email, password)) {
-                // 로그인 처리
                 if (isValidAccount(email, password)) {
-                    // MainActivity 이동
+                    // 로그인 성공 -> MainActivity로 이동
                     navigateToMainActivity()
                 } else {
                     // 유효하지 않은 계정
@@ -46,17 +51,15 @@ class LoginEmailFragment : Fragment() {
             }
         }
 
-        // 이메일 회원가입
+        // 이메일 회원가입 버튼 클릭
         binding.btnEmailSignup.setOnClickListener {
-            // SignupEmailFragment 이동
-            findNavController().navigate(R.id.action_email_to_signupEmail)
+            // 회원가입 화면(SignUpEmailFragment)으로 이동
+            findNavController().navigate(R.id.action_loginEmail_to_signUpEmail)
         }
-
-        return binding.root
     }
 
+    // 이메일과 비밀번호 입력 검증 함수
     private fun validateInput(email: String, password: String): Boolean {
-        // email/pw 입력 확인
         if (email.isBlank()) {
             Toast.makeText(requireContext(), "이메일을 입력해 주세요.", Toast.LENGTH_SHORT).show()
             return false
@@ -72,14 +75,20 @@ class LoginEmailFragment : Fragment() {
         return true
     }
 
+    // 임시 계정 유효성 검사 (나중에 서버 연동)
     private fun isValidAccount(email: String, password: String): Boolean {
-        // email/pw 유효 확인
         return email == "test@example.com" && password == "password123"
     }
 
+    // MainActivity로 이동
     private fun navigateToMainActivity() {
         val intent = Intent(requireContext(), MainActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

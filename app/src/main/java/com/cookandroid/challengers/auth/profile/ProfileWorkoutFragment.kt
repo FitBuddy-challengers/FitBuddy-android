@@ -9,6 +9,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import androidx.core.view.children
 import androidx.navigation.fragment.findNavController
+import com.cookandroid.challengers.auth.profile.ProfileDoneFragment
 import com.cookandroid.challengers.R
 import com.cookandroid.challengers.databinding.FragmentProfileWorkoutBinding
 
@@ -92,7 +93,10 @@ class ProfileWorkoutFragment : Fragment() {
         }
 
         binding.btnNext.setOnClickListener {
-            findNavController().navigate(R.id.action_profileWorkoutFragment_to_profileDoneFragment)
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.exercise_fragment_container, ProfileDoneFragment())
+                .addToBackStack(null) // 뒤로가기 가능하도록
+                .commit()
         }
     }
 

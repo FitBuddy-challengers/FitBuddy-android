@@ -7,6 +7,9 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
+import androidx.navigation.findNavController
+import androidx.navigation.fragment.NavHostFragment
+import androidx.navigation.ui.setupWithNavController
 import com.cookandroid.challengers.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
@@ -19,31 +22,17 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // 앱 처음 실행 시 LoginFragment로 이동
+        // ⭐ 처음 시작할 때 BottomNavigationView 숨기기
         if (savedInstanceState == null) {
-            supportFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container_view, LoginFragment())
-                .commit()
+            binding.mainBnv.visibility = View.GONE
         }
 
-        // 하단바 클릭 시 다른 프래그먼트로 이동
-        binding.mainBnv.setOnItemSelectedListener { item ->
-            val selectedFragment: Fragment? = when (item.itemId) {
-                R.id.homeFragment -> HomeFragment()
-                R.id.exerciseFragment -> ExerciseFragment()
-                R.id.challengeFragment -> ChallengeFragment()
-                R.id.recordFragment -> RecordFragment()
-                R.id.storeFragment -> StoreFragment()
-                else -> null
-            }
+        // NavController 가져오기
+        val navHostFragment = supportFragmentManager.findFragmentById(R.id.fragment_container_view) as NavHostFragment
+        val navController = navHostFragment.navController
 
-            selectedFragment?.let {
-                supportFragmentManager.beginTransaction()
-                    .replace(R.id.fragment_container_view, it)
-                    .commitAllowingStateLoss()
-                true
-            } ?: false
-        }
+        // BottomNavigationView를 NavController에 연결
+        binding.mainBnv.setupWithNavController(navController)
 
         // 로그인/회원가입 화면에서는 하단바 숨기기
         supportFragmentManager.registerFragmentLifecycleCallbacks(
@@ -51,12 +40,12 @@ class MainActivity : AppCompatActivity() {
                 override fun onFragmentResumed(fm: FragmentManager, f: Fragment) {
                     super.onFragmentResumed(fm, f)
                     when (f) {
-                        is LoginFragment,
-                        is LoginEmailFragment,
-                        is SignUpEmailFragment,
-                        is SignUpPasswordFragment,
-                        is SignUpOtpFragment,
-                        is SignUpDoneFragment -> {
+                        is com.cookandroid.challengers.auth.login.LoginFragment,
+                        is com.cookandroid.challengers.auth.login.LoginEmailFragment,
+                        is com.cookandroid.challengers.auth.signup.SignUpEmailFragment,
+                        is com.cookandroid.challengers.auth.signup.SignUpPasswordFragment,
+                        is com.cookandroid.challengers.auth.signup.SignUpOtpFragment,
+                        is com.cookandroid.challengers.auth.signup.SignUpDoneFragment -> {
                             binding.mainBnv.visibility = View.GONE
                         }
                         else -> {
@@ -68,5 +57,3 @@ class MainActivity : AppCompatActivity() {
         )
     }
 }
-
-

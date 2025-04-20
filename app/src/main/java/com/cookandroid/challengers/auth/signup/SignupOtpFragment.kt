@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.InputType
 import android.text.TextWatcher
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -12,96 +13,123 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.cookandroid.challengers.R
+import com.cookandroid.challengers.auth.signup.SignUpDoneFragment
+import com.cookandroid.challengers.api.RetrofitClient
+import com.cookandroid.challengers.api.SignUpService
 import com.cookandroid.challengers.databinding.FragmentSignupOtpBinding
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
-class SignupOtpFragment : Fragment() {
+
+
+class SignUpOtpFragment : Fragment() {
 
     private var _binding: FragmentSignupOtpBinding? = null
     private val binding get() = _binding!!
 
-    private lateinit var otpFields: List<EditText>
+    private val signUpService = RetrofitClient.retrofit.create(SignUpService::class.java)
+
+    private lateinit var email: String // 이전 프래그먼트(SignUpPasswordFragment)에서 넘어온 이메일
 
     override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?,
     ): View {
         _binding = FragmentSignupOtpBinding.inflate(inflater, container, false)
         return binding.root
     }
 
+    // 서버에 이메일로 OTP 발송 요청 보내는 함수
+    private fun sendOtpEmail(email: String) {
+        val request = mapOf(
+            "email" to email
+        )
+
+        signUpService.sendOtp(request).enqueue(object : Callback<Map<String, String>> {
+            override fun onResponse(call: Call<Map<String, String>>, response: Response<Map<String, String>>) {
+                if (response.isSuccessful) {
+                    Log.d("OTP", "OTP 이메일 전송 성공")
+                    Toast.makeText(requireContext(), "인증번호가 이메일로 발송되었습니다.", Toast.LENGTH_SHORT).show()
+                } else {
+                    Log.d("OTP", "OTP 이메일 전송 실패: ${response.errorBody()?.string()}")
+                    Toast.makeText(requireContext(), "OTP 전송 실패. 다시 시도해주세요.", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onFailure(call: Call<Map<String, String>>, t: Throwable) {
+                Log.e("OTP", "서버 연결 실패: ${t.message}")
+                Toast.makeText(requireContext(), "서버 연결 실패. 다시 시도해주세요.", Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // OTP 입력 처리
-        otpFields = listOf(
-            binding.otp1, binding.otp2, binding.otp3,
-            binding.otp4, binding.otp5, binding.otp6
-        )
-        otpFields.forEachIndexed { i, field ->
-            field.inputType = InputType.TYPE_CLASS_NUMBER
-            field.addTextChangedListener(createOtpTextWatcher(i))
-        }
+        // ✨ 이메일을 arguments로부터 가져오기
+        email = arguments?.getString("email") ?: ""
 
-        // 다음 버튼
+        // ✨ 화면 열리자마자 서버에 OTP 이메일 발송 요청
+        sendOtpEmail(email)
+
+        // 다음 버튼 클릭 시
         binding.btnNext.setOnClickListener {
-            val otp = otpFields.joinToString("") { it.text.toString() }
+            val otp = getEnteredOtp()
 
-            if (otp.length == 6 && otp.all { it.isDigit() }) {
-                findNavController().navigate(R.id.action_otp_to_done)
-            } else {
-                Toast.makeText(requireContext(), "인증번호를 확인해 주세요.", Toast.LENGTH_SHORT).show()
+            if (otp.length != 6) {
+                Toast.makeText(requireContext(), "6자리 인증번호를 입력해주세요.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
             }
+
+            verifyOtp(email, otp)
         }
-        // 뒤로 버튼
+
+        // 뒤로 가기 버튼 클릭 시
         binding.btnBack.setOnClickListener {
-            findNavController().popBackStack()
+            requireActivity().onBackPressedDispatcher.onBackPressed()
         }
     }
 
-    // TextWatcher
-    private fun createOtpTextWatcher(index: Int): TextWatcher {
-        return object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+    // EditText 6개에서 입력한 OTP 가져오기
+    private fun getEnteredOtp(): String {
+        return binding.otp1.text.toString() +
+                binding.otp2.text.toString() +
+                binding.otp3.text.toString() +
+                binding.otp4.text.toString() +
+                binding.otp5.text.toString() +
+                binding.otp6.text.toString()
+    }
 
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                val currentField = otpFields[index]
+    // 서버로 인증 요청
+    private fun verifyOtp(email: String, otp: String) {
+        val request = mapOf(
+            "email" to email,
+            "otp" to otp
+        )
 
-                // 입력값 1자
-                if (s?.length ?: 0 > 1) {
-                    currentField.setText(s?.last().toString())
-                    currentField.setSelection(1)
+        signUpService.verifyOtp(request).enqueue(object : Callback<Map<String, String>> {
+            override fun onResponse(
+                call: Call<Map<String, String>>,
+                response: Response<Map<String, String>>
+            ) {
+                if (response.isSuccessful) {
+                    Log.d("OTP", "인증 성공")
+                    Toast.makeText(requireContext(), "인증에 성공했습니다!", Toast.LENGTH_SHORT).show()
+
+                    // 회원가입 완료 화면으로 이동
+                    findNavController().navigate(R.id.action_signUpOtp_to_signUpDone)
+                } else {
+                    Log.d("OTP", "인증 실패")
+                    Toast.makeText(requireContext(), "인증번호가 틀렸습니다.", Toast.LENGTH_SHORT).show()
                 }
-                // 다음 칸 이동
-                if (s?.length == 1 && index < otpFields.size - 1) {
-                    otpFields[index + 1].requestFocus()
-                }
-                // 삭제 시 이전 칸 이동
-                if (s?.isEmpty() == true && before == 1 && index > 0) {
-                    otpFields[index - 1].apply {
-                        requestFocus()
-                        setSelection(text?.length ?: 0)
-                    }
-                }
-                validateOtp()
             }
 
-            override fun afterTextChanged(s: Editable?) {}
-        }
-    }
-
-    // OTP 유효성 검사
-    private fun validateOtp() {
-        val otp = otpFields.joinToString("") { it.text.toString() }
-        val isComplete = otp.length == 6 && otp.all { it.isDigit() }
-
-        binding.btnNext.apply {
-            isEnabled = isComplete
-            setBackgroundResource(
-                if (isComplete) R.drawable.btn_next_blue
-                else R.drawable.btn_next_gray
-            )
-        }
+            override fun onFailure(call: Call<Map<String, String>>, t: Throwable) {
+                Log.e("OTP", "서버 연결 실패: ${t.message}")
+                Toast.makeText(requireContext(), "서버 연결 실패. 다시 시도해주세요.", Toast.LENGTH_SHORT).show()
+            }
+        })
     }
 
     override fun onDestroyView() {
