@@ -1,4 +1,4 @@
-package com.cookandroid.challengers
+package com.cookandroid.challengers.api
 
 
 import retrofit2.Retrofit
