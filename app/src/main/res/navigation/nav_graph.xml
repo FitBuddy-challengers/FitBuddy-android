@@ -14,6 +14,7 @@
         <action
             android:id="@+id/action_login_to_loginEmail"
             app:destination="@id/loginEmailFragment" />
+
     </fragment>
 
     <fragment
@@ -25,6 +26,10 @@
         <action
             android:id="@+id/action_loginEmail_to_signUpEmail"
             app:destination="@id/signUpEmailFragment" />
+
+        <action
+            android:id="@+id/action_loginEmail_to_home"
+            app:destination="@id/homeFragment" />
     </fragment>
 
     <fragment
@@ -68,6 +73,12 @@
     <action
         android:id="@+id/action_signUpDone_to_home"
         app:destination="@id/homeFragment" />
+
+
+    <fragment
+        android:id="@+id/homeFragment"
+        android:name="com.cookandroid.challengers.HomeFragment"
+        android:label="HomeFragment" />
 
 
 </navigation>
