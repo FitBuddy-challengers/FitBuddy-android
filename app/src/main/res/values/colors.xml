@@ -8,10 +8,6 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <!-- 선택된 아이콘 및 텍스트 색상 (검정색) -->
-    <color name="bottom_nav_item_selected_icon">#000000</color>
-    <color name="bottom_nav_item_selected_text">#000000</color>
-
-
 
     <!-- 선택되지 않은 아이콘 및 텍스트 색상 (연한 회색) -->
     <color name="bottom_nav_item_icon_tint">#B0B0B0</color> <!-- 연한 회색 -->
