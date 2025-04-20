@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_margin="16dp"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    tools:context=".auth.login.LoginEmailFragment">
+
+    <android.widget.Button
+        android:id="@+id/btnBack"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:background="@drawable/btn_back"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="40dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="66dp"
+        android:text="이메일로\n로그인/회원가입"
+        android:fontFamily="@font/pretendard_bold"
+        android:textSize="28dp"
+        style="@style/Theme.Challengers"
+        app:layout_constraintTop_toBottomOf="@+id/btnBack"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="116dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="17dp"
+        android:text="이메일"
+        android:fontFamily="@font/pretendard_bold"
+        android:textSize="14dp"
+        style="@style/Theme.Challengers"
+        app:layout_constraintTop_toBottomOf="@+id/btnBack"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="240dp" />
+    
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilLoginAddress"
+        android:layout_width="match_parent"
+        style="@style/TextInputLayoutStyle"
+        app:endIconMode="clear_text"
+        app:layout_constraintTop_toBottomOf="@+id/btnBack"
+        android:layout_marginTop="264dp">
+        <com.google.android.material.textfield.TextInputEditText
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            style="@style/TextInputEditTextStyle"
+            android:hint="abc@gmail.com"
+            android:inputType="textEmailAddress" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="17dp"
+        android:text="비밀번호"
+        android:fontFamily="@font/pretendard_bold"
+        android:textSize="14dp"
+        style="@style/Theme.Challengers"
+        app:layout_constraintTop_toBottomOf="@+id/tilLoginAddress"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="16dp" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilLoginPassword"
+        android:layout_width="match_parent"
+        style="@style/TextInputLayoutStyle"
+        app:endIconMode="password_toggle"
+        app:layout_constraintTop_toBottomOf="@+id/tilLoginAddress"
+        android:layout_marginTop="40dp">
+        <com.google.android.material.textfield.TextInputEditText
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            style="@style/TextInputEditTextStyle"
+            android:hint="8자 이상의 비밀번호"
+            android:inputType="textPassword" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <android.widget.Button
+        android:id="@+id/btnEmailSignin"
+        android:layout_width="match_parent"
+        android:layout_height="43dp"
+        android:background="@drawable/btn_email_signin"
+        app:layout_constraintTop_toBottomOf="@id/tilLoginPassword"
+        android:layout_marginTop="56dp"/>
+
+    <android.widget.Button
+        android:id="@+id/btnEmailSignup"
+        android:layout_width="match_parent"
+        android:layout_height="43dp"
+        android:background="@drawable/btn_email_signup"
+        app:layout_constraintTop_toBottomOf="@id/btnEmailSignin"
+        android:layout_marginTop="12dp"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

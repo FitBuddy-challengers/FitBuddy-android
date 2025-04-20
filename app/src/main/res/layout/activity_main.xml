@@ -5,15 +5,20 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- 일단 하단바 구현으로!! 이후 추가적인 작업하기! -->
 
-    <FrameLayout
-        android:id="@+id/main_frm"
+
+    <!-- 프래그먼트가 표시될 자리 (FrameLayout → FragmentContainerView로 변경) -->
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/fragment_container_view"
+        android:name="androidx.navigation.fragment.NavHostFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        app:defaultNavHost="true"
+        app:navGraph="@navigation/nav_graph"
         app:layout_constraintBottom_toTopOf="@id/main_bnv"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/main_bnv"
@@ -27,6 +32,5 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>

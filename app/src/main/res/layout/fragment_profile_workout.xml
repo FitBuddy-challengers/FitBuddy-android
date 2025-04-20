@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_margin="16dp"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    tools:context=".auth.profile.ProfileWorkoutFragment">
+
+    <android.widget.Button
+        android:id="@+id/btnBack"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:background="@drawable/btn_back"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="40dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="66dp"
+        android:text="핏버디에게 회원님의\n운동 수준을 알려주세요"
+        android:fontFamily="@font/pretendard_bold"
+        android:textSize="28dp"
+        style="@style/Theme.Challengers"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="136dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="17dp"
+        android:text="핏버디가 회원님에게 딱 맞는 운동루틴을 제공할 거예요"
+        android:fontFamily="@font/pretendard_bold"
+        android:textSize="14dp"
+        android:textColor="#7E7E7E"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="232dp" />
+
+    <LinearLayout
+        android:id="@+id/workoutLevel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@+id/btnBack"
+        android:layout_marginTop="204dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="17dp"
+            android:text="운동 수준"
+            android:fontFamily="@font/pretendard_bold"
+            android:textSize="14dp"
+            style="@style/Theme.Challengers"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
+            android:gravity="start"
+            android:layoutDirection="ltr">
+
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:text="상" />
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:layout_marginLeft="8dp"
+                android:text="중" />
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:layout_marginLeft="8dp"
+                android:text="하" />
+
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/prefExercise"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@+id/workoutLevel"
+        android:layout_marginTop="20dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="17dp"
+            android:text="선호 운동"
+            android:fontFamily="@font/pretendard_bold"
+            android:textSize="14dp"
+            style="@style/Theme.Challengers"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="14dp"
+            android:text="3개까지 선택할 수 있어요"
+            android:fontFamily="@font/pretendard_medium"
+            android:textSize="12dp"
+            android:textColor="#7E7E7E"
+            android:layout_marginTop="8dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
+            android:gravity="start"
+            android:layoutDirection="ltr">
+
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:text="산책" />
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:layout_marginLeft="8dp"
+                android:text="러닝" />
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:layout_marginLeft="8dp"
+                android:text="필라테스/요가" />
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:layout_marginLeft="8dp"
+                android:text="구기종목" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
+            android:gravity="start"
+            android:layoutDirection="ltr">
+
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:text="자전거" />
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:layout_marginLeft="8dp"
+                android:text="기구운동" />
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:layout_marginLeft="8dp"
+                android:text="댄스" />
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:layout_marginLeft="8dp"
+                android:text="홈트" />
+
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/equipment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@+id/prefExercise"
+        android:layout_marginTop="24dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="17dp"
+            android:text="가지고 있는 운동 기구"
+            android:fontFamily="@font/pretendard_bold"
+            android:textSize="14dp"
+            style="@style/Theme.Challengers"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="14dp"
+            android:text="어떤 운동 기구를 활용하시나요? (중복 선택 가능)"
+            android:fontFamily="@font/pretendard_medium"
+            android:textSize="12dp"
+            android:textColor="#7E7E7E"
+            android:layout_marginTop="8dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
+            android:gravity="start"
+            android:layoutDirection="ltr">
+
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:text="아령" />
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:layout_marginLeft="8dp"
+                android:text="스트레칭 밴드" />
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:layout_marginLeft="8dp"
+                android:text="실내사이클" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
+            android:gravity="start"
+            android:layoutDirection="ltr">
+
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:text="러닝머신" />
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:layout_marginLeft="8dp"
+                android:text="스텝퍼" />
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:layout_marginLeft="8dp"
+                android:text="가지고 있지 않아요" />
+
+        </LinearLayout>
+    </LinearLayout>
+
+    <android.widget.Button
+        android:id="@+id/btnNext"
+        android:layout_width="match_parent"
+        android:layout_height="43dp"
+        android:background="@drawable/btn_next_gray"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginBottom="48dp" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

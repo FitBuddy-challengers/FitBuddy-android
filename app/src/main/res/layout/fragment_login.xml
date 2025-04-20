@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_margin="16dp"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    tools:context=".auth.login.LoginFragment">
+
+    <ImageView
+        android:id="@+id/icLogo"
+        android:layout_width="137dp"
+        android:layout_height="36dp"
+        android:src="@drawable/ic_logo_blue"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="252dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="33dp"
+        android:text="우리 함께 운동해요!"
+        android:fontFamily="@font/pretendard_bold"
+        android:textSize="28dp"
+        style="@style/Theme.Challengers"
+        app:layout_constraintTop_toBottomOf="@+id/icLogo"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="12dp" />
+
+    <android.widget.Button
+        android:id="@+id/btnLoginKakao"
+        android:layout_width="match_parent"
+        android:layout_height="43dp"
+        android:layout_marginTop="156dp"
+        android:background="@drawable/btn_login_kakao"
+        app:layout_constraintTop_toBottomOf="@id/icLogo" />
+
+    <android.widget.Button
+        android:id="@+id/btnLoginNaver"
+        android:layout_width="match_parent"
+        android:layout_height="43dp"
+        android:background="@drawable/btn_login_naver"
+        app:layout_constraintTop_toBottomOf="@id/btnLoginKakao"
+        android:layout_marginTop="16dp"/>
+
+    <android.widget.Button
+        android:id="@+id/btnLoginEmail"
+        android:layout_width="match_parent"
+        android:layout_height="43dp"
+        android:background="@drawable/btn_login_email"
+        app:layout_constraintTop_toBottomOf="@id/btnLoginNaver"
+        android:layout_marginTop="16dp"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

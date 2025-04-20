@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/loginFragment">
+
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="com.cookandroid.challengers.auth.login.LoginFragment"
+        android:label="LoginFragment"
+        tools:layout="@layout/fragment_login">
+
+        <action
+            android:id="@+id/action_login_to_loginEmail"
+            app:destination="@id/loginEmailFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/loginEmailFragment"
+        android:name="com.cookandroid.challengers.auth.login.LoginEmailFragment"
+        android:label="LoginEmailFragment"
+        tools:layout="@layout/fragment_login_email">
+
+        <action
+            android:id="@+id/action_loginEmail_to_signUpEmail"
+            app:destination="@id/signUpEmailFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/signUpEmailFragment"
+        android:name="com.cookandroid.challengers.auth.signup.SignUpEmailFragment"
+        android:label="SignUpEmailFragment"
+        tools:layout="@layout/fragment_signup_email">
+
+        <action
+            android:id="@+id/action_signUpEmail_to_signUpPassword"
+            app:destination="@id/signUpPasswordFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/signUpPasswordFragment"
+        android:name="com.cookandroid.challengers.auth.signup.SignUpPasswordFragment"
+        android:label="SignUpPasswordFragment"
+        tools:layout="@layout/fragment_signup_pw">
+
+        <action
+            android:id="@+id/action_signUpPassword_to_signUpOtp"
+            app:destination="@id/signUpOtpFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/signUpOtpFragment"
+        android:name="com.cookandroid.challengers.auth.signup.SignUpOtpFragment"
+        android:label="SignUpOtpFragment"
+        tools:layout="@layout/fragment_signup_otp">
+
+        <action
+            android:id="@+id/action_signUpOtp_to_signUpDone"
+            app:destination="@id/signUpDoneFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/signUpDoneFragment"
+        android:name="com.cookandroid.challengers.auth.signup.SignUpDoneFragment"
+        android:label="SignUpDoneFragment"
+        tools:layout="@layout/fragment_signup_done" />
+    <action
+        android:id="@+id/action_signUpDone_to_home"
+        app:destination="@id/homeFragment" />
+
+
+</navigation>

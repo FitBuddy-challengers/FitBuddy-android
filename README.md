@@ -81,7 +81,10 @@ git push origin <브랜치명>
 6. **Asset Name** 확인 (자동 변환됨: 예 `ic_search_gray_24`)
 7. Finish 버튼 클릭 → `drawable` 폴더에 벡터 에셋 추가됨
 
+
 #png는 용량을 많이 차지합니다! 최대한 svg 형태로 하되, 애니메이션 같이 깨질 수 있는 복잡한 형태는 png로 저장해주세요:)
+
+>>>>>>> potato
 
 ## 📦 프로젝트 구조 안내
 
