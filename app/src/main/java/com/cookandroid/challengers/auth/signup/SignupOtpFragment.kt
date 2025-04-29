@@ -73,7 +73,25 @@ class SignUpOtpFragment : Fragment() {
         // ✨ 화면 열리자마자 서버에 OTP 이메일 발송 요청
         sendOtpEmail(email)
 
-        // 다음 버튼 클릭 시
+        // ✨ (추가) OTP EditText 입력 감지
+        val otpWatcher = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                updateNextButtonState()
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        }
+
+        // ✨ 6개 EditText에 TextWatcher 등록
+        binding.otp1.addTextChangedListener(otpWatcher)
+        binding.otp2.addTextChangedListener(otpWatcher)
+        binding.otp3.addTextChangedListener(otpWatcher)
+        binding.otp4.addTextChangedListener(otpWatcher)
+        binding.otp5.addTextChangedListener(otpWatcher)
+        binding.otp6.addTextChangedListener(otpWatcher)
+
+
+        // 다음 버튼 클릭
         binding.btnNext.setOnClickListener {
             val otp = getEnteredOtp()
 
@@ -91,14 +109,24 @@ class SignUpOtpFragment : Fragment() {
         }
     }
 
+    // ✅ (추가) 버튼 상태 업데이트 함수
+    private fun updateNextButtonState() {
+        val otp = getEnteredOtp()
+        val isComplete = otp.length == 6
+
+        binding.btnNext.isEnabled = isComplete
+        val backgroundRes = if (isComplete) R.drawable.btn_next_blue else R.drawable.btn_next_gray
+        binding.btnNext.setBackgroundResource(backgroundRes)
+    }
+
     // EditText 6개에서 입력한 OTP 가져오기
     private fun getEnteredOtp(): String {
-        return binding.otp1.text.toString() +
+        return (binding.otp1.text.toString() +
                 binding.otp2.text.toString() +
                 binding.otp3.text.toString() +
                 binding.otp4.text.toString() +
                 binding.otp5.text.toString() +
-                binding.otp6.text.toString()
+                binding.otp6.text.toString()).trim()
     }
 
     // 서버로 인증 요청
@@ -121,6 +149,7 @@ class SignUpOtpFragment : Fragment() {
                     findNavController().navigate(R.id.action_signUpOtp_to_signUpDone)
                 } else {
                     Log.d("OTP", "인증 실패")
+                    Log.d("OTP", "인증 실패: ${response.errorBody()?.string()}")
                     Toast.makeText(requireContext(), "인증번호가 틀렸습니다.", Toast.LENGTH_SHORT).show()
                 }
             }

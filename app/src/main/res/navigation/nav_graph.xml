@@ -5,6 +5,7 @@
     android:id="@+id/nav_graph"
     app:startDestination="@id/loginFragment">
 
+    <!-- 로그인 화면 -->
     <fragment
         android:id="@+id/loginFragment"
         android:name="com.cookandroid.challengers.auth.login.LoginFragment"
@@ -14,9 +15,9 @@
         <action
             android:id="@+id/action_login_to_loginEmail"
             app:destination="@id/loginEmailFragment" />
-
     </fragment>
 
+    <!-- 이메일 입력 화면 -->
     <fragment
         android:id="@+id/loginEmailFragment"
         android:name="com.cookandroid.challengers.auth.login.LoginEmailFragment"
@@ -32,6 +33,7 @@
             app:destination="@id/homeFragment" />
     </fragment>
 
+    <!-- 회원가입 이메일 입력 -->
     <fragment
         android:id="@+id/signUpEmailFragment"
         android:name="com.cookandroid.challengers.auth.signup.SignUpEmailFragment"
@@ -43,6 +45,7 @@
             app:destination="@id/signUpPasswordFragment" />
     </fragment>
 
+    <!-- 회원가입 비밀번호 입력 -->
     <fragment
         android:id="@+id/signUpPasswordFragment"
         android:name="com.cookandroid.challengers.auth.signup.SignUpPasswordFragment"
@@ -54,6 +57,7 @@
             app:destination="@id/signUpOtpFragment" />
     </fragment>
 
+    <!-- 회원가입 OTP 인증 -->
     <fragment
         android:id="@+id/signUpOtpFragment"
         android:name="com.cookandroid.challengers.auth.signup.SignUpOtpFragment"
@@ -65,20 +69,69 @@
             app:destination="@id/signUpDoneFragment" />
     </fragment>
 
+    <!-- 회원가입 완료 화면 -->
     <fragment
         android:id="@+id/signUpDoneFragment"
         android:name="com.cookandroid.challengers.auth.signup.SignUpDoneFragment"
         android:label="SignUpDoneFragment"
-        tools:layout="@layout/fragment_signup_done" />
-    <action
-        android:id="@+id/action_signUpDone_to_home"
-        app:destination="@id/homeFragment" />
+        tools:layout="@layout/fragment_signup_done">
 
+        <action
+            android:id="@+id/action_signUpDone_to_profileInfoFragment"
+            app:destination="@id/profileInfoFragment" />
+    </fragment>
 
+    <!-- 프로필 입력 시작 화면 -->
+    <fragment
+        android:id="@+id/profileInfoFragment"
+        android:name="com.cookandroid.challengers.auth.profile.ProfileInfoFragment"
+        android:label="ProfileInfoFragment"
+        tools:layout="@layout/fragment_profile_info">
+
+        <action
+            android:id="@+id/action_profileInfo_to_profileHealth"
+            app:destination="@id/profileHealthFragment" />
+    </fragment>
+
+    <!-- 프로필 신체정보 화면 -->
+    <fragment
+        android:id="@+id/profileHealthFragment"
+        android:name="com.cookandroid.challengers.auth.profile.ProfileHealthFragment"
+        android:label="ProfileHealthFragment"
+        tools:layout="@layout/fragment_profile_health">
+
+        <action
+            android:id="@+id/action_profileHealth_to_profileWorkout"
+            app:destination="@id/profileWorkoutFragment" />
+    </fragment>
+
+    <!-- 프로필 운동선호 화면 -->
+    <fragment
+        android:id="@+id/profileWorkoutFragment"
+        android:name="com.cookandroid.challengers.auth.profile.ProfileWorkoutFragment"
+        android:label="ProfileWorkoutFragment"
+        tools:layout="@layout/fragment_profile_workout">
+
+        <action
+            android:id="@+id/action_profileWorkout_to_profileDone"
+            app:destination="@id/profileDoneFragment" />
+    </fragment>
+
+    <!-- 프로필 입력 완료 화면 -->
+    <fragment
+        android:id="@+id/profileDoneFragment"
+        android:name="com.cookandroid.challengers.auth.profile.ProfileDoneFragment"
+        android:label="ProfileDoneFragment"
+        tools:layout="@layout/fragment_profile_done">
+
+        <action
+            android:id="@+id/action_profileDone_to_home"
+            app:destination="@id/homeFragment" />
+    </fragment>
+
+    <!-- 홈 화면 -->
     <fragment
         android:id="@+id/homeFragment"
         android:name="com.cookandroid.challengers.HomeFragment"
         android:label="HomeFragment" />
-
-
 </navigation>

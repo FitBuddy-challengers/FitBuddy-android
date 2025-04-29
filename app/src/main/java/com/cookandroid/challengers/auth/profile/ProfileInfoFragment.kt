@@ -79,13 +79,11 @@ class ProfileInfoFragment : Fragment() {
             }
         }
 
-        // ProfileHealthFragment로 이동
+        // ✅ 수정된 부분: Navigation으로 이동
         binding.btnNext.setOnClickListener {
-            parentFragmentManager.beginTransaction()
-                .replace(R.id.exercise_fragment_container, ProfileHealthFragment())
-                .addToBackStack(null)  // 뒤로가기 가능하게
-                .commit()
+            findNavController().navigate(R.id.action_profileInfo_to_profileHealth)
         }
+
     }
 
     private fun updateSelection(buttons: List<View>, selected: View) {

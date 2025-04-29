@@ -93,10 +93,8 @@ class ProfileWorkoutFragment : Fragment() {
         }
 
         binding.btnNext.setOnClickListener {
-            parentFragmentManager.beginTransaction()
-                .replace(R.id.exercise_fragment_container, ProfileDoneFragment())
-                .addToBackStack(null) // 뒤로가기 가능하도록
-                .commit()
+            // ✅ Navigation으로 이동
+            findNavController().navigate(R.id.action_profileWorkout_to_profileDone)
         }
     }
 

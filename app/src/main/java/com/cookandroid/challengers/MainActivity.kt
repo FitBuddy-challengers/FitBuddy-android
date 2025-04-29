@@ -1,7 +1,6 @@
 package com.cookandroid.challengers
 
 
-
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
@@ -12,8 +11,6 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
 import com.cookandroid.challengers.databinding.ActivityMainBinding
 
-
-//로그인 부분을 불러오는데 오류가 잡히지 않아서, 중간 평가 이후 수정하겠음!
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
@@ -28,16 +25,13 @@ class MainActivity : AppCompatActivity() {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.fragment_container_view) as NavHostFragment
         navController = navHostFragment.navController
 
-        // ⭐⭐ navGraph를 명시적으로 설정해준다!! ⭐⭐
         navController.setGraph(R.navigation.nav_graph_main)
-
         binding.mainBnv.setupWithNavController(navController)
 
-        val isMasterLogin = intent.getBooleanExtra("isMasterLogin", false)
+        val isLoggedIn = intent.getBooleanExtra("isLoggedIn", false)
 
         if (savedInstanceState == null) {
-            if (isMasterLogin) {
-                // 마스터 로그인이면 HomeFragment부터 시작
+            if (isLoggedIn) {
                 navController.navigate(R.id.homeFragment)
                 binding.mainBnv.visibility = View.VISIBLE
             } else {

@@ -26,10 +26,9 @@ class ProfileDoneFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.btnNext.setOnClickListener {
-            // MainActivity 이동
             val intent = Intent(requireContext(), MainActivity::class.java)
-            // 기존 스택 비우기
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            intent.putExtra("isLoggedIn", true)  // 로그인 완료 여부 전달
             startActivity(intent)
         }
     }

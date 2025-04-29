@@ -15,17 +15,26 @@
         android:theme="@style/Theme.Challengers"
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
+
+        <!-- ✅ LoginActivity를 앱 시작화면으로 설정 -->
         <activity
-            android:name=".MainActivity"
+            android:name=".auth.LoginActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- MainActivity는 그냥 일반 액티비티로 -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" />
+
     </application>
 
 </manifest>

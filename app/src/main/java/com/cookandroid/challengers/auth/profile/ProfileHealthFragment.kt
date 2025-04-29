@@ -53,12 +53,9 @@ class ProfileHealthFragment : Fragment() {
             }
         }
 
-        // 다음 버튼
         binding.btnNext.setOnClickListener {
-            parentFragmentManager.beginTransaction()
-                .replace(R.id.exercise_fragment_container, ProfileWorkoutFragment())
-                .addToBackStack(null)  // 뒤로가기 가능하게
-                .commit()
+            // ✅ Navigation으로 이동
+            findNavController().navigate(R.id.action_profileHealth_to_profileWorkout)
         }
 
         // 초기 상태 설정
