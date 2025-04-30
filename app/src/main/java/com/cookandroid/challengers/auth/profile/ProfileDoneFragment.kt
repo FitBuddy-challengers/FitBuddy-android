@@ -36,7 +36,7 @@ class ProfileDoneFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.btnNext.setOnClickListener {
+        binding.btnNext.setOnClickListener { ///
             // ✅ ProfileData 구성
             val profileData = ProfileData(
                 email = viewModel.email,
