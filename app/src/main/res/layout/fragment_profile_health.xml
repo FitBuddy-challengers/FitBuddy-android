@@ -163,6 +163,11 @@
                 android:layout_marginLeft="8dp"
                 android:text="허리" />
 
+            <Button
+                style="@style/Widget.Profile.SelectButton"
+                android:layout_marginLeft="8dp"
+                android:text="없음" />
+
         </LinearLayout>
 
     </LinearLayout>

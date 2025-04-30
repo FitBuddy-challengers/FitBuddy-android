@@ -1,6 +1,7 @@
 package com.cookandroid.challengers.auth.signup
 
 import android.os.Bundle
+import android.content.Context
 import android.text.Editable
 import android.text.InputType
 import android.text.TextWatcher
@@ -130,6 +131,7 @@ class SignUpOtpFragment : Fragment() {
     }
 
     // 서버로 인증 요청
+    // 서버로 인증 요청
     private fun verifyOtp(email: String, otp: String) {
         val request = mapOf(
             "email" to email,
@@ -145,10 +147,13 @@ class SignUpOtpFragment : Fragment() {
                     Log.d("OTP", "인증 성공")
                     Toast.makeText(requireContext(), "인증에 성공했습니다!", Toast.LENGTH_SHORT).show()
 
+                    // ✅ SharedPreferences에 이메일 저장
+                    val prefs = requireActivity().getSharedPreferences("user", Context.MODE_PRIVATE)
+                    prefs.edit().putString("email", email).apply()
+
                     // 회원가입 완료 화면으로 이동
                     findNavController().navigate(R.id.action_signUpOtp_to_signUpDone)
                 } else {
-                    Log.d("OTP", "인증 실패")
                     Log.d("OTP", "인증 실패: ${response.errorBody()?.string()}")
                     Toast.makeText(requireContext(), "인증번호가 틀렸습니다.", Toast.LENGTH_SHORT).show()
                 }
