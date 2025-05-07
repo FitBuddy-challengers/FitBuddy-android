@@ -24,12 +24,8 @@ class ExerciseFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // 앱 최초 진입 or 운동 정보 입력 안 했을 때
-        if (savedInstanceState == null) {
-            childFragmentManager.beginTransaction()
-                .replace(R.id.exercise_fragment_container, ProfileHealthFragment())
-                .commit()
-        }
+        // ✅ 더 이상 아무 것도 하지 않아도 돼!
+        // 그냥 fragment_exercise.xml만 화면에 보여주면 돼.
     }
 
     override fun onDestroyView() {

@@ -4,6 +4,7 @@ package com.cookandroid.challengers.api
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import com.cookandroid.challengers.BuildConfig // ★ 명시적으로 추가!
+import com.cookandroid.challengers.auth.login.LoginService
 
 // 서버와 애뮬레이터 연동을 위한 코드 절대 수정 XXX
 object RetrofitClient {
@@ -16,5 +17,10 @@ object RetrofitClient {
 
     val profileApiService: ProfileApiService by lazy {
         retrofit.create(ProfileApiService::class.java)
+    }
+
+    //로그인 API 인터페이스
+    val loginService: LoginService by lazy {
+        retrofit.create(LoginService::class.java)
     }
 }

@@ -27,9 +27,17 @@ class LoginActivity : AppCompatActivity() {
     }
 
     // 로그인 성공 or 회원가입 완료 후 메인으로 이동하는 함수
-    fun navigateToMain() {
+    /*fun navigateToMain() {
         val intent = Intent(this, MainActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
     }
+    */
+    fun navigateToMain() {
+        val intent = Intent(this, MainActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        intent.putExtra("isLoggedIn", true)
+        startActivity(intent)
+    }
+
 }
