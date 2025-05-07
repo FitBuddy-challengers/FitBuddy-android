@@ -134,4 +134,21 @@
         android:id="@+id/homeFragment"
         android:name="com.cookandroid.challengers.HomeFragment"
         android:label="HomeFragment" />
+
+    <!-- 운동 화면 -->
+    <fragment
+        android:id="@+id/exerciseFragment"
+        android:name="com.cookandroid.challengers.ExerciseFragment"
+        android:label="ExerciseFragment">
+<!--        <action-->
+<!--            android:id="@+id/action_exerciseFragment_to_exerciseAddFragment"-->
+<!--            app:destination="@id/exerciseAddFragment" />-->
+<!--        <action-->
+<!--            android:id="@+id/action_exerciseFragment_to_exerciseDoingFragment"-->
+<!--            app:destination="@id/exerciseDoingFragment" />-->
+        <action
+            android:id="@+id/action_exerciseFragment_to_exerciseListFragment"
+            app:destination="@+id/exerciseListFragment" />
+    </fragment>
+
 </navigation>

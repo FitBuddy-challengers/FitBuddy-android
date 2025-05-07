@@ -74,4 +74,74 @@
         <item name="android:gravity">center</item>
     </style>
 
+    <!--  운동 타이머 스타일  -->
+    <style name="BottomSheetDialogTheme" parent="Theme.Design.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/BottomSheetStyle</item>
+    </style>
+    <style name="BottomSheetStyle" parent="Widget.Design.BottomSheet.Modal">
+        <item name="android:background">@color/white</item>
+        <item name="behavior_peekHeight">auto</item>
+        <item name="shapeAppearance">@style/CustomShapeAppearanceBottomSheetDialog</item>
+    </style>
+    <style name="CustomShapeAppearanceBottomSheetDialog" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopRight">36dp</item>
+        <item name="cornerSizeTopLeft">36dp</item>
+        <item name="cornerSizeBottomRight">0dp</item>
+        <item name="cornerSizeBottomLeft">0dp</item>
+    </style>
+
+    <!--  텍스트칩 스타일  -->
+    <style name="TextChip" parent="Widget.MaterialComponents.Chip.Action">
+        <item name="chipBackgroundColor">@android:color/transparent</item>
+        <item name="android:textColor">@color/black</item>
+        <item name="chipStrokeWidth">0dp</item>
+        <item name="chipCornerRadius">@dimen/default_chip_corner_radius</item>
+        <item name="chipIconVisible">false</item>
+        <item name="closeIconVisible">false</item>
+        <item name="chipStartPadding">0dp</item>
+        <item name="chipEndPadding">0dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textAppearance">@style/ChipTextAppearance</item>
+    </style>
+    <style name="SelectedChip" parent="Widget.MaterialComponents.Chip.Action">
+        <item name="chipBackgroundColor">@color/blue</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="chipStrokeWidth">0dp</item>
+        <item name="chipCornerRadius">@dimen/selected_chip_corner_radius</item>
+        <item name="chipIconVisible">false</item>
+        <item name="closeIcon">@drawable/ic_close</item>
+        <item name="closeIconTint">@color/white</item>
+        <item name="android:textSize">14sp</item>
+        <item name="chipStartPadding">@dimen/selected_chip_padding_horizontal</item>
+        <item name="chipEndPadding">@dimen/selected_chip_padding_horizontal</item>
+        <item name="closeIconStartPadding">@dimen/selected_close_icon_start_padding</item>
+        <item name="android:paddingTop">@dimen/selected_chip_padding_vertical</item>
+        <item name="android:paddingBottom">@dimen/selected_chip_padding_vertical</item>
+        <item name="android:textAppearance">@style/ChipTextAppearance</item>
+    </style>
+    <style name="ChipTextAppearance" parent="TextAppearance.AppCompat">
+        <item name="android:paddingTop">0dp</item>
+        <item name="android:paddingBottom">0dp</item>
+    </style>
+    <style name="SelectedExerciseChip" parent="Widget.MaterialComponents.Chip.Action">
+        <item name="chipBackgroundColor">@color/light_gray</item>
+        <item name="android:textColor">@color/black</item>
+        <item name="closeIcon">@drawable/ic_close</item>
+        <item name="closeIconTint">@color/black</item>
+        <item name="closeIconVisible">true</item>
+        <item name="android:minHeight">32dp</item>
+        <item name="chipStartPadding">8dp</item>
+        <item name="chipEndPadding">8dp</item>
+        <item name="textStartPadding">4dp</item>
+        <item name="textEndPadding">4dp</item>
+    </style>
+
+    <!--tap 스타일-->
+    <style name="tab_text" parent="TextAppearance.Design.Tab">
+        <item name="android:textSize">20sp</item>
+        <item name="android:textColor">@color/black</item>
+        <item name="android:fontFamily">@font/pretendard_bold</item>
+    </style>
+
 </resources>

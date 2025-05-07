@@ -22,7 +22,8 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val navHostFragment = supportFragmentManager.findFragmentById(R.id.fragment_container_view) as NavHostFragment
+        val navHostFragment =
+            supportFragmentManager.findFragmentById(R.id.fragment_container_view) as NavHostFragment
         navController = navHostFragment.navController
 
         navController.setGraph(R.navigation.nav_graph_main)
@@ -49,9 +50,11 @@ class MainActivity : AppCompatActivity() {
                         is com.cookandroid.challengers.auth.signup.SignUpEmailFragment,
                         is com.cookandroid.challengers.auth.signup.SignUpPasswordFragment,
                         is com.cookandroid.challengers.auth.signup.SignUpOtpFragment,
-                        is com.cookandroid.challengers.auth.signup.SignUpDoneFragment -> {
+                        is com.cookandroid.challengers.auth.signup.SignUpDoneFragment,
+                        is ExerciseListFragment -> {
                             binding.mainBnv.visibility = View.GONE
                         }
+
                         else -> {
                             binding.mainBnv.visibility = View.VISIBLE
                         }

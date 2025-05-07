@@ -5,12 +5,22 @@
     <color name="purple_700">#FF3700B3</color>
     <color name="teal_200">#FF03DAC5</color>
     <color name="teal_700">#FF018786</color>
-    <color name="black">#FF000000</color>
+<!--    <color name="black">#FF000000</color>-->
+    <color name="black">#292929</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="light_gray">#D6D6D6</color>
+    <color name="light_gray2">#F5F5F5</color>
+    <color name="blue">#2777F0</color>
+    <color name="light_blue">#E1E9F5</color>
+    <color name="red">#E94E4E</color>
     <!-- 선택된 아이콘 및 텍스트 색상 (검정색) -->
 
     <!-- 선택되지 않은 아이콘 및 텍스트 색상 (연한 회색) -->
     <color name="bottom_nav_item_icon_tint">#B0B0B0</color> <!-- 연한 회색 -->
     <color name="bottom_nav_item_text_tint">#B0B0B0</color> <!-- 연한 회색 -->
     <color name="gray">#D3D3D3</color> <!-- 피그마와는 다른 컬러 코드...-->
+
+    <!--  프로그레스 바 컬러  -->
+    <color name="progress_gradient_start">#084BB1</color>
+    <color name="progress_gradient_end">#4B91FA</color>
 </resources>

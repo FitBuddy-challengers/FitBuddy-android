@@ -1,0 +1,10 @@
+<resources>
+    <dimen name="chip_spacing">8dp</dimen>
+    <dimen name="default_chip_corner_radius">0dp</dimen>
+    <dimen name="selected_chip_corner_radius">20dp</dimen>
+    <dimen name="selected_chip_padding_horizontal">8dp</dimen>
+    <dimen name="selected_chip_padding_vertical">3dp</dimen>
+    <dimen name="selected_close_icon_start_padding">1dp</dimen>
+    <dimen name="chip_text_padding_vertical">0dp</dimen>
+    <dimen name="rest_timer_peek_height">700dp</dimen>
+</resources>
