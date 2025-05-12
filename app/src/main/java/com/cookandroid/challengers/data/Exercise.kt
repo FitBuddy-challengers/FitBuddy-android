@@ -20,7 +20,8 @@ data class Exercise(
     val breathing: List<String>? = null, // 호흡법
     val caution: List<String>? = null, // 주의사항
     val mets: Double, // 운동계수
-    var isFavorite: Boolean = false // 북마크 여부
+    var isFavorite: Boolean = false, // 북마크 여부
+    var isHidden: Boolean = false // 숨김 여부
 
     // 횟수 세는 운동, 시간 세는 운동 : 플래그로?
     // 층간소음 bool : 버피테스트 등 추가..

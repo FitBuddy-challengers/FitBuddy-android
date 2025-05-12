@@ -23,4 +23,5 @@
     <!--  프로그레스 바 컬러  -->
     <color name="progress_gradient_start">#084BB1</color>
     <color name="progress_gradient_end">#4B91FA</color>
+
 </resources>

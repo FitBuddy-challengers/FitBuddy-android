@@ -80,7 +80,6 @@
     </style>
     <style name="BottomSheetStyle" parent="Widget.Design.BottomSheet.Modal">
         <item name="android:background">@color/white</item>
-        <item name="behavior_peekHeight">auto</item>
         <item name="shapeAppearance">@style/CustomShapeAppearanceBottomSheetDialog</item>
     </style>
     <style name="CustomShapeAppearanceBottomSheetDialog" parent="">

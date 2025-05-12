@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/edit_set_content_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="@dimen/rest_timer_peek_height"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <ImageView
+        android:id="@+id/timer_bar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:src="@drawable/ic_timer_bar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <TextView
+        android:id="@+id/textTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="48dp"
+        android:fontFamily="@font/pretendard_semi_bold"
+        android:layout_marginBottom="24dp"
+        android:text="운동이름"
+        android:textColor="@color/black"
+        android:textSize="28dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/timer_bar" />
+
+    <LinearLayout
+        android:id="@+id/layout_set_edit"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="24dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textTitle"
+        app:layout_constraintEnd_toEndOf="parent">
+        <ImageView
+            android:id="@+id/icon_set_edit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_edit_black" />
+        <TextView
+            android:id="@+id/menu_set_edit"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="세트 수정하기"
+            android:textSize="20sp"
+            android:textColor="@color/black"
+            android:fontFamily="@font/pretendard_semi_bold"
+            android:layout_marginStart="16dp"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layout_exercise_change"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="24dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/layout_set_edit"
+        app:layout_constraintEnd_toEndOf="parent">
+        <ImageView
+            android:id="@+id/icon_exercise_change"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_change_black" />
+        <TextView
+            android:id="@+id/menu_exercise_change"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="운동 변경하기"
+            android:textSize="20sp"
+            android:textColor="@color/black"
+            android:fontFamily="@font/pretendard_semi_bold"
+            android:layout_marginStart="16dp"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layout_exercise_guide"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="24dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/layout_exercise_change"
+        app:layout_constraintEnd_toEndOf="parent">
+        <ImageView
+            android:id="@+id/icon_exercise_guide"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_guide_black" />
+        <TextView
+            android:id="@+id/menu_exercise_guide"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="운동 가이드"
+            android:textSize="20sp"
+            android:textColor="@color/black"
+            android:fontFamily="@font/pretendard_semi_bold"
+            android:layout_marginStart="16dp"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layout_favorite"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="24dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/layout_exercise_guide"
+        app:layout_constraintEnd_toEndOf="parent">
+        <ImageView
+            android:id="@+id/icon_favorite"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/btn_favorite" />
+        <TextView
+            android:id="@+id/menu_favorite"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="즐겨찾기"
+            android:textSize="20sp"
+            android:textColor="@color/black"
+            android:fontFamily="@font/pretendard_semi_bold"
+            android:layout_marginStart="16dp"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layout_hide_exercise"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="24dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/layout_favorite"
+        app:layout_constraintEnd_toEndOf="parent">
+        <ImageView
+            android:id="@+id/icon_hide_exercise"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_hide_black" />
+        <TextView
+            android:id="@+id/menu_hide_exercise"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="운동숨기기"
+            android:textSize="20sp"
+            android:textColor="@color/black"
+            android:fontFamily="@font/pretendard_semi_bold"
+            android:layout_marginStart="16dp"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layout_delete_exercise"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="24dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/layout_hide_exercise"
+        app:layout_constraintEnd_toEndOf="parent">
+        <ImageView
+            android:id="@+id/icon_delete_exercise"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_delete_red" />
+        <TextView
+            android:id="@+id/menu_delete_exercise"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="운동 삭제하기"
+            android:textSize="20sp"
+            android:textColor="@color/red"
+            android:fontFamily="@font/pretendard_semi_bold"
+            android:layout_marginStart="16dp"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

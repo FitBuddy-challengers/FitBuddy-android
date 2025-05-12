@@ -68,6 +68,10 @@ interface ExercisePlanDao {
         planId: Long
     ): Flow<List<PlanDetailWithExercise>>
 
+    // 오늘 날짜의 운동 루틴에 있는 운동
+    @Query("SELECT * FROM exercise_plans WHERE plannedDate BETWEEN :startDate AND :endDate")
+    suspend fun getExercisePlansByDateRange(startDate: Long, endDate: Long): List<ExercisePlan>
+
 }
 
 data class ExerciseInPlan(

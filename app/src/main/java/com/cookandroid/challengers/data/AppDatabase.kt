@@ -17,25 +17,34 @@ import com.cookandroid.challengers.data.PlanDetail
 import com.cookandroid.challengers.data.PlanDetailDao
 import com.cookandroid.challengers.data.ChallengePersonal
 import com.cookandroid.challengers.data.ChallengePersonalDao
+import com.cookandroid.challengers.data.CoolDownStretch
+import com.cookandroid.challengers.data.CoolDownStretchDao
+import com.cookandroid.challengers.data.WeightRecord
+import com.cookandroid.challengers.data.WeightRecordDao
 import com.cookandroid.challengers.data.converters.ListConverter
+import com.cookandroid.challengers.data.converters.LocalDateConverter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 @Database(
-    entities = [ExercisePlan::class, Exercise::class, ExerciseSet::class,
-                PlanDetail::class, ChallengePersonal::class],
+    entities = [ExercisePlan::class, Exercise::class, ExerciseSet::class, WeightRecord::class,
+                PlanDetail::class, ChallengePersonal::class, CoolDownStretch::class],
     version = 1,
     exportSchema = false
 )
-@TypeConverters(ListConverter::class)
+@TypeConverters(ListConverter::class, LocalDateConverter::class)
+
 abstract class AppDatabase : RoomDatabase() {
 
+    abstract fun coolDownStretchDao(): CoolDownStretchDao
     abstract fun exercisePlanDao(): ExercisePlanDao
     abstract fun exerciseDao(): ExerciseDao
     abstract fun exerciseSetDao(): ExerciseSetDao
     abstract fun planDetailDao(): PlanDetailDao
     abstract fun challengePersonalDao(): ChallengePersonalDao
+    abstract fun weightRecordDao(): WeightRecordDao
 
     companion object {
         @Volatile
@@ -69,22 +78,26 @@ abstract class AppDatabase : RoomDatabase() {
             INSTANCE?.let { database ->
                 scope.launch(Dispatchers.IO) {
                     populateInitialData(
-                        database.exercisePlanDao(),
                         database.exerciseDao(),
-                        database.exerciseSetDao(),
+                        database.coolDownStretchDao(),
+                        database.challengePersonalDao(),
+                        database.exercisePlanDao(),
                         database.planDetailDao(),
-                        database.challengePersonalDao()
+                        database.exerciseSetDao(),
+                        database.weightRecordDao()
                     )
                 }
             }
         }
 
         private suspend fun populateInitialData(
-            exercisePlanDao: ExercisePlanDao,
             exerciseDao: ExerciseDao,
-            exerciseSetDao: ExerciseSetDao,
+            coolDownStretchDao: CoolDownStretchDao,
+            challengePersonalDao: ChallengePersonalDao,
+            exercisePlanDao: ExercisePlanDao,
             planDetailDao: PlanDetailDao,
-            challengePersonalDao: ChallengePersonalDao
+            exerciseSetDao: ExerciseSetDao,
+            weightRecordDao: WeightRecordDao
         ) {
             // 개인챌린지 초기데이터
             val challenge1 = ChallengePersonal(name = "스쿼트 10번 하기", coinReward = 500, targetCount = 10, currentCount = 4)
@@ -95,6 +108,19 @@ abstract class AppDatabase : RoomDatabase() {
             challengePersonalDao.insert(challenge2)
             challengePersonalDao.insert(challenge3)
 
+            val stretch1 = CoolDownStretch(name = "상체 스트레칭", imagePath = "upper_body_stretch", stOrder = 1)
+            val stretch2 = CoolDownStretch(name = "암 써클링 어깨 스트레칭", imagePath = "arm_circling_shoulders", stOrder = 2)
+            val stretch3 = CoolDownStretch(name = "라잉 햄스트링 스트레칭", imagePath = "lying_hamstring_stretch", stOrder = 3)
+
+            coolDownStretchDao.insert(stretch1)
+            coolDownStretchDao.insert(stretch2)
+            coolDownStretchDao.insert(stretch3)
+
+            val weightRecord1 = WeightRecord(date = LocalDate.of(2025, 5, 10), weight = 57.3, bodyFatPercentage = 14.5, skeletalMuscleMass = 23.4)
+            val weightRecord2 = WeightRecord(date = LocalDate.of(2025, 5, 12), weight = 56.1, bodyFatPercentage = 14.2, skeletalMuscleMass = 23.6)
+
+            weightRecordDao.insert(weightRecord1)
+            weightRecordDao.insert(weightRecord2)
 
             // Exercise 초기 데이터 삽입
             val donkeyKickId = exerciseDao.insert( //

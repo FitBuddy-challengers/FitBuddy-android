@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <ImageView
+            android:id="@+id/back_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_back"
+            android:contentDescription="뒤로가기"
+            android:layout_marginTop="39dp"
+            android:clickable="true"
+            android:focusable="true"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <TextView
+            android:id="@+id/title_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="인클라인 푸쉬업"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            app:layout_constraintTop_toBottomOf="@id/back_button"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/favoriteButton"
+            app:layout_constraintBottom_toBottomOf="@id/favoriteButton"
+            android:layout_marginTop="16dp"/>
+
+        <ImageView
+            android:id="@+id/favoriteButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/btn_favorite"
+            android:contentDescription="즐겨찾기"
+            android:clickable="true"
+            android:focusable="true"
+            app:layout_constraintTop_toBottomOf="@id/back_button"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="16dp"/>
+
+        <ImageView
+            android:id="@+id/image_placeholder"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="#E0E0E0"
+            app:layout_constraintTop_toBottomOf="@id/title_text"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintDimensionRatio="1:1"
+            android:layout_marginTop="16dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp" />
+
+        <TextView
+            android:id="@+id/guide_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="운동 가이드"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            app:layout_constraintTop_toBottomOf="@id/image_placeholder"
+            app:layout_constraintStart_toStartOf="parent"
+            android:layout_marginTop="40dp" />
+
+        <TextView
+            android:id="@+id/start_position_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="시작 자세"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            app:layout_constraintTop_toBottomOf="@id/guide_title"
+            app:layout_constraintStart_toStartOf="parent"
+            android:layout_marginTop="16dp" />
+
+        <TextView
+            android:id="@+id/start_position_content"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="1. 바닥보다 높은 곳에 손을 올리고 진행해주세요.\n2. 엉덩이와 어깨에 힘을 주어 몸을 일직선으로 만들어 주세요."
+            android:textSize="14sp"
+            android:textColor="@color/black"
+            app:layout_constraintTop_toBottomOf="@id/start_position_title"
+            app:layout_constraintStart_toStartOf="parent"
+            android:layout_marginTop="16dp"/>
+
+        <TextView
+            android:id="@+id/exercise_motion_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="운동 동작"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            app:layout_constraintTop_toBottomOf="@id/start_position_content"
+            app:layout_constraintStart_toStartOf="parent"
+            android:layout_marginTop="36dp" />
+
+        <TextView
+            android:id="@+id/exercise_motion_content"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="1. 가슴이 닿기 직전까지 내려가 주세요.\n2. 이때, 팔꿈치는 바깥과 수직이 되어야 합니다.\n3. 가슴에 힘을 주어 시작 자세로 돌아오세요."
+            android:textSize="14sp"
+            android:textColor="@color/black"
+            app:layout_constraintTop_toBottomOf="@id/exercise_motion_title"
+            app:layout_constraintStart_toStartOf="parent"
+            android:layout_marginTop="16dp"/>
+
+        <TextView
+            android:id="@+id/breathing_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="호흡법"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            app:layout_constraintTop_toBottomOf="@id/exercise_motion_content"
+            app:layout_constraintStart_toStartOf="parent"
+            android:layout_marginTop="36dp" />
+
+        <TextView
+            android:id="@+id/breathing_content"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="팔을 굽힐 때 숨을 들이쉬고, 팔을 밀 때 숨을 내쉬세요."
+            android:textSize="14sp"
+            android:textColor="@color/black"
+            app:layout_constraintTop_toBottomOf="@id/breathing_title"
+            app:layout_constraintStart_toStartOf="parent"
+            android:layout_marginTop="16dp"/>
+
+        <!-- 주의사항 -->
+        <TextView
+            android:id="@+id/caution_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="주의사항"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            app:layout_constraintTop_toBottomOf="@id/breathing_content"
+            app:layout_constraintStart_toStartOf="parent"
+            android:layout_marginTop="48dp" />
+
+        <TextView
+            android:id="@+id/caution_content"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="1. 어깨에 무리가 가지 않도록 내려갈 수 있는 만큼 내려가 주세요.\n2. 엉덩이가 내려가지 않게 코어에 힘을 유지하세요."
+            android:textSize="14sp"
+            android:textColor="@color/black"
+            app:layout_constraintTop_toBottomOf="@id/caution_title"
+            app:layout_constraintStart_toStartOf="parent"
+            android:layout_marginTop="16dp" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="80dp"
+            app:layout_constraintTop_toBottomOf="@id/caution_content"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>

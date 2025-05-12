@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph_main"
     app:startDestination="@id/homeFragment">
 
@@ -8,11 +9,6 @@
         android:id="@+id/homeFragment"
         android:name="com.cookandroid.challengers.HomeFragment"
         android:label="홈" />
-
-    <fragment
-        android:id="@+id/exerciseFragment"
-        android:name="com.cookandroid.challengers.ExerciseFragment"
-        android:label="운동" />
 
     <fragment
         android:id="@+id/challengeFragment"
@@ -28,4 +24,101 @@
         android:id="@+id/storeFragment"
         android:name="com.cookandroid.challengers.StoreFragment"
         android:label="스토어" />
+
+    <!-- 운동 화면 -->
+    <fragment
+        android:id="@+id/exerciseFragment"
+        android:name="com.cookandroid.challengers.ExerciseFragment"
+        android:label="ExerciseFragment">
+        <action
+            android:id="@+id/action_exercise_to_exerciseList"
+            app:destination="@+id/exerciseListFragment" />
+        <action
+            android:id="@+id/action_exercise_to_exerciseAdd"
+            app:destination="@id/exerciseAddFragment" />
+        <action
+            android:id="@+id/action_exercise_to_exerciseDoing"
+            app:destination="@id/exerciseDoingFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/exerciseListFragment"
+        android:name="com.cookandroid.challengers.ExerciseListFragment"
+        android:label="운동 목록"
+        tools:layout="@layout/fragment_exercise_list">
+        <action
+            android:id="@+id/action_exerciseList_to_exerciseHidden"
+            app:destination="@id/exerciseHiddenFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/exerciseHiddenFragment"
+        android:name="com.cookandroid.challengers.ExerciseHiddenFragment"
+        android:label="숨긴 운동"
+        tools:layout="@layout/fragment_exercise_hidden" />
+
+    <fragment
+        android:id="@+id/exerciseAddFragment"
+        android:name="com.cookandroid.challengers.ExerciseAddFragment"
+        android:label="운동 추가"
+        tools:layout="@layout/fragment_exercise_add" />
+
+    <fragment
+        android:id="@+id/exerciseDoingFragment"
+        android:name="com.cookandroid.challengers.ExerciseDoingFragment"
+        android:label="운동 중"
+        tools:layout="@layout/fragment_exercise_doing">
+        <action
+            android:id="@+id/action_exerciseDoing_to_coolDownStretch"
+            app:destination="@id/coolDownStretchFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/exerciseDetailFragment"
+        android:name="com.cookandroid.challengers.ExerciseDetailFragment"
+        android:label="운동 정보"
+        tools:layout="@layout/fragment_exercise_add" />
+
+    <fragment
+        android:id="@+id/coolDownStretchFragment"
+        android:name="com.cookandroid.challengers.CoolDownStretchFragment"
+        android:label="쿨다운 스트레칭"
+        tools:layout="@layout/fragment_cool_down_stretch" >
+        <action
+            android:id="@+id/action_coolDownStretch_to_home"
+            app:destination="@id/homeFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/exerciseEditFragment"
+        android:name="com.cookandroid.challengers.ExerciseEditFragment"
+        android:label="운동 수정"
+        tools:layout="@layout/fragment_exercise_edit" />
+
+    <fragment
+        android:id="@+id/exerciseEditSetFragment"
+        android:name="com.cookandroid.challengers.ExerciseEditSetFragment"
+        android:label="운동 세트 수정"
+        tools:layout="@layout/fragment_exercise_edit_set">
+        <argument
+            android:name="exerciseId"
+            app:argType="long" />
+        <argument
+            android:name="initialSetList"
+            app:argType="com.cookandroid.challengers.data.ExerciseSet[]" />
+        <argument
+            android:name="highlightIndex"
+            app:argType="integer"
+            android:defaultValue="-1" />
+    </fragment>
+
+    <action
+        android:id="@+id/action_global_exerciseDetailFragment"
+        app:destination="@id/exerciseDetailFragment" />
+
+    <action
+        android:id="@+id/action_global_exerciseEditSetFragment"
+        app:destination="@id/exerciseEditSetFragment" />
+
+
 </navigation>

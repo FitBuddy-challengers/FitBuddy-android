@@ -31,5 +31,4 @@ interface ExerciseSetDao {
     @Query("DELETE FROM exercise_sets WHERE exerciseId = :exerciseId")
     suspend fun deleteSetsByExerciseId(exerciseId: Long)
 
-
 }
