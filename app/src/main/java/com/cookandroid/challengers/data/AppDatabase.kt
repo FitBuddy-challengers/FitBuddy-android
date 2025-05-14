@@ -28,6 +28,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
+
+//룸 데이터베이스 초기화시, 초기 데이터를 삽입하는 역할을 함.!
+//따라서 앱 처음 실행할 때 담긴 데이터이기에 삭제하지 않고 유지할 예정임.
+
 @Database(
     entities = [ExercisePlan::class, Exercise::class, ExerciseSet::class, WeightRecord::class,
                 PlanDetail::class, ChallengePersonal::class, CoolDownStretch::class],
