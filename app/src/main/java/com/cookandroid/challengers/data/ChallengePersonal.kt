@@ -3,6 +3,9 @@ package com.cookandroid.challengers.data
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
+//챌린지 기능 데이터는 데이터베이스 테이블로 실행할 예정!!!(ROOM 에서 데이터 베이스 전환이
+//일단 존재만 하고, 추후 필요없을 때 삭제하기!
+
 @Entity(tableName = "challenge_personal")
 data class ChallengePersonal(
     @PrimaryKey(autoGenerate = true) val id: Int = 0, // 자동 생성되는 Primary Key
