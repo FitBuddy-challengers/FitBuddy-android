@@ -2,7 +2,7 @@ package com.cookandroid.challengers.data
 
 import androidx.room.*
 import androidx.lifecycle.LiveData
-
+//사용X
 @Dao
 interface ChallengePersonalDao {
     @Query("SELECT * FROM challenge_personal WHERE prerequisiteChallengeId IS NULL LIMIT 1")
