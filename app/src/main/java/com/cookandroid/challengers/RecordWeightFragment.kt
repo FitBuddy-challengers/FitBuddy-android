@@ -1,6 +1,7 @@
-package com.cookandroid.challengers.ui.record
+package com.cookandroid.challengers
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -16,16 +17,17 @@ import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
 import com.github.mikephil.charting.formatter.ValueFormatter
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.button.MaterialButtonToggleGroup
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.navigation.fragment.findNavController
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
+import java.util.Locale
 
 class RecordWeightFragment : Fragment() {
 
@@ -34,9 +36,9 @@ class RecordWeightFragment : Fragment() {
     private lateinit var db: AppDatabase
     private lateinit var weightChart: LineChart
     private lateinit var fatChart: LineChart
-    private var weightRecords: List<WeightRecord> = emptyList()
-
+    private var weightRecords: MutableList<WeightRecord> = mutableListOf()
     private val dateFormatter = DateTimeFormatter.ofPattern("MM/dd")
+    private val fullDateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.getDefault())
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -58,11 +60,18 @@ class RecordWeightFragment : Fragment() {
         setupChart(fatChart)
 
         observeWeightRecords()
-
         setupPeriodToggleButtons()
+
+        binding.fabAddWeight.setOnClickListener {
+            RecordAddWeightFragment().show(parentFragmentManager, "AddWeight")
+        }
+
     }
 
     private fun setupPeriodToggleButtons() {
+        binding.btnWeekWeight.isChecked = true
+        binding.btnWeekFat.isChecked = true
+
         binding.periodToggleWeight.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
                 updateWeightChartByPeriod(checkedId)
@@ -73,19 +82,22 @@ class RecordWeightFragment : Fragment() {
                 updateFatChartByPeriod(checkedId)
             }
         }
-        // 초기 선택 설정 (1주)
-        binding.btnWeekWeight.isChecked = true
-        binding.btnWeekFat.isChecked = true
     }
 
     private fun updateWeightChartByPeriod(checkedId: Int) {
+        if (_binding == null || isDetached) return
         val filteredRecords = filterRecordsByPeriod(checkedId)
-        updateChart(weightChart, filteredRecords, "kg", binding.tvWeightDateRange, binding.tvWeightAverage)
+        if (_binding != null && !isDetached) { // 추가: 뷰가 소멸되지 않았는지 확인
+            updateChart(weightChart, filteredRecords, "kg", binding.tvWeightDateRange, binding.tvWeightAverage)
+        }
     }
 
     private fun updateFatChartByPeriod(checkedId: Int) {
+        if (_binding == null || isDetached) return
         val filteredRecords = filterRecordsByPeriod(checkedId)
-        updateChart(fatChart, filteredRecords, "%", binding.tvFatDateRange, binding.tvFatAverage)
+        if (_binding != null && !isDetached) {  // 추가: 뷰가 소멸되지 않았는지 확인
+            updateChart(fatChart, filteredRecords, "%", binding.tvFatDateRange, binding.tvFatAverage)
+        }
     }
 
     private fun filterRecordsByPeriod(checkedId: Int): List<WeightRecord> {
@@ -112,12 +124,13 @@ class RecordWeightFragment : Fragment() {
         chart.description.isEnabled = false
         chart.setTouchEnabled(true)
         chart.isDragEnabled = true
-        chart.setScaleEnabled(true)
-        chart.setPinchZoom(true)
+        chart.setScaleEnabled(false)
+        chart.setPinchZoom(false)
         chart.xAxis.position = XAxis.XAxisPosition.BOTTOM
         chart.xAxis.setDrawGridLines(false)
         chart.axisRight.isEnabled = false
         chart.legend.isEnabled = false
+        chart.isDragXEnabled = true
     }
 
     private fun updateChart(
@@ -127,11 +140,15 @@ class RecordWeightFragment : Fragment() {
         dateRangeTextView: TextView,
         averageTextView: TextView
     ) {
+        if (isDetached) return
+
         if (records.isEmpty()) {
             chart.clear()
             chart.invalidate()
-            dateRangeTextView.text = ""
-            averageTextView.text = ""
+            if (_binding != null) { // 뷰가 null이 아닌 경우에만 텍스트 뷰 업데이트
+                dateRangeTextView.text = ""
+                averageTextView.text = ""
+            }
             return
         }
 
@@ -157,45 +174,46 @@ class RecordWeightFragment : Fragment() {
         val lineData = LineData(dataSet)
         chart.data = lineData
 
-        // X축 포맷터 설정 (날짜)
         chart.xAxis.valueFormatter = object : ValueFormatter() {
             override fun getFormattedValue(value: Float): String {
                 if (value >= 0 && value < sortedRecords.size) {
-                    return sortedRecords[value.toInt()].date.format(DateTimeFormatter.ofPattern("MM/dd"))
+                    return sortedRecords[value.toInt()].date.format(dateFormatter)
                 }
                 return ""
             }
         }
 
-        // Y축 최소/최대 값 설정 (데이터 기반)
         val minVal = entries.minByOrNull { it.y }?.y ?: 0f
-        val maxVal = entries.maxByOrNull { it.y }?.y ?: 100f // 기본 최댓값
-        chart.axisLeft.axisMinimum = minVal * 0.9f // 약간의 패딩
+        val maxVal = entries.maxByOrNull { it.y }?.y ?: 100f
+        chart.axisLeft.axisMinimum = minVal * 0.9f
         chart.axisLeft.axisMaximum = maxVal * 1.1f
 
         chart.invalidate()
 
-        // 날짜 범위 표시
-        val firstDate = sortedRecords.first().date.format(DateTimeFormatter.ofPattern("yy년 M월 d일"))
-        val lastDate = sortedRecords.last().date.format(DateTimeFormatter.ofPattern("yy년 M월 d일"))
-        dateRangeTextView.text = "$firstDate ~ $lastDate"
+        if (_binding != null) { // 뷰가 null이 아닌 경우에만 텍스트 뷰 업데이트
+            val firstDate = sortedRecords.first().date.format(fullDateFormatter)
+            val lastDate = sortedRecords.last().date.format(fullDateFormatter)
+            dateRangeTextView.text = "$firstDate ~ $lastDate"
 
-        // 평균 값 계산 및 표시
-        if (entries.isNotEmpty()) {
-            val average = entries.sumOf { it.y.toDouble() } / entries.size
-            averageTextView.text = String.format("평균 %.1f %s", average, unit)
-        } else {
-            averageTextView.text = ""
+            if (entries.isNotEmpty()) {
+                val average = entries.sumOf { it.y.toDouble() } / entries.size
+                averageTextView.text = String.format("평균 %.1f %s", average, unit)
+            } else {
+                averageTextView.text = ""
+            }
         }
     }
 
     private fun observeWeightRecords() {
         lifecycleScope.launch(Dispatchers.IO) {
-            db.weightRecordDao().getAllRecords().collectLatest { records -> // 여기에서 접근
+            db.weightRecordDao().getAllRecords().collectLatest { records ->
                 withContext(Dispatchers.Main) {
-                    weightRecords = records
-                    updateWeightChartByPeriod(binding.periodToggleWeight.checkedButtonId)
-                    updateFatChartByPeriod(binding.periodToggleFat.checkedButtonId)
+                    if (_binding != null && !isDetached) {
+                        weightRecords.clear()
+                        weightRecords.addAll(records)
+                        updateWeightChartByPeriod(binding.periodToggleWeight.checkedButtonId)
+                        updateFatChartByPeriod(binding.periodToggleFat.checkedButtonId)
+                    }
                 }
             }
         }

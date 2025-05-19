@@ -2,6 +2,7 @@ package com.cookandroid.challengers
 
 import android.app.Dialog
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -9,6 +10,8 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.cookandroid.challengers.ExerciseEditSetFragment
+
 import com.cookandroid.challengers.data.Exercise
 import com.cookandroid.challengers.data.PlanDetail
 import com.cookandroid.challengers.data.db.AppDatabase
@@ -21,7 +24,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class ExerciseEditFragment(
-
     private val planDetail: PlanDetail,
     private val exercise: Exercise,
     private val onExerciseDeleted: () -> Unit
@@ -46,21 +48,19 @@ class ExerciseEditFragment(
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = BottomSheetDialog(requireContext(), R.style.BottomSheetDialogTheme)
-        dialog.setOnShowListener { dlg ->
+        dialog.setOnShowListener { dialogInterface ->
             val bottomSheet =
-                (dlg as BottomSheetDialog).findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
-
-            // 여기서 requireContext() 대신 dialog.context 사용
-            bottomSheet?.background = ContextCompat.getDrawable(
-                dialog.context,
-                R.drawable.bottom_sheet_background
-            )
-
+                (dialogInterface as BottomSheetDialog).findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
             bottomSheet?.let {
+                it.background = ContextCompat.getDrawable(
+                    dialog.context,
+                    R.drawable.bottom_sheet_background
+                )
                 val behavior = BottomSheetBehavior.from(it)
-                val height = resources.getDimensionPixelSize(R.dimen.exercise_set_peek_height)
-                behavior.peekHeight = height
-                behavior.maxHeight = height
+                behavior.peekHeight =
+                    resources.getDimensionPixelSize(R.dimen.exercise_set_peek_height)
+                behavior.maxHeight =
+                    resources.getDimensionPixelSize(R.dimen.exercise_set_peek_height)
                 behavior.state = BottomSheetBehavior.STATE_EXPANDED
             }
         }
@@ -71,35 +71,91 @@ class ExerciseEditFragment(
         super.onViewCreated(view, savedInstanceState)
         db = AppDatabase.getDatabase(requireContext(), viewLifecycleOwner.lifecycleScope)
 
-        // 세트 수정하기
+        binding.textTitle.text = exercise.name
+        binding.menuFavorite.text = if (exercise.isFavorite) "즐겨찾기 해제" else "즐겨찾기"
+        binding.iconFavorite.isSelected = exercise.isFavorite
+
         binding.layoutSetEdit.setOnClickListener {
             lifecycleScope.launch(Dispatchers.IO) {
                 val exerciseSets = db.exerciseSetDao().getSetsByExerciseId(exercise.id)
                 withContext(Dispatchers.Main) {
-                    // newInstance 로 번들까지 세팅
                     val sheet = ExerciseEditSetFragment.newInstance(
-                        exercise.id,
-                        exerciseSets,
-                        /*highlightIndex=*/ -1
+                        planDetail.exercisePlanId,  // planId
+                        exercise.id,                // exerciseId
+                        exerciseSets,               // initialSetList
+                        -1,                          // 하이라이트 인덱스
+                        exercise.equip
                     )
-                    sheet.setOnSetsUpdatedListener { updatedSets ->
-                        // 변경된 세트 받아서 처리
-                    }
-                    // 🚩 Activity의 FragmentManager 에 띄우기
-                    sheet.show(requireActivity().supportFragmentManager, ExerciseEditSetFragment.TAG)
-                    // 부모 시트 닫기
-                    dismiss()
+                    sheet.show(
+                        childFragmentManager,
+                        ExerciseEditSetFragment.TAG
+                    )
                 }
             }
         }
 
-        // 운동 변경하기
         binding.layoutExerciseChange.setOnClickListener {
-            dismiss()
-            // TODO: 운동 변경 다이얼로그
+            val sheet = ExerciseChangeFragment.newInstance(
+                planDetail.exercisePlanId,
+                exercise.id
+            )
+
+            parentFragmentManager.setFragmentResultListener(
+                "exercise_changed", viewLifecycleOwner
+            ) { _, bundle ->
+                val newId = bundle.getLong("newId")
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        val updatedRows = db.planDetailDao().replaceExercise(
+                            planDetail.exercisePlanId,
+                            exercise.id,
+                            newId
+                        )
+                        if (updatedRows > 0) {
+                            db.exerciseSetDao().updateExerciseId(
+                                oldExerciseId = exercise.id,
+                                newExerciseId = newId
+                            )
+                            db.exerciseDao().getExerciseById(newId)?.let { newEx ->
+                                withContext(Dispatchers.Main) {
+                                    binding.textTitle.text = newEx.name
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "운동이 ${newEx.name}으로 변경되었습니다.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    parentFragmentManager.setFragmentResult(
+                                        "sets_updated",
+                                        Bundle()
+                                    )
+                                    dismiss()
+                                }
+                            }
+                        } else {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(
+                                    requireContext(),
+                                    "운동 변경 실패: PlanDetail 업데이트 안됨",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("ExerciseChange", "Error updating exercise: ${e.message}")
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                requireContext(),
+                                "운동 변경 중 오류 발생: ${e.message}",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }
+            }
+
+            sheet.show(childFragmentManager, "ExerciseChange")
         }
 
-        // 운동 가이드
         binding.layoutExerciseGuide.setOnClickListener {
             dismiss()
             findNavController().navigate(
@@ -108,50 +164,37 @@ class ExerciseEditFragment(
             )
         }
 
-        // 즐겨찾기
         binding.layoutFavorite.setOnClickListener {
             lifecycleScope.launch(Dispatchers.IO) {
-                val updated = exercise.copy(isFavorite = !exercise.isFavorite)
-                db.exerciseDao().update(updated)
+                val updatedExercise = exercise.copy(isFavorite = !exercise.isFavorite)
+                db.exerciseDao().update(updatedExercise)
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
                         requireContext(),
-                        if (updated.isFavorite) "${exercise.name} 즐겨찾기 추가"
-                        else "${exercise.name} 즐겨찾기 해제",
+                        if (updatedExercise.isFavorite) "${exercise.name} 즐겨찾기 추가" else "${exercise.name} 즐겨찾기 해제",
                         Toast.LENGTH_SHORT
                     ).show()
                     binding.menuFavorite.text =
-                        if (updated.isFavorite) "즐겨찾기 해제" else "즐겨찾기"
-                    binding.iconFavorite.isSelected = updated.isFavorite
+                        if (updatedExercise.isFavorite) "즐겨찾기 해제" else "즐겨찾기"
+                    binding.iconFavorite.isSelected = updatedExercise.isFavorite
+                    parentFragmentManager.setFragmentResult("sets_updated", Bundle())
                 }
             }
         }
 
-        // 운동 숨기기
-        binding.layoutHideExercise.setOnClickListener {
-            lifecycleScope.launch(Dispatchers.IO) {
-                db.exerciseDao().update(exercise.copy(isHidden = true))
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(requireContext(), "${exercise.name} 숨김", Toast.LENGTH_SHORT).show()
-                    dismiss()
-                }
-            }
-        }
-
-        // 운동 삭제하기
         binding.layoutDeleteExercise.setOnClickListener {
             lifecycleScope.launch(Dispatchers.IO) {
                 db.planDetailDao().delete(planDetail)
                 db.exerciseSetDao().deleteSetsByExerciseId(exercise.id)
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(requireContext(), "${exercise.name} 삭제", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "${exercise.name} 삭제", Toast.LENGTH_SHORT)
+                        .show()
+                    parentFragmentManager.setFragmentResult("sets_updated", Bundle())
                     dismiss()
                     onExerciseDeleted()
                 }
             }
         }
-
-        binding.textTitle.text = exercise.name
     }
 
     override fun onDestroyView() {

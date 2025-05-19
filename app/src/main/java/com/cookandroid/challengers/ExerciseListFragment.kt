@@ -70,7 +70,7 @@ class ItemClickListener(
     }
 }
 
-
+// 운동탭 우측 상단 - 운동 목록
 class ExerciseListFragment : Fragment() {
 
     private var _binding: FragmentExerciseListBinding? = null
@@ -276,7 +276,7 @@ class ExerciseListFragment : Fragment() {
     private fun setupChipGroups() {
         setupChips(binding.myChipGroup, listOf("즐겨찾기", "최근 한 운동"))
         setupChips(binding.partChipGroup, listOf("가슴", "등", "하체", "어깨", "복근", "유산소"))
-        setupChips(binding.equipmentChipGroup, listOf("맨몸", "덤벨", "케틀벨", "세라밴드", "스텝박스"))
+        setupChips(binding.equipmentChipGroup, listOf("맨몸", "덤벨", "케틀벨", "세라밴드", "스텝박스","짐볼"))
     }
 
     private fun setupButtonClickListeners() {

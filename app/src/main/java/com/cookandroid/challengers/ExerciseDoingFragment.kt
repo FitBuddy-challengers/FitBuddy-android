@@ -45,6 +45,8 @@ class ExerciseDoingFragment : Fragment() {
     private var currentExerciseIndex = 0
     private var planExerciseList: List<ExerciseInPlan> = emptyList()
     private var currentExerciseId: Long = -1L
+    private var setStartTime: Long = 0L
+
     private var currentExerciseSets: MutableList<ExerciseSet> = mutableListOf()
 
     private val stopwatchViewModel: StopwatchViewModel by activityViewModels()
@@ -171,6 +173,7 @@ class ExerciseDoingFragment : Fragment() {
     }
 
     private fun fetchSetsForCurrentExercise() {
+
         planExerciseList.getOrNull(currentExerciseIndex)?.exercise?.let { ex ->
             currentExerciseId = ex.id
             lifecycleScope.launch(Dispatchers.IO) {
@@ -198,7 +201,11 @@ class ExerciseDoingFragment : Fragment() {
     private fun updateExerciseInfo() {
         planExerciseList.getOrNull(currentExerciseIndex)?.exercise?.let { ex ->
             binding.exerciseNameTextView.text = ex.name
-            val resId = resources.getIdentifier(ex.imagePath ?: "", "drawable", requireContext().packageName)
+            val resId = resources.getIdentifier(
+                ex.imagePath ?: "",
+                "drawable",
+                requireContext().packageName
+            )
             Glide.with(requireContext())
                 .load(if (resId != 0) resId else R.drawable.ic_launcher_background)
                 .transition(withCrossFade())
@@ -210,7 +217,15 @@ class ExerciseDoingFragment : Fragment() {
 
     private fun completeCurrentSet() {
         if (currentSetIndex < currentExerciseSets.size) {
-            val completed = currentExerciseSets[currentSetIndex].copy(isCompleted = true, isHighlighted = false)
+            val now = System.currentTimeMillis()
+            val elapsed = now - setStartTime // 세트 수행 시간 계산
+
+            val completed =
+                currentExerciseSets[currentSetIndex].copy(
+                    isCompleted = true,
+                    isHighlighted = false,
+                    elapsedTimeMillis = elapsed // 수행 시간 기록
+                )
             currentExerciseSets[currentSetIndex] = completed
 
             val nextIdx = currentSetIndex + 1
@@ -237,22 +252,24 @@ class ExerciseDoingFragment : Fragment() {
             lifecycleScope.launch(Dispatchers.IO) {
                 val nextNo = (currentExerciseSets.maxByOrNull { it.setNumber }?.setNumber ?: 0) + 1
                 val newSet = ExerciseSet(
-                    id = 0,
+                    id = 0L,
+                    exercisePlanId = exercisePlanId,
                     exerciseId = ex.id,
                     setNumber = nextNo,
                     weight = currentExerciseSets.lastOrNull()?.weight ?: 0,
-                    reps = currentExerciseSets.lastOrNull()?.reps ?: 0
+                    reps = currentExerciseSets.lastOrNull()?.reps ?: 0,
+                    isCompleted = false
                 )
-                val inserted = exerciseSetDao.insert(newSet)
-                if (inserted > 0) {
+                val insertedId = exerciseSetDao.insert(newSet)
+                if (insertedId > 0) {
                     withContext(Dispatchers.Main) {
-                        currentExerciseSets.add(newSet.copy(id = inserted))
-                        val list = currentExerciseSets.mapIndexed { idx, s ->
-                            s.copy(isHighlighted = (idx == currentSetIndex))
-                        }.sortedBy { it.setNumber }
-                        setAdapter.submitList(list) {
+                        currentExerciseSets.add(newSet.copy(id = insertedId))
+                        val updatedList = currentExerciseSets
+                            .mapIndexed { idx, s -> s.copy(isHighlighted = (idx == currentSetIndex)) }
+                            .sortedBy { it.setNumber }
+                        setAdapter.submitList(updatedList) {
                             updateProgressText()
-                            binding.setsRecyclerView.scrollToPosition(list.size - 1)
+                            binding.setsRecyclerView.scrollToPosition(updatedList.size - 1)
                         }
                     }
                 }
@@ -260,19 +277,29 @@ class ExerciseDoingFragment : Fragment() {
         }
     }
 
+
     private fun showEditSetBottomSheet() {
+        val equip = planExerciseList
+            .getOrNull(currentExerciseIndex)
+            ?.exercise?.equip?.trim()
+
         val sheet = ExerciseEditSetFragment.newInstance(
-            currentExerciseId, currentExerciseSets.toList(), currentSetIndex
+            exercisePlanId,                   // planId
+            currentExerciseId,                // exerciseId
+            currentExerciseSets.toList(),     // initialSetList
+            currentSetIndex,                  // highlightIndex
+            equip                             // equip
         )
-        sheet.setOnSetsUpdatedListener { updated ->
-            currentExerciseSets = updated.toMutableList()
-            (binding.setsRecyclerView.adapter as? ExerciseSetAdapter)
-                ?.updateSetNumbers(currentExerciseSets)
-            val list = currentExerciseSets.mapIndexed { idx, s ->
-                s.copy(isHighlighted = (idx == currentSetIndex))
-            }
-            setAdapter.submitList(list) { updateProgressText() }
-        }
+
+//        sheet.setOnSetsUpdatedListener { updated ->
+//            currentExerciseSets = updated.toMutableList()
+//            (binding.setsRecyclerView.adapter as? ExerciseSetAdapter)
+//                ?.updateSetNumbers(currentExerciseSets)
+//            val list = currentExerciseSets.mapIndexed { idx, s ->
+//                s.copy(isHighlighted = (idx == currentSetIndex))
+//            }
+//            setAdapter.submitList(list) { updateProgressText() }
+//        }
         sheet.show(childFragmentManager, ExerciseEditSetFragment.TAG)
     }
 
@@ -297,6 +324,7 @@ class ExerciseDoingFragment : Fragment() {
                         list[currentSetIndex - 1].copy(isHighlighted = false)
                 }
                 setAdapter.submitList(list) {
+                    setStartTime = System.currentTimeMillis() // 다음 세트 진입 시간 기록
                     prefs.edit().putInt(KEY_SET_INDEX, nextIdx).apply()
                     updateProgressText()
                 }
@@ -348,7 +376,8 @@ class ExerciseDoingFragment : Fragment() {
 
     private class ExerciseSetAdapter(
         private val onSetClick: ((ExerciseSet) -> Unit)? = null
-    ) : ListAdapter<ExerciseSet, ExerciseSetAdapter.ViewHolder>(object : DiffUtil.ItemCallback<ExerciseSet>() {
+    ) : ListAdapter<ExerciseSet, ExerciseSetAdapter.ViewHolder>(object :
+        DiffUtil.ItemCallback<ExerciseSet>() {
         override fun areItemsTheSame(old: ExerciseSet, new: ExerciseSet) = old.id == new.id
         override fun areContentsTheSame(old: ExerciseSet, new: ExerciseSet) = old == new
     }) {
@@ -357,9 +386,11 @@ class ExerciseDoingFragment : Fragment() {
             currentEquip = e
             notifyDataSetChanged()
         }
+
         fun updateSetNumbers(list: MutableList<ExerciseSet>) {
             list.forEachIndexed { idx, s -> s.setNumber = idx + 1 }
         }
+
         inner class ViewHolder(val b: ItemExerciseSetBinding) : RecyclerView.ViewHolder(b.root) {
             init {
                 b.root.setOnClickListener {
@@ -368,37 +399,48 @@ class ExerciseDoingFragment : Fragment() {
                     }
                 }
             }
+
             fun bind(s: ExerciseSet) {
                 b.setNumberTextView.text = "${s.setNumber}세트"
-                b.repsTextView.text     = "${s.reps}회"
+                b.repsTextView.text = "${s.reps}회"
 
                 val lp = b.repsTextView.layoutParams as ViewGroup.MarginLayoutParams
-                if (currentEquip in listOf("맨몸", "스텝박스", "세라밴드")) {
-                    b.weightTextView.visibility  = View.GONE
+                if (currentEquip in listOf("맨몸", "스텝박스", "세라밴드", "짐볼")) {
+                    b.weightTextView.visibility = View.GONE
                     b.dividerImageView.visibility = View.GONE
                     // repsTextView 오른쪽 마진 24dp 로 설정
                     lp.marginEnd = itemView.context.resources.getDimensionPixelSize(
-                        R.dimen.item_reps_margin_end_no_weight)
+                        R.dimen.item_reps_margin_end_no_weight
+                    )
                 } else {
-                    b.weightTextView.visibility  = View.VISIBLE
+                    b.weightTextView.visibility = View.VISIBLE
                     b.dividerImageView.visibility = View.VISIBLE
                     b.weightTextView.text = s.weight?.let { "${it}kg" } ?: "-"
                     lp.marginEnd = itemView.context.resources.getDimensionPixelSize(
-                        R.dimen.item_reps_margin_end_default)
+                        R.dimen.item_reps_margin_end_default
+                    )
                 }
                 b.completionCheckImageView.alpha = if (s.isCompleted) 1f else 0f
                 b.root.background = ContextCompat.getDrawable(
                     b.root.context,
                     when {
-                        s.isCompleted    -> R.drawable.set_item_background_completed
-                        s.isHighlighted  -> R.drawable.set_item_background_emphasized
-                        else              -> R.drawable.set_item_background
+                        s.isCompleted -> R.drawable.set_item_background_completed
+                        s.isHighlighted -> R.drawable.set_item_background_emphasized
+                        else -> R.drawable.set_item_background
                     }
                 )
             }
         }
+
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-            ViewHolder(ItemExerciseSetBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            ViewHolder(
+                ItemExerciseSetBinding.inflate(
+                    LayoutInflater.from(parent.context),
+                    parent,
+                    false
+                )
+            )
+
         override fun onBindViewHolder(holder: ViewHolder, position: Int) =
             holder.bind(getItem(position))
     }

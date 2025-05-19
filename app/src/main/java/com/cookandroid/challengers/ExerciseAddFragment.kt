@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.cookandroid.challengers.data.Exercise
 import com.cookandroid.challengers.data.ExerciseSet
 import com.cookandroid.challengers.data.PlanDetail
@@ -132,7 +133,7 @@ class ExerciseAddFragment : Fragment() {
 
         setupChips(binding.myChipGroup, listOf("즐겨찾기", "최근 한 운동"))
         setupChips(binding.partChipGroup, listOf("가슴", "등", "하체", "어깨", "복근", "유산소"))
-        setupChips(binding.equipmentChipGroup, listOf("맨몸", "덤벨", "케틀벨", "세라밴드", "스텝박스"))
+        setupChips(binding.equipmentChipGroup, listOf("맨몸", "덤벨", "케틀벨", "세라밴드", "스텝박스","짐볼"))
 
         binding.addCompleteButton.setOnClickListener {
             val maxSelect = maxSlots - existingExercises.size
@@ -140,36 +141,41 @@ class ExerciseAddFragment : Fragment() {
                 Toast.makeText(requireContext(), "최대 ${maxSelect}개까지 선택 가능합니다.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
+
             lifecycleScope.launch(Dispatchers.IO) {
+                val defaultSets = 3
+                val defaultReps = 15
+
                 selectedExercises.forEachIndexed { idx, ex ->
-                    val newPlanDetail = PlanDetail(
+                    val planDetail = PlanDetail(
                         exercisePlanId = planId,
                         exerciseId = ex.id,
-                        exOrder = existingExercises.size + idx + 1,
-                        sets = 3, // 기본 세트 수
-                        reps = 12 // 기본 횟수
+                        exOrder = existingExercises.size + idx + 1
                     )
-                    val insertedPlanExerciseId = planDetailDao.insert(newPlanDetail)
+                    planDetailDao.insert(planDetail)
 
-                    // 기본 세트 수만큼 ExerciseSet 생성 및 삽입
-                    for (i in 1..newPlanDetail.sets) {
-                        val newExerciseSet = ExerciseSet(
-                            exerciseId = ex.id,
-                            setNumber = i,
-                            weight = 0, // 기본 무게 (조정 가능)
-                            reps = newPlanDetail.reps,
-                            isCompleted = false,
-                            isHighlighted = (i == 1 && idx == 0 && existingExercises.isEmpty()) // 첫 번째 운동의 첫 번째 세트 하이라이트 (선택 사항)
+                    for (i in 1..defaultSets) {
+                        val exerciseSet = ExerciseSet(
+                            exercisePlanId  = planId,
+                            exerciseId      = ex.id,
+                            setNumber       = i,
+                            weight          = 0,
+                            reps            = defaultReps,
+                            isCompleted     = false,
+                            isHighlighted   = (i == 1 && idx == 0 && existingExercises.isEmpty())
                         )
-                        db.exerciseSetDao().insert(newExerciseSet)
+                        db.exerciseSetDao().insert(exerciseSet)
                     }
-                    Log.d("AddExercise", "Inserted PlanExercise ID: $insertedPlanExerciseId for ${ex.name}")
+
+                    Log.d("AddExercise", "Inserted PlanDetail for ${ex.name}")
                 }
+
                 withContext(Dispatchers.Main) {
                     findNavController().popBackStack()
                 }
             }
         }
+
 
         binding.backButton.setOnClickListener {
             findNavController().popBackStack()
@@ -376,6 +382,21 @@ class ExerciseAddFragment : Fragment() {
             fun bind(exercise: Exercise) {
                 binding.exerciseNameTextView.text = exercise.name
                 binding.favoriteButton.isSelected = exercise.isFavorite
+
+                val resId = context.resources.getIdentifier(
+                    exercise.imagePath ?: "",
+                    "drawable",
+                    context.packageName
+                ).takeIf { it != 0 } ?: R.drawable.ic_launcher_background
+
+                // Glide 로 이미지 로드
+                Glide.with(binding.exerciseImageView)
+                    .asBitmap() // GIF를 비트맵으로 로드하여 정지 상태로
+                    .load(resId)
+                    .placeholder(R.drawable.ic_launcher_background)   // 로딩 중 보여줄 이미지
+                    .error(R.drawable.ic_launcher_background)  // 에러 시 보여줄 이미지
+                    .into(binding.exerciseImageView)
+
                 // 아이템이 바인딩될 때 현재 선택 상태에 따라 배경색 설정 (원하는 색상으로)
                 updateBackgroundColor(selectedItemPositions.contains(adapterPosition))
             }

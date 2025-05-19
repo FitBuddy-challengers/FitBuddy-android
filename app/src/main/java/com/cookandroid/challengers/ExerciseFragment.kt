@@ -2,9 +2,14 @@ package com.cookandroid.challengers
 
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
+import android.widget.ImageButton
+import android.widget.ImageView
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -13,7 +18,9 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.cookandroid.challengers.data.ExercisePlanDao
+import com.cookandroid.challengers.data.PlanDetail
 import com.cookandroid.challengers.data.PlanDetailDao
 import com.cookandroid.challengers.data.PlanDetailWithExercise
 import com.cookandroid.challengers.data.db.AppDatabase
@@ -27,6 +34,7 @@ import kotlinx.coroutines.withContext
 import java.util.Calendar
 import java.util.Collections
 
+// 운동탭 메인화면
 class ExerciseFragment : Fragment() {
 
     private var _binding: FragmentExerciseBinding? = null
@@ -35,6 +43,7 @@ class ExerciseFragment : Fragment() {
     private lateinit var adapter: ExerciseAdapter
     private lateinit var planDao: ExercisePlanDao
     private lateinit var planDetailDao: PlanDetailDao
+    private lateinit var db: AppDatabase
     private var planId: Long = -1L
 
     override fun onCreateView(
@@ -49,13 +58,15 @@ class ExerciseFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // DAO 초기화
-        val db = AppDatabase.getDatabase(requireContext(), lifecycleScope)
+        db = AppDatabase.getDatabase(requireContext(), lifecycleScope)
         planDao = db.exercisePlanDao()
         planDetailDao = db.planDetailDao()
 
-        // 어댑터 세팅
-        adapter = ExerciseAdapter(requireContext(), this) {
+        parentFragmentManager.setFragmentResultListener("sets_updated", viewLifecycleOwner) { _, _ ->
+            loadTodayPlan()
+        }
+
+        adapter = ExerciseAdapter(requireContext(), this, db) {
             findNavController().navigate(
                 R.id.action_exercise_to_exerciseAdd,
                 Bundle().apply { putLong("planId", planId) }
@@ -66,8 +77,6 @@ class ExerciseFragment : Fragment() {
             adapter = this@ExerciseFragment.adapter
         }
         setupDragAndDrop()
-
-        // 오늘 계획 처음 로드
         loadTodayPlan()
 
         binding.startExerciseButton.setOnClickListener {
@@ -88,7 +97,6 @@ class ExerciseFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        // DoingFragment 등에서 돌아올 때도 항상 최신 상태로
         loadTodayPlan()
     }
 
@@ -115,9 +123,10 @@ class ExerciseFragment : Fragment() {
                             .collectLatest { exercises ->
                                 val sorted = exercises.sortedBy { it.planDetail.exOrder }
                                 withContext(Dispatchers.Main) {
-                                    adapter.submitList(sorted)
+                                    adapter.submitList(sorted.toList())
                                 }
                             }
+
                     } else {
                         withContext(Dispatchers.Main) {
                             adapter.submitList(emptyList())
@@ -144,9 +153,39 @@ class ExerciseFragment : Fragment() {
                     Collections.swap(this, from, to)
                 }
                 adapter.submitList(newList)
-                // TODO: exOrder DB 저장 로직
+
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        val planDetails = planDetailDao.getPlanDetailsForPlanId(planId)
+                        newList.forEachIndexed { index, item ->
+                            val planDetail =
+                                planDetails.find { it.exerciseId == item.planDetail.exerciseId }
+                            planDetail?.let {
+                                val updatedPlanDetail = it.copy(exOrder = index)
+                                planDetailDao.update(updatedPlanDetail)
+                            }
+                        }
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                requireContext(),
+                                "운동 순서가 변경되었습니다.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    } catch (e: Exception) {
+                        Log.e("ExerciseFragment", "Error updating exOrder: ${e.message}")
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                requireContext(),
+                                "운동 순서 변경에 실패했습니다: ${e.message}",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }
                 return true
             }
+
             override fun onSwiped(holder: RecyclerView.ViewHolder, dir: Int) = Unit
         })
         helper.attachToRecyclerView(binding.exerciseListRecyclerView)
@@ -160,6 +199,7 @@ class ExerciseFragment : Fragment() {
     private class ExerciseAdapter(
         private val context: Context,
         private val fragment: Fragment,
+        private val db: AppDatabase,
         private val onAddClick: () -> Unit
     ) : ListAdapter<PlanDetailWithExercise, RecyclerView.ViewHolder>(
         object : DiffUtil.ItemCallback<PlanDetailWithExercise>() {
@@ -170,11 +210,11 @@ class ExerciseFragment : Fragment() {
                 return oldItem.planDetail.exercisePlanId == newItem.planDetail.exercisePlanId &&
                         oldItem.planDetail.exerciseId == newItem.planDetail.exerciseId
             }
+
             override fun areContentsTheSame(
                 oldItem: PlanDetailWithExercise,
                 newItem: PlanDetailWithExercise
             ): Boolean {
-                // isCompleted 가 바뀌면 무조건 리바인딩
                 return oldItem == newItem &&
                         oldItem.planDetail.isCompleted == newItem.planDetail.isCompleted
             }
@@ -213,7 +253,9 @@ class ExerciseFragment : Fragment() {
                         false
                     )
                     object : RecyclerView.ViewHolder(binding.root) {
-                        init { binding.addExerciseButton.setOnClickListener { onAddClick() } }
+                        init {
+                            binding.addExerciseButton.setOnClickListener { onAddClick() }
+                        }
                     }
                 }
             }
@@ -222,14 +264,34 @@ class ExerciseFragment : Fragment() {
             if (holder is ExerciseVH && position < currentList.size) {
                 val item = currentList[position]
                 holder.binding.apply {
-                    exerciseNameTextView.text = item.exercise.name
-                    exerciseDetailTextView.text = "${item.planDetail.reps}회 X ${item.planDetail.sets}세트"
+                    fragment.lifecycleScope.launch(Dispatchers.IO) {
+                        val exerciseSets = db.exerciseSetDao().getSetsByExerciseId(item.exercise.id)
+                        withContext(Dispatchers.Main) {
+                            val reps = exerciseSets.firstOrNull()?.reps ?: 0
+                            val setCount = exerciseSets.size
+                            holder.binding.apply {
+                                exerciseNameTextView.text = item.exercise.name
+                                exerciseDetailTextView.text = "${reps}회 X ${setCount}세트"
+                            }
+                        }
+                    }
+
+
                     val resId = context.resources.getIdentifier(
                         item.exercise.imagePath ?: "",
                         "drawable",
                         context.packageName
                     )
-                    exerciseImageView.setImageResource(if (resId != 0) resId else R.drawable.ic_launcher_background)
+                    if (item.exercise.imagePath != null) {
+                        Glide.with(context)
+                            .asBitmap()
+                            .load(resId)
+                            .placeholder(R.drawable.ic_launcher_background)
+                            .error(R.drawable.ic_launcher_background)
+                            .into(exerciseImageView)
+                    } else {
+                        exerciseImageView.setImageResource(R.drawable.ic_launcher_background)
+                    }
 
                     exerciseItem.setOnClickListener {
                         fragment.findNavController().navigate(
@@ -245,11 +307,23 @@ class ExerciseFragment : Fragment() {
                             item.planDetail,
                             item.exercise
                         ) {
-                            // 삭제 후 콜백 → 목록 갱신
                             (fragment as? ExerciseFragment)?.loadTodayPlan()
                         }
                         dialog.show(fragment.childFragmentManager, ExerciseEditFragment.TAG)
                     }
+                }
+            } else if (position == currentList.size) {
+                val coolDownListView =
+                    holder.itemView.findViewById<LinearLayout>(R.id.coolDownListLayoutContainer)
+                val btnExpand = holder.itemView.findViewById<ImageButton>(R.id.btnExpand)
+
+                btnExpand.setOnClickListener {
+                    coolDownListView.visibility =
+                        if (coolDownListView.visibility == View.GONE) {
+                            View.VISIBLE
+                        } else {
+                            View.GONE
+                        }
                 }
             }
         }

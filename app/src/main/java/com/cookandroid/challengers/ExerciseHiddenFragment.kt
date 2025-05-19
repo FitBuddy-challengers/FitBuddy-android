@@ -30,6 +30,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.core.graphics.drawable.toDrawable
 
+// 운동탭 - 운동목록 - 숨겨진운동
 class ExerciseHiddenFragment : Fragment() {
 
     private var _binding: FragmentExerciseHiddenBinding? = null

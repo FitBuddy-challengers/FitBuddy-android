@@ -31,6 +31,13 @@ interface ExerciseDao {
     @Query("SELECT * FROM exercises WHERE id = :id")
     suspend fun getExerciseById(id: Long): Exercise?
 
+    @Query("SELECT * FROM exercises")
+    suspend fun getAll(): List<Exercise>
+
+    // 운동 이름을 가져오기 위해 필요)
+    @Query("SELECT name FROM exercises WHERE id = :exerciseId")
+    suspend fun getExerciseNameById(exerciseId: Long): String
+
     // 특정 운동 계획에 속한 운동 목록 조회 (PlanExercise Join 테이블 사용)
     @Query("SELECT e.* FROM exercises e INNER JOIN plan_details pd ON e.id = pd.exerciseId WHERE pd.exercisePlanId = :planId ORDER BY pd.exOrder ASC")
     fun getExercisesByPlanId(planId: Long): List<Exercise>
@@ -55,6 +62,14 @@ interface ExerciseDao {
     @Transaction
     @Query("SELECT * FROM exercises WHERE id IN (SELECT exerciseId FROM plan_details WHERE exercisePlanId = :planId) ORDER BY name ASC")
     suspend fun getExercisesWithPlanInfo(planId: Long): List<ExerciseWithPlanInfo>
+
+    // 운동의 mets(운동계수)를 가져옴
+    @Query("SELECT mets FROM exercises WHERE part = :part LIMIT 1")
+
+    suspend fun getExerciseMets(part: String): Float
+    // 층간소음이 없는 운동만 가져옴
+    @Query("SELECT * FROM exercises WHERE isNoise = false")
+    fun getNonNoisyExercises(): Flow<List<Exercise>>
 }
 
 // Exercise와 PlanDetail 정보를 함께 담는 데이터 클래스 (필요한 정보에 따라 필드 추가)

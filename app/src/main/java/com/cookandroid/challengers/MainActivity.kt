@@ -1,6 +1,5 @@
 package com.cookandroid.challengers
 
-
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
@@ -25,6 +24,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // 최초 계획이 없으면 하나 생성
         val db = AppDatabase.getDatabase(this, lifecycleScope)
         lifecycleScope.launch {
             val planDao = db.exercisePlanDao()
@@ -34,19 +34,18 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Navigation Component 설정
         val navHostFragment =
             supportFragmentManager.findFragmentById(R.id.fragment_container_view) as NavHostFragment
         navController = navHostFragment.navController
-
         navController.setGraph(R.navigation.nav_graph_main)
         binding.mainBnv.setupWithNavController(navController)
 
+        // 로그인 여부에 따라 초기 노출
         val isLoggedIn = intent.getBooleanExtra("isLoggedIn", false)
-
         if (savedInstanceState == null) {
             if (isLoggedIn) {
                 navController.navigate(R.id.homeFragment)
@@ -56,6 +55,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // 프래그먼트 교체될 때마다 BottomNav 보여줄지 말지 결정
         supportFragmentManager.registerFragmentLifecycleCallbacks(
             object : FragmentManager.FragmentLifecycleCallbacks() {
                 override fun onFragmentResumed(fm: FragmentManager, f: Fragment) {
@@ -73,10 +73,11 @@ class MainActivity : AppCompatActivity() {
                         is ExerciseAddFragment,
                         is ExerciseEditSetFragment,
                         is RestTimerFragment,
-                        is CoolDownStretchFragment -> {
+                        is CoolDownStretchFragment,
+                        is RecordAddWeightFragment -> {
+                            // 다이얼로그로 띄우는 Fragment 들
                             binding.mainBnv.visibility = View.GONE
                         }
-
                         else -> {
                             binding.mainBnv.visibility = View.VISIBLE
                         }
@@ -84,5 +85,10 @@ class MainActivity : AppCompatActivity() {
                 }
             }, true
         )
+    }
+
+
+    fun showBottomNav() {
+        binding.mainBnv.visibility = View.VISIBLE
     }
 }

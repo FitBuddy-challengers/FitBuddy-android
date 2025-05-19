@@ -38,7 +38,7 @@ interface ExercisePlanDao {
 
     // 운동 계획에 포함된 운동 목록 조회 (PlanDetail Join 테이블 사용) - 기존 방식 유지
     @Transaction
-    @Query("SELECT e.*, pd.exOrder AS planOrder, pd.sets AS planSets, pd.reps AS planReps FROM exercises e INNER JOIN plan_details pd ON e.id = pd.exerciseId WHERE pd.exercisePlanId = :planId ORDER BY pd.exOrder ASC")
+    @Query("SELECT e.*, pd.exOrder AS planOrder FROM exercises e INNER JOIN plan_details pd ON e.id = pd.exerciseId WHERE pd.exercisePlanId = :planId ORDER BY pd.exOrder ASC")
     suspend fun getExercisesInPlan(planId: Long): List<ExerciseInPlan>
 
     // 특정 운동 계획과 그 계획에 속한 운동 목록 조회 (PlanDetailWithExercise 사용)
@@ -48,7 +48,7 @@ interface ExercisePlanDao {
 
     // 특정 운동 계획과 그 계획에 속한 운동 목록 조회 (직접 Join 쿼리 사용) - 기존 방식 유지
     @Transaction
-    @Query("SELECT ep.*, e.*, pd.exOrder AS planOrder, pd.sets AS planSets, pd.reps AS planReps FROM exercise_plans ep INNER JOIN plan_details pd ON ep.id = pd.exercisePlanId INNER JOIN exercises e ON pd.exerciseId = e.id WHERE ep.id = :planId ORDER BY pd.exOrder ASC")
+    @Query("SELECT ep.*, e.*, pd.exOrder AS planOrder FROM exercise_plans ep INNER JOIN plan_details pd ON ep.id = pd.exercisePlanId INNER JOIN exercises e ON pd.exerciseId = e.id WHERE ep.id = :planId ORDER BY pd.exOrder ASC")
     suspend fun getExercisePlanWithExercises(planId: Long): List<ExercisePlanWithExercises>
 
     // 특정 운동 계획 삭제 시 연결된 PlanDetail도 함께 삭제 (선택 사항 - Room의 onDelete CASCADE로 처리 가능)
@@ -76,15 +76,11 @@ interface ExercisePlanDao {
 
 data class ExerciseInPlan(
     @Embedded val exercise: Exercise,
-    @ColumnInfo(name = "planOrder") val order: Int,
-    @ColumnInfo(name = "planSets") val sets: Int,
-    @ColumnInfo(name = "planReps") val reps: Int
+    @ColumnInfo(name = "planOrder") val order: Int
 )
 
 data class ExercisePlanWithExercises(
     @Embedded val exercisePlan: ExercisePlan,
     @Embedded(prefix = "exercise_") val exercise: Exercise?,
-    @ColumnInfo(name = "planOrder") val order: Int?,
-    @ColumnInfo(name = "planSets") val sets: Int?,
-    @ColumnInfo(name = "planReps") val reps: Int?
+    @ColumnInfo(name = "planOrder") val order: Int?
 )

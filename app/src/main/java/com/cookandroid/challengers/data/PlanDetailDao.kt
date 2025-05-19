@@ -17,7 +17,7 @@ interface PlanDetailDao {
     suspend fun delete(planDetail: PlanDetail)
 
     @Update // Add this function
-    suspend fun updatePlanDetail(planDetail: PlanDetail)
+    suspend fun update(planDetail: PlanDetail)
 
     @Query("SELECT * FROM plan_details WHERE exercisePlanId = :planId ORDER BY exOrder ASC")
     suspend fun getPlanDetailsForPlanId(planId: Long): List<PlanDetail>
@@ -37,46 +37,75 @@ interface PlanDetailDao {
     suspend fun updatePlanDetailOrder(exercisePlanId: Long, exerciseId: Long, order: Int)
 
     @Query("SELECT * FROM plan_details WHERE exercisePlanId = :exercisePlanId AND exerciseId = :exerciseId")
-    suspend fun getPlanDetailByExercisePlanIdAndExerciseId(exercisePlanId: Long, exerciseId: Long): List<PlanDetail>
+    suspend fun getPlanDetailByExercisePlanIdAndExerciseId(
+        exercisePlanId: Long,
+        exerciseId: Long
+    ): List<PlanDetail>
 
     @Query("SELECT * FROM plan_details WHERE exercisePlanId = :exercisePlanId")
     suspend fun getPlanDetailsByExercisePlanIdOnce(exercisePlanId: Long): List<PlanDetail>
 
+    // PlanDetailDao
+    @Query("SELECT * FROM plan_details WHERE exercisePlanId = :planId ORDER BY exOrder")
+    suspend fun getPlanDetailsByPlanId(planId: Long): List<PlanDetail>
+
+
     // 운동 순서 바꾸기
-    @Query("""
+    @Query(
+        """
     SELECT * FROM plan_details
      WHERE exercisePlanId = :planId
        AND exerciseId = :exerciseId
-  """)
+  """
+    )
     suspend fun getPlanDetail(
         planId: Long,
         exerciseId: Long
     ): PlanDetail
 
-    @Query("""
+    @Query(
+        """
     UPDATE plan_details
       SET exOrder = :newOrder
      WHERE exercisePlanId = :planId
        AND exerciseId = :exerciseId
-  """)
+  """
+    )
     suspend fun updateExOrder(
         planId: Long,
         exerciseId: Long,
         newOrder: Int
     )
-// PlanDetailWithExercise 리스트를 한 번만 가져오는 함수
+
+    // PlanDetailWithExercise 리스트를 한 번만 가져오는 함수
     @Transaction
     @Query("SELECT pd.*, e.* FROM plan_details pd INNER JOIN exercises e ON pd.exerciseId = e.id WHERE pd.exercisePlanId = :planId ORDER BY pd.exOrder ASC")
     suspend fun getPlanDetailsWithExerciseOnce(planId: Long): List<PlanDetailWithExercise>
 
-//주어진 planId, exerciseId 조합의 isCompleted 값을 변경
-    @Query("""
+    //주어진 planId, exerciseId 조합의 isCompleted 값을 변경
+    @Query(
+        """
       UPDATE plan_details
          SET isCompleted = :completed
        WHERE exercisePlanId = :planId
          AND exerciseId = :exerciseId
-    """)
+    """
+    )
     suspend fun updateCompletion(planId: Long, exerciseId: Long, completed: Boolean)
+
+    // 운동 변경
+    @Query(
+        """
+    UPDATE plan_details SET exerciseId = :newExerciseId
+    WHERE exercisePlanId = :planId AND exerciseId = :oldExerciseId
+    """
+    )
+    suspend fun replaceExercise(
+        planId: Long,
+        oldExerciseId: Long,
+        newExerciseId: Long
+    ): Int // Int 반환형으로 변경하여 업데이트된 행 수를 알 수 있도록 함
+
 
     //특정 순서의 운동 조회 함수 추가:
     @Transaction
@@ -93,10 +122,10 @@ interface PlanDetailDao {
         firstExId: Long,
         secondExId: Long
     ) {
-        val first  = getPlanDetail(planId, firstExId)
+        val first = getPlanDetail(planId, firstExId)
         val second = getPlanDetail(planId, secondExId)
         // 서로 값을 바꿔서 저장
-        updateExOrder(planId, firstExId,  second.exOrder)
+        updateExOrder(planId, firstExId, second.exOrder)
         updateExOrder(planId, secondExId, first.exOrder)
     }
 }

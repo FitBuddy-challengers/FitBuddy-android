@@ -4,10 +4,18 @@ import androidx.room.Embedded
 import androidx.room.Relation
 
 data class PlanDetailWithExercise(
-    @Embedded val planDetail: PlanDetail,
+    @Embedded
+    val planDetail: PlanDetail,
+
     @Relation(
         parentColumn = "exerciseId",
         entityColumn = "id"
     )
-    val exercise: Exercise
+    val exercise: Exercise,
+
+    @Relation(
+        parentColumn = "exerciseId",
+        entityColumn = "exerciseId"
+    )
+    val sets: List<ExerciseSet>
 )

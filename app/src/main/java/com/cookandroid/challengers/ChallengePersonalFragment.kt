@@ -17,8 +17,6 @@ import com.cookandroid.challengers.data.db.AppDatabase
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.DiffUtil
 import com.cookandroid.challengers.data.ChallengePersonalDao
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 
 class ChallengePersonalFragment : Fragment() {
 
@@ -92,7 +90,7 @@ class ChallengePersonalFragment : Fragment() {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
             val view = LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_personal_challenge, parent, false)
+                .inflate(R.layout.item_challenge_personal, parent, false)
             return ViewHolder(view)
         }
 
