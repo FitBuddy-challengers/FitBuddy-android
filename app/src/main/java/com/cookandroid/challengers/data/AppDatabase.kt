@@ -42,13 +42,13 @@ import java.time.format.DateTimeFormatter
 
 abstract class AppDatabase : RoomDatabase() {
 
-    abstract fun coolDownStretchDao(): CoolDownStretchDao
-    abstract fun exercisePlanDao(): ExercisePlanDao
-    abstract fun exerciseDao(): ExerciseDao
-    abstract fun exerciseSetDao(): ExerciseSetDao
-    abstract fun planDetailDao(): PlanDetailDao
-    abstract fun challengePersonalDao(): ChallengePersonalDao
-    abstract fun weightRecordDao(): WeightRecordDao
+    abstract fun coolDownStretchDao(): CoolDownStretchDao // 쿨다운 스트레칭 목록(프론트에서만 사용)
+    abstract fun exercisePlanDao(): ExercisePlanDao // 어떤 날짜의 운동 계획인지(하루에 한 계획만 생성가능)
+    abstract fun exerciseDao(): ExerciseDao // 운동의 이름, 부위, 장비 등 정보를 담음(설명 등 정보는 프론트에서만)
+    abstract fun exerciseSetDao(): ExerciseSetDao // 각 운동 계획별 세트 정보
+    abstract fun planDetailDao(): PlanDetailDao // 한 exercisePlan(날짜)에 담긴 운동 계획(exerciseplan, exercise 외래키)
+    abstract fun challengePersonalDao(): ChallengePersonalDao // 확정x, 개인 챌린지 정보를 담음
+    abstract fun weightRecordDao(): WeightRecordDao // 확정x, 체중 기록 정보를 담음
 
     companion object {
         @Volatile

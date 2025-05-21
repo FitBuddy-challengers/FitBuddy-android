@@ -23,5 +23,5 @@ data class Exercise(
     var isHidden: Boolean = false, // 숨김 여부
     // 추가
     val isTimeType: Boolean = false,  // true: 시간, false: 횟수(기본)
-    val isNoise: Boolean = true // 층간소음 여부 true: 층간소음 있음, false: 층간소음 없음(기본)
+    val isNoise: Boolean = false // 층간소음 여부 true: 층간소음 있음, false: 층간소음 없음(기본)
 ) : Parcelable // Parcelable 인터페이스 구현
