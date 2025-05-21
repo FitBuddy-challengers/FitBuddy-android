@@ -9,6 +9,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:fillViewport="true"
+        android:layout_marginBottom="180dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -18,7 +19,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="16dp"
+            android:layout_marginBottom="180dp">
 
             <TextView
                 android:id="@+id/tvWeightDateRange"
@@ -155,6 +157,73 @@
                     android:layout_height="wrap_content"
                     android:text="전체" />
             </com.google.android.material.button.MaterialButtonToggleGroup>
+            <TextView
+                android:id="@+id/tvMuscleDateRange"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="25년 7월 21일 ~ 7월 27일"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="250dp"
+                android:layout_marginBottom="8dp">
+
+                <com.github.mikephil.charting.charts.LineChart
+                    android:id="@+id/muscleChart"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
+                <TextView
+                    android:id="@+id/tvMuscleAverage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="top|end"
+                    android:padding="4dp"
+                    android:text="평균 26.2"
+                    android:textColor="@android:color/black"
+                    android:textSize="12sp" />
+            </FrameLayout>
+
+            <com.google.android.material.button.MaterialButtonToggleGroup
+                android:id="@+id/periodToggleMuscle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="16dp"
+                app:selectionRequired="true"
+                app:singleSelection="true">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnWeekMuscle"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1주" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnMonthMuscle"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1달" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnYearMuscle"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1년" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAllMuscle"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="전체" />
+            </com.google.android.material.button.MaterialButtonToggleGroup>
 
         </LinearLayout>
     </ScrollView>
@@ -168,8 +237,8 @@
         android:src="@drawable/btn_floating"
         android:tint="@color/white"
         app:elevation="0dp"
-        android:layout_marginEnd="16dp"
         android:layout_marginBottom="128dp"
+        android:layout_marginEnd="16dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 

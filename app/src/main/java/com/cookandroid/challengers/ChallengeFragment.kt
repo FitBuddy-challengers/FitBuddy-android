@@ -27,6 +27,9 @@ class ChallengeFragment : Fragment() {
         val viewPager = view.findViewById<ViewPager2>(R.id.challengeViewPager)
         val challengeTextView = view.findViewById<TextView>(R.id.challengeTextView)
 
+        // 스와이프 전환 비활성화
+        viewPager.isUserInputEnabled = false
+
         // ViewPager 어댑터 설정 (내부 클래스 사용)
         val adapter = ChallengePagerAdapter(this)
         viewPager.adapter = adapter

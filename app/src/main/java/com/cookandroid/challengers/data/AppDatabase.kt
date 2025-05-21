@@ -6,6 +6,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.withTransaction
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.cookandroid.challengers.data.Exercise
 import com.cookandroid.challengers.data.ExerciseDao
@@ -80,18 +81,21 @@ abstract class AppDatabase : RoomDatabase() {
             super.onCreate(db)
             INSTANCE?.let { database ->
                 scope.launch(Dispatchers.IO) {
-                    populateInitialData(
-                        database.exerciseDao(),
-                        database.coolDownStretchDao(),
-                        database.challengePersonalDao(),
-                        database.exercisePlanDao(),
-                        database.planDetailDao(),
-                        database.exerciseSetDao(),
-                        database.weightRecordDao()
-                    )
+                    database.withTransaction {
+                        populateInitialData(
+                            database.exerciseDao(),
+                            database.coolDownStretchDao(),
+                            database.challengePersonalDao(),
+                            database.exercisePlanDao(),
+                            database.planDetailDao(),
+                            database.exerciseSetDao(),
+                            database.weightRecordDao()
+                        )
+                    }
                 }
             }
         }
+
 
         private suspend fun populateInitialData(
             exerciseDao: ExerciseDao,
@@ -151,9 +155,16 @@ abstract class AppDatabase : RoomDatabase() {
                 bodyFatPercentage = 14.2,
                 skeletalMuscleMass = 23.6
             )
+            val weightRecord3 = WeightRecord(
+                date = LocalDate.of(2025, 5, 18),
+                weight = 55.1,
+                bodyFatPercentage = 13.2,
+                skeletalMuscleMass = 24.6
+            )
 
             weightRecordDao.insert(weightRecord1)
             weightRecordDao.insert(weightRecord2)
+            weightRecordDao.insert(weightRecord3)
 
             // Exercise 초기 데이터 삽입
             val donkeyKickId = exerciseDao.insert( //
@@ -2126,16 +2137,50 @@ abstract class AppDatabase : RoomDatabase() {
                 )
             )
 
-            // ExercisePlan 초기 데이터 삽입
-            val seoulTimeZone = ZoneId.of("Asia/Seoul")
-            val dateMay15 = LocalDate.of(2025, 5, 15)
-            val timestampMay15Seoul = dateMay15.atStartOfDay(seoulTimeZone).toInstant().toEpochMilli()
+            // 오늘의 ExercisePlan을 생성하는 방식 통일 (초기 데이터에도 적용)
+            val todaySeoulZoneId = ZoneId.of("Asia/Seoul")
+            // 2025년 5월 15일 00:00:00.000 KST에 해당하는 밀리초 타임스탬프 계산
+            val timestampMay19Seoul = LocalDate.of(2025, 5, 19)
+                .atStartOfDay(ZoneId.of("Asia/Seoul"))
+                .toInstant()
+                .toEpochMilli()
+            // 2025년 5월 15일 00:00:00.000 KST에 해당하는 밀리초 타임스탬프 계산
+            val timestampMay15Seoul = LocalDate.of(2025, 5, 15)
+                .atStartOfDay(ZoneId.of("Asia/Seoul"))
+                .toInstant()
+                .toEpochMilli()
+            // 오늘 날짜
+            val todayMidnightMillis = LocalDate.now(todaySeoulZoneId)
+                .atStartOfDay(todaySeoulZoneId)
+                .toInstant()
+                .toEpochMilli()
 
-// 5월 15일 운동계획 (서울 시간 기준 타임스탬프)
-            val planMay15 = exercisePlanDao.insert(ExercisePlan(plannedDate = timestampMay15Seoul))
+            // 1. 5월 15일 루틴 생성 시 안전하게 ID 확보
+            val planMay15Id = exercisePlanDao.insert(ExercisePlan(plannedDate = timestampMay15Seoul)).let {
+                if (it == 0L) {
+                    exercisePlanDao.getPlansByDate(timestampMay15Seoul, timestampMay15Seoul).first().id
+                } else {
+                    it
+                }
+            }
 
-            val planAId =
-                exercisePlanDao.insert(ExercisePlan(plannedDate = System.currentTimeMillis()))
+            val planMay19Id = exercisePlanDao.insert(ExercisePlan(plannedDate = timestampMay19Seoul)).let {
+                if (it == 0L) {
+                    exercisePlanDao.getPlansByDate(timestampMay19Seoul, timestampMay19Seoul).first().id
+                } else {
+                    it
+                }
+            }
+
+            // 2. 오늘 루틴 생성 시 안전하게 ID 확보
+            val planAId = exercisePlanDao.insert(ExercisePlan(plannedDate = todayMidnightMillis)).let {
+                if (it == 0L) {
+                    exercisePlanDao.getPlansByDate(todayMidnightMillis, todayMidnightMillis).first().id
+                } else {
+                    it
+                }
+            }
+
 
             // PlanDetail 초기 데이터 삽입 (운동 계획과 운동 연결)
             planDetailDao.insert(
@@ -2162,7 +2207,7 @@ abstract class AppDatabase : RoomDatabase() {
 
             planDetailDao.insert(
                 PlanDetail(
-                    exercisePlanId = planMay15,
+                    exercisePlanId = planMay15Id,
                     exerciseId = squatId,
                     exOrder = 1,
                     isCompleted = true
@@ -2170,19 +2215,45 @@ abstract class AppDatabase : RoomDatabase() {
             )
             planDetailDao.insert(
                 PlanDetail(
-                    exercisePlanId = planMay15,
+                    exercisePlanId = planMay15Id,
                     exerciseId = donkeyKickId,
                     exOrder = 2,
                 )
             )
             planDetailDao.insert(
                 PlanDetail(
-                    exercisePlanId = planMay15,
+                    exercisePlanId = planMay15Id,
                     exerciseId = armWalkingId,
                     exOrder = 3,
                     isCompleted = true
                 )
             )
+
+            planDetailDao.insert(
+                PlanDetail(
+                    exercisePlanId = planMay19Id,
+                    exerciseId = squatId,
+                    exOrder = 1,
+                    isCompleted = true
+                )
+            )
+            planDetailDao.insert(
+                PlanDetail(
+                    exercisePlanId = planMay19Id,
+                    exerciseId = donkeyKickId,
+                    exOrder = 2,
+                    isCompleted = true
+                )
+            )
+            planDetailDao.insert(
+                PlanDetail(
+                    exercisePlanId = planMay19Id,
+                    exerciseId = armWalkingId,
+                    exOrder = 3,
+                    isCompleted = true
+                )
+            )
+
 
             // ExerciseSet 초기 데이터 삽입 (각 운동 계획 내 운동의 세트)
             exerciseSetDao.insert(
@@ -2253,7 +2324,7 @@ abstract class AppDatabase : RoomDatabase() {
 
             exerciseSetDao.insert(
                 ExerciseSet(
-                    exercisePlanId = planMay15,
+                    exercisePlanId = planMay15Id,
                     exerciseId = donkeyKickId,
                     setNumber = 1,
                     weight = 0,
@@ -2262,7 +2333,7 @@ abstract class AppDatabase : RoomDatabase() {
             )
             exerciseSetDao.insert(
                 ExerciseSet(
-                    exercisePlanId = planMay15,
+                    exercisePlanId = planMay15Id,
                     exerciseId = squatId,
                     setNumber = 1,
                     weight = 0,
@@ -2271,7 +2342,35 @@ abstract class AppDatabase : RoomDatabase() {
             )
             exerciseSetDao.insert(
                 ExerciseSet(
-                    exercisePlanId = planMay15,
+                    exercisePlanId = planMay15Id,
+                    exerciseId = armWalkingId,
+                    setNumber = 1,
+                    weight = 0,
+                    reps = 60
+                )
+            )
+
+            exerciseSetDao.insert(
+                ExerciseSet(
+                    exercisePlanId = planMay19Id,
+                    exerciseId = donkeyKickId,
+                    setNumber = 1,
+                    weight = 0,
+                    reps = 60
+                )
+            )
+            exerciseSetDao.insert(
+                ExerciseSet(
+                    exercisePlanId = planMay19Id,
+                    exerciseId = squatId,
+                    setNumber = 1,
+                    weight = 0,
+                    reps = 60
+                )
+            )
+            exerciseSetDao.insert(
+                ExerciseSet(
+                    exercisePlanId = planMay19Id,
                     exerciseId = armWalkingId,
                     setNumber = 1,
                     weight = 0,

@@ -20,6 +20,9 @@ interface ExerciseSetDao {
     @Delete
     suspend fun delete(exerciseSet: ExerciseSet)
 
+    @Query("SELECT * FROM exercise_sets WHERE exercisePlanId = :planId AND exerciseId = :exerciseId ORDER BY setNumber ASC")
+    fun getSetsByPlanAndExerciseId(planId: Long, exerciseId: Long): List<ExerciseSet>
+
     @Query("SELECT * FROM exercise_sets WHERE isCompleted = 1")
     suspend fun getAllSets(): List<ExerciseSet>
 

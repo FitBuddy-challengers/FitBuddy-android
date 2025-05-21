@@ -10,6 +10,7 @@ import android.widget.LinearLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -31,6 +32,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Calendar
 import java.util.Collections
 
@@ -62,7 +65,10 @@ class ExerciseFragment : Fragment() {
         planDao = db.exercisePlanDao()
         planDetailDao = db.planDetailDao()
 
-        parentFragmentManager.setFragmentResultListener("sets_updated", viewLifecycleOwner) { _, _ ->
+        parentFragmentManager.setFragmentResultListener(
+            "sets_updated",
+            viewLifecycleOwner
+        ) { _, _ ->
             loadTodayPlan()
         }
 
@@ -81,13 +87,31 @@ class ExerciseFragment : Fragment() {
 
         binding.startExerciseButton.setOnClickListener {
             if (planId != -1L) {
-                findNavController().navigate(
-                    R.id.action_exercise_to_exerciseDoing,
-                    Bundle().apply {
-                        putLong("planId", planId)
-                        putInt("initialExerciseIndex", 0)
-                    }
-                )
+                val firstIncompleteExerciseIndex =
+                    adapter.currentList.indexOfFirst { !it.planDetail.isCompleted }
+
+                if (firstIncompleteExerciseIndex != -1) {
+                    val exerciseToStart = adapter.currentList[firstIncompleteExerciseIndex]
+                    Log.d("ExerciseFragment", "Starting exercise: ${exerciseToStart.exercise.name} at index: $firstIncompleteExerciseIndex")
+
+                    findNavController().navigate(
+                        R.id.action_exercise_to_exerciseDoing,
+                        Bundle().apply {
+                            putLong("planId", planId)
+                            putInt("initialExerciseIndex", firstIncompleteExerciseIndex)
+                        }
+                    )
+                } else {
+                    // 모든 운동이 완료되었거나 운동이 없는 경우
+                    Toast.makeText(
+                        requireContext(),
+                        "오늘 계획된 운동을 모두 완료했거나, 시작할 운동이 없습니다.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } else {
+                Toast.makeText(requireContext(), "오늘 계획된 운동이 없습니다. 운동을 추가해주세요.", Toast.LENGTH_SHORT)
+                    .show()
             }
         }
         binding.menuBtn.setOnClickListener {
@@ -102,38 +126,56 @@ class ExerciseFragment : Fragment() {
 
     private fun loadTodayPlan() {
         lifecycleScope.launch(Dispatchers.IO) {
-            val cal = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-            val todayStart = cal.timeInMillis
-            val todayEnd = Calendar.getInstance().apply {
-                timeInMillis = todayStart
-                add(Calendar.DAY_OF_YEAR, 1)
-                add(Calendar.MILLISECOND, -1)
-            }.timeInMillis
+            val zoneId = ZoneId.of("Asia/Seoul") // 서울 시간대 명시
+
+            val todayStart = LocalDate.now(zoneId)
+                .atStartOfDay(zoneId)
+                .toInstant()
+                .toEpochMilli()
+
+            val todayEnd = todayStart + 24 * 60 * 60 * 1000 - 1 // 오늘 끝 (자정 - 1밀리초)
+
+            // 로그 추가: 어떤 날짜 범위를 찾는지 확인
+            Log.d("ExerciseFragment", "Searching for plans between: $todayStart and $todayEnd")
 
             planDao.getExercisePlansByDate(todayStart, todayEnd)
                 .collectLatest { plans ->
+                    if (!isAdded || _binding == null) return@collectLatest
+
                     if (plans.isNotEmpty()) {
                         planId = plans.first().id
+                        Log.d("ExerciseFragment", "Found plan for today with ID: $planId")
+
                         planDao.getPlanDetailsWithExerciseFlow(planId)
                             .collectLatest { exercises ->
+                                if (!isAdded || _binding == null) return@collectLatest
+
                                 val sorted = exercises.sortedBy { it.planDetail.exOrder }
+
                                 withContext(Dispatchers.Main) {
+                                    if (!isAdded || _binding == null) return@withContext
+
                                     adapter.submitList(sorted.toList())
+                                    Log.d(
+                                        "ExerciseFragment",
+                                        "Loaded ${sorted.size} exercises for plan ID: $planId"
+                                    )
+                                    binding.startExerciseButton.visibility = View.VISIBLE
+                                    binding.menuBtn.visibility = View.VISIBLE
                                 }
                             }
 
                     } else {
                         withContext(Dispatchers.Main) {
+                            if (!isAdded || _binding == null) return@withContext
+
                             adapter.submitList(emptyList())
                             planId = -1L
+                            Log.d("ExerciseFragment", "No plan found for today.")
                         }
                     }
                 }
+
         }
     }
 
@@ -148,7 +190,9 @@ class ExerciseFragment : Fragment() {
             ): Boolean {
                 val from = viewHolder.bindingAdapterPosition
                 val to = target.bindingAdapterPosition
-                if (to >= adapter.currentList.size) return false
+                // 'Add Exercise' 버튼과 'Cool Down' 섹션은 이동할 수 없도록 방지
+                if (to >= adapter.currentList.size) return false // 'Add' 버튼 또는 'Cool Down' 영역으로 이동 방지
+
                 val newList = adapter.currentList.toMutableList().apply {
                     Collections.swap(this, from, to)
                 }
@@ -215,6 +259,7 @@ class ExerciseFragment : Fragment() {
                 oldItem: PlanDetailWithExercise,
                 newItem: PlanDetailWithExercise
             ): Boolean {
+                // isCompleted 값도 비교하여 UI 업데이트가 필요할 때 DiffUtil이 감지하도록 합니다.
                 return oldItem == newItem &&
                         oldItem.planDetail.isCompleted == newItem.planDetail.isCompleted
             }
@@ -224,6 +269,7 @@ class ExerciseFragment : Fragment() {
         private val TYPE_COOLDOWN = 1
         private val TYPE_ADD = 2
 
+        // currentList.size는 운동 아이템만 포함하므로, 쿨다운(1)과 추가 버튼(1)을 더해야 합니다.
         override fun getItemCount() = currentList.size + 2
         override fun getItemViewType(position: Int) = when {
             position < currentList.size -> TYPE_EXERCISE
@@ -241,12 +287,14 @@ class ExerciseFragment : Fragment() {
                     )
                     ExerciseVH(binding)
                 }
+
                 TYPE_COOLDOWN -> {
                     val view = LayoutInflater.from(parent.context)
                         .inflate(R.layout.item_cool_down, parent, false)
                     object : RecyclerView.ViewHolder(view) {}
                 }
-                else -> {
+
+                else -> { // TYPE_ADD
                     val binding = ItemAddExerciseButtonBinding.inflate(
                         LayoutInflater.from(parent.context),
                         parent,
@@ -265,7 +313,10 @@ class ExerciseFragment : Fragment() {
                 val item = currentList[position]
                 holder.binding.apply {
                     fragment.lifecycleScope.launch(Dispatchers.IO) {
-                        val exerciseSets = db.exerciseSetDao().getSetsByExerciseId(item.exercise.id)
+                        val exerciseSets = db.exerciseSetDao().getSetsByPlanAndExerciseId(
+                            item.planDetail.exercisePlanId,
+                            item.exercise.id
+                        )
                         withContext(Dispatchers.Main) {
                             val reps = exerciseSets.firstOrNull()?.reps ?: 0
                             val setCount = exerciseSets.size
@@ -275,7 +326,6 @@ class ExerciseFragment : Fragment() {
                             }
                         }
                     }
-
 
                     val resId = context.resources.getIdentifier(
                         item.exercise.imagePath ?: "",
@@ -291,6 +341,13 @@ class ExerciseFragment : Fragment() {
                             .into(exerciseImageView)
                     } else {
                         exerciseImageView.setImageResource(R.drawable.ic_launcher_background)
+                    }
+
+                    // 투명도 (visibility) 설정 부분 추가
+                    if (item.planDetail.isCompleted) {
+                        contentLayout.alpha = 0.5f // 변경: contentLayout에 alpha 적용
+                    } else {
+                        contentLayout.alpha = 1.0f // 변경: contentLayout에 alpha 적용
                     }
 
                     exerciseItem.setOnClickListener {
@@ -312,7 +369,7 @@ class ExerciseFragment : Fragment() {
                         dialog.show(fragment.childFragmentManager, ExerciseEditFragment.TAG)
                     }
                 }
-            } else if (position == currentList.size) {
+            } else if (position == currentList.size) { // Cool Down Section
                 val coolDownListView =
                     holder.itemView.findViewById<LinearLayout>(R.id.coolDownListLayoutContainer)
                 val btnExpand = holder.itemView.findViewById<ImageButton>(R.id.btnExpand)
@@ -326,6 +383,8 @@ class ExerciseFragment : Fragment() {
                         }
                 }
             }
+            // TYPE_ADD (마지막 포지션)은 onBindViewHolder에서 특별히 할 일이 없으므로 비워둡니다.
+            // 이미 onCreateViewHolder에서 클릭 리스너가 설정되어 있습니다.
         }
 
         private class ExerciseVH(val binding: ItemExerciseBinding) :

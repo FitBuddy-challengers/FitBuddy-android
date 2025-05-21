@@ -45,7 +45,7 @@ class ExerciseDoingFragment : Fragment() {
     private var currentExerciseIndex = 0
     private var planExerciseList: List<ExerciseInPlan> = emptyList()
     private var currentExerciseId: Long = -1L
-    private var setStartTime: Long = 0L
+    private var setStartTime: Long = 0L // 세트 시작 시간
 
     private var currentExerciseSets: MutableList<ExerciseSet> = mutableListOf()
 
@@ -56,7 +56,7 @@ class ExerciseDoingFragment : Fragment() {
         private const val KEY_PLAN_ID = "current_plan_id"
         private const val KEY_EXERCISE_INDEX = "current_exercise_index"
         private const val KEY_SET_INDEX = "current_set_index"
-        private const val KEY_START_TIME = "start_time"
+        private const val KEY_START_TIME = "start_time" // setStartTime 저장을 위한 키
         private const val KEY_IN_PROGRESS = "is_in_progress"
     }
 
@@ -73,25 +73,50 @@ class ExerciseDoingFragment : Fragment() {
 
         // planId는 계속 받기
         exercisePlanId = arguments?.getLong("planId") ?: -1L
+        Log.d("ExerciseDoingFragment", "Received planId: $exercisePlanId")
 
         // 네비게이션으로 넘어온 인덱스가 있는지 확인
         val navIndex = arguments?.getInt("initialExerciseIndex")
         if (navIndex != null) {
-            // 리스트 클릭이나 첫 진입 시 전달된 값
+            // 리스트 클릭이나 첫 진입 시 전달된 값: 새로운 운동 시작
             currentExerciseIndex = navIndex
+            Log.d("ExerciseDoingFragment", "New exercise started. Initial currentExerciseIndex: $currentExerciseIndex. setStartTime: $setStartTime")
             currentSetIndex = 0
+            setStartTime = System.currentTimeMillis() // 새로운 운동 시작 시점 기록
+            isInProgress = true // 운동 시작
+            prefs.edit()
+                .putLong(KEY_START_TIME, setStartTime)
+                .putInt(KEY_EXERCISE_INDEX, currentExerciseIndex)
+                .putInt(KEY_SET_INDEX, currentSetIndex)
+                .putBoolean(KEY_IN_PROGRESS, isInProgress)
+                .apply()
+            Log.d("ExerciseDoingFragment", "New exercise started. Initial setStartTime: $setStartTime")
+
         } else if (savedInstanceState != null) {
-            // 화면 회전 등 복구
+            // 화면 회전 등 프래그먼트 상태 복구
             currentExerciseIndex = savedInstanceState.getInt(KEY_EXERCISE_INDEX, 0)
             currentSetIndex = savedInstanceState.getInt(KEY_SET_INDEX, 0)
+            setStartTime = savedInstanceState.getLong(KEY_START_TIME, System.currentTimeMillis())
+            isInProgress = savedInstanceState.getBoolean(KEY_IN_PROGRESS, false)
+            Log.d("ExerciseDoingFragment", "Restoring from savedInstanceState. setStartTime: $setStartTime")
+
         } else {
-            // 이전 진행 상황(앱 재시작 등)
+            // 이전 진행 상황 (앱 재시작 등) 복구
             currentExerciseIndex = prefs.getInt(KEY_EXERCISE_INDEX, 0)
             currentSetIndex = prefs.getInt(KEY_SET_INDEX, 0)
+            setStartTime = prefs.getLong(KEY_START_TIME, 0L) // prefs에서 setStartTime 복원, 없으면 0L
+            isInProgress = prefs.getBoolean(KEY_IN_PROGRESS, false)
+            Log.d("ExerciseDoingFragment", "Restoring from prefs. setStartTime: $setStartTime")
+
         }
 
-        // 진행 중 여부는 항상 복원
-        isInProgress = prefs.getBoolean(KEY_IN_PROGRESS, false)
+        // 운동이 진행 중인데 setStartTime이 초기값이라면 현재 시간으로 보정
+        // (예: 앱이 강제 종료되어 setStartTime이 저장되지 않았을 경우)
+        if (isInProgress && setStartTime == 0L) {
+            setStartTime = System.currentTimeMillis()
+            prefs.edit().putLong(KEY_START_TIME, setStartTime).apply()
+            Log.w("ExerciseDoingFragment", "setStartTime was 0L while in progress, corrected to: $setStartTime")
+        }
     }
 
 
@@ -131,20 +156,30 @@ class ExerciseDoingFragment : Fragment() {
         outState.putInt(KEY_EXERCISE_INDEX, currentExerciseIndex)
         outState.putInt(KEY_SET_INDEX, currentSetIndex)
         outState.putBoolean(KEY_IN_PROGRESS, isInProgress)
+        outState.putLong(KEY_START_TIME, setStartTime) // setStartTime 저장
     }
 
     private fun setupStopwatch() {
         stopwatchViewModel.elapsedTime.observe(viewLifecycleOwner) { time ->
             binding.stopwatchTextView.text = stopwatchViewModel.formatElapsedTime(time)
-            if (time > 0L && !isInProgress) isInProgress = true
+            // 스톱워치가 0보다 크고 isInProgress가 false이면, 운동이 시작된 것으로 간주
+            if (time > 0L && !isInProgress) {
+                isInProgress = true
+                prefs.edit().putBoolean(KEY_IN_PROGRESS, true).apply()
+            }
         }
         stopwatchViewModel.isRunning.observe(viewLifecycleOwner) { running ->
             binding.pauseButton.setImageResource(
                 if (running) R.drawable.ic_pause_black else R.drawable.ic_play_black
             )
         }
-        if (stopwatchViewModel.elapsedTime.value == 0L && !stopwatchViewModel.isRunning.value!!) {
-            stopwatchViewModel.startStopwatch()
+        // 스톱워치 ViewModel의 초기 상태에 따라 스톱워치 시작 또는 복원
+        // 만약 isInProgress가 true인데 스톱워치가 멈춰있다면 재시작 (앱 재시작 시)
+        if (isInProgress && !stopwatchViewModel.isRunning.value!!) {
+            stopwatchViewModel.startStopwatch(stopwatchViewModel.elapsedTime.value ?: 0L)
+        } else if (!isInProgress && stopwatchViewModel.elapsedTime.value == 0L) {
+            // 운동이 진행 중이 아니고, 스톱워치 시간도 0이라면 (새로운 운동 시작 시)
+            stopwatchViewModel.startStopwatch() // 새롭게 시작
         }
     }
 
@@ -155,6 +190,7 @@ class ExerciseDoingFragment : Fragment() {
             else stopwatchViewModel.startStopwatch(stopwatchViewModel.elapsedTime.value ?: 0L)
         }
         binding.completeSetButton.setOnClickListener {
+            // 세트 완료 버튼 클릭 시 스톱워치가 멈춰있다면 다시 시작
             if (stopwatchViewModel.isRunning.value == false) {
                 stopwatchViewModel.startStopwatch(stopwatchViewModel.elapsedTime.value ?: 0L)
             }
@@ -167,17 +203,24 @@ class ExerciseDoingFragment : Fragment() {
 
     private fun loadPlanExercises(onComplete: () -> Unit) {
         lifecycleScope.launch(Dispatchers.IO) {
-            planExerciseList = planDao.getExercisesInPlan(exercisePlanId)
-            withContext(Dispatchers.Main) { onComplete() }
+            planExerciseList = planDao.getExercisesInPlan(exercisePlanId).sortedBy { it.order }
+            Log.d("ExerciseDoingFragment", "Loaded planExerciseList size: ${planExerciseList.size}")
+            Log.d("ExerciseDoingFragment", "Loaded planExerciseList (sorted by order): ${planExerciseList.map { it.exercise.name + " (order: ${it.order}), isCompleted: ${it.isCompleted}" }}") // 디버그용 로그에 isCompleted도 추가
+            withContext(Dispatchers.Main) {
+                // 여기서 currentExerciseIndex에 해당하는 운동 이름을 다시 로그로 찍어 확인
+                val currentExerciseName = planExerciseList.getOrNull(currentExerciseIndex)?.exercise?.name
+                val currentExerciseOrder = planExerciseList.getOrNull(currentExerciseIndex)?.order
+                Log.d("ExerciseDoingFragment", "After loading planExerciseList, currentExerciseIndex ($currentExerciseIndex) points to: $currentExerciseName (order: $currentExerciseOrder)")
+                onComplete()
+            }
         }
     }
 
     private fun fetchSetsForCurrentExercise() {
-
         planExerciseList.getOrNull(currentExerciseIndex)?.exercise?.let { ex ->
             currentExerciseId = ex.id
             lifecycleScope.launch(Dispatchers.IO) {
-                val sets = exerciseSetDao.getSetsByExerciseId(ex.id)
+                val sets = exerciseSetDao.getSetsByPlanAndExerciseId(exercisePlanId, ex.id)
                     .sortedBy { it.setNumber }
                 currentExerciseSets = sets.toMutableList()
 
@@ -190,8 +233,14 @@ class ExerciseDoingFragment : Fragment() {
                 }
 
                 withContext(Dispatchers.Main) {
-                    setAdapter.submitList(highlighted) {
-                        binding.setsRecyclerView.scrollToPosition(startIdx)
+                    // _binding이 null이 아닌지 확인하여 UI 업데이트 (이전 버그 수정 반영)
+                    _binding?.let { currentBinding ->
+                        setAdapter.submitList(highlighted) {
+                            currentBinding.setsRecyclerView.scrollToPosition(startIdx)
+                            // setStartTime 초기화 로직은 onCreate에서 대부분 처리되므로 여기서는 제거
+                            // 단, 필요에 따라 첫 세트가 강조될 때 setStartTime을 여기서 다시 설정할 수도 있으나,
+                            // onCreate에서 복원 또는 초기화된 setStartTime이 다음 세트 완료 시에만 업데이트되도록 하는 것이 더 논리적입니다.
+                        }
                     }
                 }
             }
@@ -219,6 +268,7 @@ class ExerciseDoingFragment : Fragment() {
         if (currentSetIndex < currentExerciseSets.size) {
             val now = System.currentTimeMillis()
             val elapsed = now - setStartTime // 세트 수행 시간 계산
+            Log.d("ExerciseDoingFragment", "Completing set ${currentSetIndex + 1}. Elapsed time: $elapsed ms")
 
             val completed =
                 currentExerciseSets[currentSetIndex].copy(
@@ -277,7 +327,6 @@ class ExerciseDoingFragment : Fragment() {
         }
     }
 
-
     private fun showEditSetBottomSheet() {
         val equip = planExerciseList
             .getOrNull(currentExerciseIndex)
@@ -290,16 +339,6 @@ class ExerciseDoingFragment : Fragment() {
             currentSetIndex,                  // highlightIndex
             equip                             // equip
         )
-
-//        sheet.setOnSetsUpdatedListener { updated ->
-//            currentExerciseSets = updated.toMutableList()
-//            (binding.setsRecyclerView.adapter as? ExerciseSetAdapter)
-//                ?.updateSetNumbers(currentExerciseSets)
-//            val list = currentExerciseSets.mapIndexed { idx, s ->
-//                s.copy(isHighlighted = (idx == currentSetIndex))
-//            }
-//            setAdapter.submitList(list) { updateProgressText() }
-//        }
         sheet.show(childFragmentManager, ExerciseEditSetFragment.TAG)
     }
 
@@ -319,14 +358,16 @@ class ExerciseDoingFragment : Fragment() {
                 val list = setAdapter.currentList.mapIndexed { idx, s ->
                     s.copy(isHighlighted = (idx == nextIdx))
                 }.toMutableList()
-                if (currentSetIndex > 0 && currentSetIndex < list.size) {
-                    list[currentSetIndex - 1] =
+                // 이전 세트의 강조 표시 제거
+                if (currentSetIndex > 0 && currentSetIndex < list.size) { // currentSetIndex는 이미 nextIdx로 업데이트된 상태
+                    list[currentSetIndex - 1] = // 이전 세트의 실제 인덱스
                         list[currentSetIndex - 1].copy(isHighlighted = false)
                 }
                 setAdapter.submitList(list) {
                     setStartTime = System.currentTimeMillis() // 다음 세트 진입 시간 기록
-                    prefs.edit().putInt(KEY_SET_INDEX, nextIdx).apply()
+                    prefs.edit().putLong(KEY_START_TIME, setStartTime).putInt(KEY_SET_INDEX, nextIdx).apply() // prefs에도 저장
                     updateProgressText()
+                    Log.d("ExerciseDoingFragment", "Rest timer finished. Next set start time: $setStartTime")
                 }
             } else {
                 completeCurrentExercise()
@@ -340,19 +381,23 @@ class ExerciseDoingFragment : Fragment() {
         lifecycleScope.launch(Dispatchers.IO) {
             planDetailDao.updateCompletion(exercisePlanId, currentExerciseId, true)
             if (nextIdx < planExerciseList.size) {
+                // 다음 운동으로 넘어갈 때, 새로운 운동의 첫 세트 시작 시간으로 setStartTime을 초기화
+                val newSetStartTime = System.currentTimeMillis()
                 prefs.edit()
                     .putInt(KEY_EXERCISE_INDEX, nextIdx)
                     .putInt(KEY_SET_INDEX, 0)
-                    .putLong(KEY_START_TIME, System.currentTimeMillis())
+                    .putLong(KEY_START_TIME, newSetStartTime) // 다음 운동의 setStartTime을 미리 저장
                     .apply()
                 withContext(Dispatchers.Main) {
                     currentExerciseIndex = nextIdx
                     currentSetIndex = 0
+                    setStartTime = newSetStartTime // UI 스레드에서도 반영
                     updateExerciseInfo()
                     fetchSetsForCurrentExercise()
-
+                    Log.d("ExerciseDoingFragment", "Moving to next exercise. New setStartTime: $setStartTime")
                 }
             } else {
+                // 모든 운동 완료
                 prefs.edit().putBoolean(KEY_IN_PROGRESS, false).apply()
                 withContext(Dispatchers.Main) {
                     findNavController().navigate(R.id.action_exerciseDoing_to_coolDownStretch)

@@ -15,6 +15,8 @@ import com.cookandroid.challengers.data.db.AppDatabase
 import com.cookandroid.challengers.databinding.ActivityMainBinding
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.ZoneId
 
 class MainActivity : AppCompatActivity() {
 
@@ -28,11 +30,31 @@ class MainActivity : AppCompatActivity() {
         val db = AppDatabase.getDatabase(this, lifecycleScope)
         lifecycleScope.launch {
             val planDao = db.exercisePlanDao()
-            val existingPlans = planDao.getAllExercisePlans().first()
-            if (existingPlans.isEmpty()) {
-                planDao.insert(ExercisePlan(plannedDate = System.currentTimeMillis()))
+
+            val zoneId = ZoneId.of("Asia/Seoul")
+
+            val todayStart = LocalDate.now(zoneId)
+                .atStartOfDay(zoneId)
+                .toInstant()
+                .toEpochMilli()
+
+            val todayEnd = todayStart + 24 * 60 * 60 * 1000 - 1  // 오늘 끝
+            val todayPlans = planDao.getPlansByDate(todayStart, todayEnd)
+
+            if (todayPlans.isEmpty()) {
+                val insertedId = planDao.insert(ExercisePlan(plannedDate = todayStart))
+
+                if (insertedId == 0L) {
+                    // 이론상 도달하지 않아야 하지만, insert 시점에 race condition 방지
+                    android.util.Log.w("MainActivity", "❗ 이미 오늘 날짜의 plan이 존재 (insert skipped)")
+                } else {
+                    android.util.Log.i("MainActivity", "✅ 오늘 날짜의 plan 생성됨 (id=$insertedId)")
+                }
+            } else {
+                android.util.Log.i("MainActivity", "✅ 오늘 날짜의 plan 이미 존재 (id=${todayPlans.first().id})")
             }
         }
+
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)

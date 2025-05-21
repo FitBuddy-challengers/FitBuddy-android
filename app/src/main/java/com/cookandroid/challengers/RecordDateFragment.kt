@@ -92,7 +92,6 @@ class RecordDateFragment : Fragment() {
             }
         }
     }
-
     private fun loadRadarChartData(period: String) {
         lifecycleScope.launch {
             val partTimeMap = withContext(Dispatchers.IO) {
@@ -100,19 +99,48 @@ class RecordDateFragment : Fragment() {
             }
 
             val entries = bodyParts.map { part -> RadarEntry(partTimeMap[part] ?: 0f) }
-            val dataSet = RadarDataSet(entries, "운동 점수")
-            dataSet.color = ContextCompat.getColor(requireContext(), R.color.blue)
-            dataSet.fillColor = ContextCompat.getColor(requireContext(), R.color.blue)
-            dataSet.setDrawFilled(true)
-            dataSet.valueTextSize = 14f
 
-            val data = RadarData(dataSet)
-            radarChart.data = data
-            radarChart.xAxis.valueFormatter = IndexAxisValueFormatter(bodyParts)
+            val dataSet = RadarDataSet(entries, "").apply {
+                color = ContextCompat.getColor(requireContext(), R.color.blue)
+                fillColor = ContextCompat.getColor(requireContext(), R.color.blue)
+                setDrawFilled(true)
+                setDrawValues(false) // ✅ 수치 텍스트 제거
+                lineWidth = 2f
+            }
+
+            radarChart.data = RadarData(dataSet)
+
             radarChart.description.isEnabled = false
+            radarChart.legend.isEnabled = false
+            radarChart.rotationAngle = 0f              // ✅ 회전 고정
+            radarChart.isRotationEnabled = false       // ✅ 사용자 회전 방지
+
+            // X축: "부위\n퍼센트%"로 표시
+            radarChart.xAxis.apply {
+                valueFormatter = IndexAxisValueFormatter(
+                    bodyParts.map { part ->
+                        val percent = ((partTimeMap[part] ?: 0f) * 100).toInt()
+                        "$part\n$percent%"
+                    }
+                )
+                textSize = 13f
+                yOffset = 0f
+                xOffset = 0f
+            }
+
+            // Y축 스타일 제거
+            radarChart.yAxis.apply {
+                axisMinimum = 0f
+                setDrawLabels(false)       // 숫자 제거
+                setDrawAxisLine(false)     // 중심선 제거
+                setDrawGridLines(false)    // 내부 원 제거
+            }
+
             radarChart.invalidate()
         }
     }
+
+
 
     private suspend fun getWorkoutDataForPeriod(period: String): MutableMap<String, Float> =
         withContext(Dispatchers.IO) {

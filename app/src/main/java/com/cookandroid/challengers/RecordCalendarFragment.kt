@@ -32,13 +32,7 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.InsetDrawable
 import android.text.style.ForegroundColorSpan
 import android.util.Log
-import androidx.compose.runtime.getValue
-import com.cookandroid.challengers.data.ExerciseDao
-import com.cookandroid.challengers.data.ExercisePlanDao
-import com.cookandroid.challengers.data.ExerciseSetDao
-import com.cookandroid.challengers.data.PlanDetailDao
 import com.cookandroid.challengers.data.db.AppDatabase
-import com.google.android.material.dialog.MaterialDialogs.insetDrawable
 import com.prolificinteractive.materialcalendarview.MaterialCalendarView
 
 class RecordCalendarFragment : Fragment() {
@@ -124,7 +118,7 @@ class RecordCalendarFragment : Fragment() {
             addDecorator(selectedDecorator)
 
             // 오늘 날짜 데코
-            addDecorator(TodayDecorator(requireContext()))
+//            addDecorator(TodayDecorator(requireContext()))
 
             // 날짜 선택 리스너
             setOnDateChangedListener { _, date, _ ->
@@ -175,7 +169,7 @@ class RecordCalendarFragment : Fragment() {
             if (items30.isNotEmpty()) {
                 calendarView.addDecorator(CompletionRateGroupDecorator(requireContext(), items30, R.drawable.ic_circle_blue_30))
             }
-            calendarView.addDecorator(TodayDecorator(requireContext())) // 오늘 데코레이터 다시 추가
+//            calendarView.addDecorator(TodayDecorator(requireContext())) // 오늘 데코레이터 다시 추가
         }
 
         // 캘린더 월 변경 리스너
@@ -192,25 +186,25 @@ class RecordCalendarFragment : Fragment() {
 
 }
 
-class TodayDecorator(context: Context) : DayViewDecorator {
-    private val today = CalendarDay.today()
-    private val bgDrawable = ContextCompat.getDrawable(context, R.drawable.ic_circle_black)!!
-    private val textColor = ContextCompat.getColor(context, R.color.white)
-    private val transparent = ColorDrawable(Color.TRANSPARENT)
-
-
-    override fun shouldDecorate(day: CalendarDay): Boolean {
-        return day == today
-    }
-
-    override fun decorate(view: DayViewFacade) {
-        view.setSelectionDrawable(transparent)
-        val inset = 4
-        val insetDrawable = InsetDrawable(bgDrawable, inset, inset, inset, inset)
-        view.setBackgroundDrawable(insetDrawable)
-        view.addSpan(ForegroundColorSpan(textColor))
-    }
-}
+//class TodayDecorator(context: Context) : DayViewDecorator {
+//    private val today = CalendarDay.today()
+//    private val bgDrawable = ContextCompat.getDrawable(context, R.drawable.ic_circle_black)!!
+//    private val textColor = ContextCompat.getColor(context, R.color.white)
+//    private val transparent = ColorDrawable(Color.TRANSPARENT)
+//
+//
+//    override fun shouldDecorate(day: CalendarDay): Boolean {
+//        return day == today
+//    }
+//
+//    override fun decorate(view: DayViewFacade) {
+//        view.setSelectionDrawable(transparent)
+//        val inset = 4
+//        val insetDrawable = InsetDrawable(bgDrawable, inset, inset, inset, inset)
+//        view.setBackgroundDrawable(insetDrawable)
+//        view.addSpan(ForegroundColorSpan(textColor))
+//    }
+//}
 
 class SelectedDateDecorator(context: Context) : DayViewDecorator {
     private val transparent = ColorDrawable(Color.TRANSPARENT)
