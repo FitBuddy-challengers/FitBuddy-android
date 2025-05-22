@@ -23,4 +23,10 @@ object RetrofitClient {
     val loginService: LoginService by lazy {
         retrofit.create(LoginService::class.java)
     }
+
+    
+    //더미 스케줄을 담음(채윤지 05.22 추가)
+    val exerciseApi: ExerciseApi by lazy {
+        retrofit.create(ExerciseApi::class.java)
+    }
 }

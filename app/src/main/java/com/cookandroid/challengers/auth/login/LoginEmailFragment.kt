@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.cookandroid.challengers.MainActivity
@@ -65,10 +66,17 @@ class LoginEmailFragment : Fragment() {
         loginService.login(request).enqueue(object : Callback<LoginResponse> {
             override fun onResponse(call: Call<LoginResponse>, response: Response<LoginResponse>) {
                 if (response.isSuccessful && response.body()?.user != null) {
-                    Toast.makeText(requireContext(), "로그인 성공!", Toast.LENGTH_SHORT).show()
+                    val userId = response.body()!!.user!!.id
+                    Log.d("Login", "로그인 성공 - userId: $userId")
 
-                    // ✅ LoginActivity → MainActivity 이동
+                    // SharedPreferences에 userId 저장
+                    val prefs = requireContext().getSharedPreferences("UserPrefs", AppCompatActivity.MODE_PRIVATE)
+                    prefs.edit().putInt("userId", userId).apply()
+
+                    Toast.makeText(requireContext(), "로그인 성공!", Toast.LENGTH_SHORT).show()
                     (requireActivity() as? LoginActivity)?.navigateToMain()
+
+
                 } else {
                     Toast.makeText(requireContext(), "이메일 또는 비밀번호가 일치하지 않아요.", Toast.LENGTH_SHORT).show()
                 }

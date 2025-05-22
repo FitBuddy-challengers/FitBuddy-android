@@ -1,6 +1,7 @@
 package com.cookandroid.challengers
 
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
@@ -17,6 +18,17 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.http.Body
+import retrofit2.http.POST
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+
+import com.cookandroid.challengers.api.RetrofitClient
+import com.cookandroid.challengers.network.dto.DummyPlanRequest
+import com.cookandroid.challengers.network.dto.DummyPlanResponse
 
 class MainActivity : AppCompatActivity() {
 
@@ -26,34 +38,35 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 최초 계획이 없으면 하나 생성
-        val db = AppDatabase.getDatabase(this, lifecycleScope)
-        lifecycleScope.launch {
-            val planDao = db.exercisePlanDao()
-
-            val zoneId = ZoneId.of("Asia/Seoul")
-
-            val todayStart = LocalDate.now(zoneId)
-                .atStartOfDay(zoneId)
-                .toInstant()
-                .toEpochMilli()
-
-            val todayEnd = todayStart + 24 * 60 * 60 * 1000 - 1  // 오늘 끝
-            val todayPlans = planDao.getPlansByDate(todayStart, todayEnd)
-
-            if (todayPlans.isEmpty()) {
-                val insertedId = planDao.insert(ExercisePlan(plannedDate = todayStart))
-
-                if (insertedId == 0L) {
-                    // 이론상 도달하지 않아야 하지만, insert 시점에 race condition 방지
-                    android.util.Log.w("MainActivity", "❗ 이미 오늘 날짜의 plan이 존재 (insert skipped)")
-                } else {
-                    android.util.Log.i("MainActivity", "✅ 오늘 날짜의 plan 생성됨 (id=$insertedId)")
-                }
-            } else {
-                android.util.Log.i("MainActivity", "✅ 오늘 날짜의 plan 이미 존재 (id=${todayPlans.first().id})")
-            }
-        }
+//        // 최초 계획이 없으면 하나 생성
+//        val db = AppDatabase.getDatabase(this, lifecycleScope)
+//        lifecycleScope.launch {
+//            val planDao = db.exercisePlanDao()
+//
+//            val zoneId = ZoneId.of("Asia/Seoul")
+//
+//            val todayStart = LocalDate.now(zoneId)
+//                .atStartOfDay(zoneId)
+//                .toInstant()
+//                .toEpochMilli()
+//
+//            val todayEnd = todayStart + 24 * 60 * 60 * 1000 - 1  // 오늘 끝
+//            val todayPlans = planDao.getPlansByDate(todayStart, todayEnd)
+//
+//            if (todayPlans.isEmpty()) {
+//                val insertedId = planDao.insert(ExercisePlan(plannedDate = todayStart))
+//
+//                if (insertedId == 0L) {
+//                    // 이론상 도달하지 않아야 하지만, insert 시점에 race condition 방지
+//                    android.util.Log.w("MainActivity", "❗ 이미 오늘 날짜의 plan이 존재 (insert skipped)")
+//                } else {
+//                    android.util.Log.i("MainActivity", "✅ 오늘 날짜의 plan 생성됨 (id=$insertedId)")
+//                }
+//            } else {
+//                android.util.Log.i("MainActivity", "✅ 오늘 날짜의 plan 이미 존재 (id=${todayPlans.first().id})")
+//            }
+//        }
+        //-> 이제 roomDB가 아닌 실제 데이터베이스로 저장! 화면에는 지장없으니 걱정하지 말아요!(05.22 채윤지 수정)
 
 
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -72,6 +85,10 @@ class MainActivity : AppCompatActivity() {
             if (isLoggedIn) {
                 navController.navigate(R.id.homeFragment)
                 binding.mainBnv.visibility = View.VISIBLE
+
+                // 여기에서 서버에 더미 플랜 생성 요청 넣기(채윤지 추가)
+                createDummyPlanOnServer()
+
             } else {
                 binding.mainBnv.visibility = View.GONE
             }
@@ -107,6 +124,38 @@ class MainActivity : AppCompatActivity() {
                 }
             }, true
         )
+    }
+
+    private fun createDummyPlanOnServer() {
+        val userId = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+            .getInt("userId", -1)
+
+        if (userId == -1) {
+            Log.e("DummyPlan", "유저 ID 없음 - 더미 생성 건너뜀")
+            return
+        }
+
+        val date = LocalDate.now().toString() // YYYY-MM-DD
+
+        val request = DummyPlanRequest(userId = userId, date = date)
+
+        
+        //서버 시준으로 플랜이 없는 경우, 사용자의 편의성을 위해 더미 플랜을 생성
+        RetrofitClient.exerciseApi.createDummyPlan(request)
+            .enqueue(object : Callback<DummyPlanResponse> {
+                override fun onResponse(call: Call<DummyPlanResponse>, response: Response<DummyPlanResponse>) {
+                    if (response.isSuccessful) {
+                        val planId = response.body()?.planId
+                        Log.d("DummyPlan", "✅ 더미 운동 계획 생성됨 - planId: $planId")
+                    } else {
+                        Log.w("DummyPlan", "⚠️ 서버 응답 오류: ${response.code()}")
+                    }
+                }
+
+                override fun onFailure(call: Call<DummyPlanResponse>, t: Throwable) {
+                    Log.e("DummyPlan", "❌ 서버 요청 실패: ${t.message}")
+                }
+            })
     }
 
 

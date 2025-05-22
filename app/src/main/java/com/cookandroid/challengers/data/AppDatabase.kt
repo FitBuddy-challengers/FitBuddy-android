@@ -2033,7 +2033,7 @@ abstract class AppDatabase : RoomDatabase() {
             )
             val gymBallCrunchId = exerciseDao.insert(
                 Exercise(
-                    id = 104,
+                    id = 145,   //104로 되어있었음!! 수정함.
                     name = "짐볼 크런치",
                     part = "복근",
                     equip = "짐볼",
@@ -2266,7 +2266,7 @@ abstract class AppDatabase : RoomDatabase() {
 
 
             // ExerciseSet 초기 데이터 삽입 (각 운동 계획 내 운동의 세트)
-            exerciseSetDao.insert(
+            exerciseSetDao.insert( //운동 계쇡별로, 어떤 운동을 몇 세트, 몇회, 무게로 수행하는지 초기화!
                 ExerciseSet(
                     exercisePlanId = planAId,
                     exerciseId = squatId,
