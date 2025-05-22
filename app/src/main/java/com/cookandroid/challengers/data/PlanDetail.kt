@@ -28,9 +28,7 @@ import androidx.room.Index
 data class PlanDetail(
     val exercisePlanId: Long, // (Pk,외래키) 운동계획 ID
     val exerciseId: Long, // (PK,외래키) 운동 ID
-    val exOrder: Int, // 운동 순서
+    val exOrder: Int, // 운동의 순서
+    var isCompleted: Boolean = false // 모든 세트를 완료하면 true가 됨
     // 세트, 횟수, 무게, 시간은 ExerciseSet에 저장
-    // val sets: Int,
-    // val reps: Int,
-    var isCompleted: Boolean = false
     )

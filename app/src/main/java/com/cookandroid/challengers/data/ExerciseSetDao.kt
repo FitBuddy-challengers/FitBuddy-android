@@ -20,21 +20,27 @@ interface ExerciseSetDao {
     @Delete
     suspend fun delete(exerciseSet: ExerciseSet)
 
+    // 특정 운동계획에 속하고 특정 욷동에 해당하는 모든 세트 목록 조회
     @Query("SELECT * FROM exercise_sets WHERE exercisePlanId = :planId AND exerciseId = :exerciseId ORDER BY setNumber ASC")
     fun getSetsByPlanAndExerciseId(planId: Long, exerciseId: Long): List<ExerciseSet>
 
+    // 모든 완료된(isCompleted가 1인) ExerciseSet 목록을 조회
     @Query("SELECT * FROM exercise_sets WHERE isCompleted = 1")
     suspend fun getAllSets(): List<ExerciseSet>
 
+    // 특정 운동 ID(oldExerciseId)를 가진 모든 ExerciseSet들의 exerciseId를 새로운 운동 ID(newExerciseId)로 업데이트
     @Query("UPDATE exercise_sets SET exerciseId = :newExerciseId WHERE exerciseId = :oldExerciseId")
     suspend fun updateExerciseId(oldExerciseId: Long, newExerciseId: Long)
 
+    // 지정된 id를 가진 exerciseSet 데이터를 삭제
     @Query("DELETE FROM exercise_sets WHERE id = :id")
     suspend fun deleteById(id: Long)
 
+    // 특정 운동 id에 해당하는 모든 세트 목록 조회
     @Query("SELECT * FROM exercise_sets WHERE exerciseId = :exerciseId ORDER BY setNumber ASC")
     suspend fun getSetsByExerciseId(exerciseId: Long): List<ExerciseSet>
 
+    // 지정된 세트id를 가진 exerciseSet 데이터를 조회
     @Query("SELECT * FROM exercise_sets WHERE id = :setId")
     suspend fun getSetById(setId: Long): ExerciseSet?
 
@@ -86,7 +92,7 @@ interface ExerciseSetDao {
     @Query("SELECT * FROM exercise_sets WHERE exercisePlanId = :planId AND exerciseId = :exerciseId")
     suspend fun getExerciseSets(planId: Long, exerciseId: Long): List<ExerciseSet>
 
-    // setNumber의 개수 조회
+    // setNumber의 개수 조회 = 한 운동안에 몇 세트가 들어있는지
     @Query("SELECT COUNT(DISTINCT setNumber) FROM exercise_sets WHERE exercisePlanId = :planId AND exerciseId = :exerciseId")
     suspend fun getSetCount(planId: Long, exerciseId: Long): Int
 

@@ -6,7 +6,7 @@ import androidx.room.TypeConverters
 import android.os.Parcelable // Parcelable 추가
 import kotlinx.parcelize.Parcelize // Parcelize 추가
 
-@Parcelize // Parcelize 어노테이션 추가
+@Parcelize
 @Entity(tableName = "exercises")
 data class Exercise(
     @PrimaryKey(autoGenerate = true) val id: Long = 0, // 운동 ID(PK)
@@ -21,7 +21,8 @@ data class Exercise(
     val mets: Double, // 운동계수: 운동강도를 나타냄!
     var isFavorite: Boolean = false, // 북마크 여부
     var isHidden: Boolean = false, // 숨김 여부
-    // 추가
+
     val isTimeType: Boolean = false,  // true: 시간, false: 횟수(기본)
     val isNoise: Boolean = false // 층간소음 여부 true: 층간소음 있음, false: 층간소음 없음(기본)
+
 ) : Parcelable // Parcelable 인터페이스 구현

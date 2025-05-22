@@ -45,6 +45,9 @@ interface ExercisePlanDao {
     @Query("SELECT e.*, pd.exOrder AS planOrder, pd.isCompleted AS isCompleted FROM exercises e INNER JOIN plan_details pd ON e.id = pd.exerciseId WHERE pd.exercisePlanId = :planId ORDER BY pd.exOrder ASC")
     suspend fun getExercisesInPlan(planId: Long): List<ExerciseInPlan>
 
+    @Query("SELECT * FROM exercise_plans WHERE id = :planId")
+    suspend fun getExercisePlanById(planId: Long): ExercisePlan?
+
     // 특정 운동 계획 삭제 시 연결된 PlanDetail도 함께 삭제 (선택 사항 - Room의 onDelete CASCADE로 처리 가능)
     @Query("DELETE FROM plan_details WHERE exercisePlanId = :planId")
     suspend fun deletePlanDetails(planId: Long)
@@ -52,9 +55,6 @@ interface ExercisePlanDao {
     @Transaction
     @Query("SELECT * FROM plan_details")
     fun getAllPlanDetailsWithExerciseFlow(): Flow<List<PlanDetailWithExercise>>
-
-    @Query("SELECT * FROM exercise_plans WHERE id = :planId")
-    suspend fun getExercisePlanById(planId: Long): ExercisePlan?
 
     @Transaction
     @Query("SELECT * FROM plan_details WHERE exercisePlanId = :planId")
@@ -73,9 +73,3 @@ data class ExerciseInPlan(
     @ColumnInfo(name = "planOrder") val order: Int,
     @ColumnInfo(name = "isCompleted") val isCompleted: Boolean
 )
-
-//data class ExercisePlanWithExercises(
-//    @Embedded val exercisePlan: ExercisePlan,
-//    @Embedded(prefix = "exercise_") val exercise: Exercise?,
-//    @ColumnInfo(name = "planOrder") val order: Int?
-//)

@@ -308,6 +308,7 @@ class ExerciseDoingFragment : Fragment() {
                     setNumber = nextNo,
                     weight = currentExerciseSets.lastOrNull()?.weight ?: 0,
                     reps = currentExerciseSets.lastOrNull()?.reps ?: 0,
+                    times = currentExerciseSets.lastOrNull()?.times ?: 0,
                     isCompleted = false
                 )
                 val insertedId = exerciseSetDao.insert(newSet)

@@ -45,7 +45,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun coolDownStretchDao(): CoolDownStretchDao // 쿨다운 스트레칭 목록(프론트에서만 사용)
     abstract fun exercisePlanDao(): ExercisePlanDao // 어떤 날짜의 운동 계획인지(하루에 한 계획만 생성가능)
     abstract fun exerciseDao(): ExerciseDao // 운동의 이름, 부위, 장비 등 정보를 담음(설명 등 정보는 프론트에서만)
-    abstract fun exerciseSetDao(): ExerciseSetDao // 각 운동 계획별 세트 정보
+    abstract fun exerciseSetDao(): ExerciseSetDao // 각 운동 계획별 세트 정보 (PlanDetail 외래키)
     abstract fun planDetailDao(): PlanDetailDao // 한 exercisePlan(날짜)에 담긴 운동 계획(exerciseplan, exercise 외래키)
     abstract fun challengePersonalDao(): ChallengePersonalDao // 확정x, 개인 챌린지 정보를 담음
     abstract fun weightRecordDao(): WeightRecordDao // 확정x, 체중 기록 정보를 담음
@@ -96,7 +96,6 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-
         private suspend fun populateInitialData(
             exerciseDao: ExerciseDao,
             coolDownStretchDao: CoolDownStretchDao,
@@ -117,10 +116,14 @@ abstract class AppDatabase : RoomDatabase() {
                 name = "런지 5회 하기",
                 coinReward = 300,
                 targetCount = 5,
-                prerequisiteChallengeId = 1
-            ) // 스쿼트 10번 완료 후 활성화
-            val challenge3 =
-                ChallengePersonal(name = "푸시업 3번 하기", coinReward = 400, targetCount = 3)
+            )
+            // 스쿼트 10번 완료 후 활성화
+            val challenge3 = ChallengePersonal(
+                name = "스쿼트 30번 하기",
+                prerequisiteChallengeId = 1,
+                coinReward = 700,
+                targetCount = 30
+            )
 
             challengePersonalDao.insert(challenge1)
             challengePersonalDao.insert(challenge2)
@@ -2155,31 +2158,38 @@ abstract class AppDatabase : RoomDatabase() {
                 .toInstant()
                 .toEpochMilli()
 
-            // 1. 5월 15일 루틴 생성 시 안전하게 ID 확보
-            val planMay15Id = exercisePlanDao.insert(ExercisePlan(plannedDate = timestampMay15Seoul)).let {
-                if (it == 0L) {
-                    exercisePlanDao.getPlansByDate(timestampMay15Seoul, timestampMay15Seoul).first().id
-                } else {
-                    it
+            //  5월 15일 루틴 생성 시 안전하게 ID 확보 (더미)
+            val planMay15Id =
+                exercisePlanDao.insert(ExercisePlan(plannedDate = timestampMay15Seoul)).let {
+                    if (it == 0L) {
+                        exercisePlanDao.getPlansByDate(timestampMay15Seoul, timestampMay15Seoul)
+                            .first().id
+                    } else {
+                        it
+                    }
                 }
-            }
 
-            val planMay19Id = exercisePlanDao.insert(ExercisePlan(plannedDate = timestampMay19Seoul)).let {
-                if (it == 0L) {
-                    exercisePlanDao.getPlansByDate(timestampMay19Seoul, timestampMay19Seoul).first().id
-                } else {
-                    it
+            //  5월 19일 루틴 생성 시 안전하게 ID 확보 (더미)
+            val planMay19Id =
+                exercisePlanDao.insert(ExercisePlan(plannedDate = timestampMay19Seoul)).let {
+                    if (it == 0L) {
+                        exercisePlanDao.getPlansByDate(timestampMay19Seoul, timestampMay19Seoul)
+                            .first().id
+                    } else {
+                        it
+                    }
                 }
-            }
 
-            // 2. 오늘 루틴 생성 시 안전하게 ID 확보
-            val planAId = exercisePlanDao.insert(ExercisePlan(plannedDate = todayMidnightMillis)).let {
-                if (it == 0L) {
-                    exercisePlanDao.getPlansByDate(todayMidnightMillis, todayMidnightMillis).first().id
-                } else {
-                    it
+            //  오늘 루틴 생성 시 안전하게 ID 확보
+            val planAId =
+                exercisePlanDao.insert(ExercisePlan(plannedDate = todayMidnightMillis)).let {
+                    if (it == 0L) {
+                        exercisePlanDao.getPlansByDate(todayMidnightMillis, todayMidnightMillis)
+                            .first().id
+                    } else {
+                        it
+                    }
                 }
-            }
 
 
             // PlanDetail 초기 데이터 삽입 (운동 계획과 운동 연결)
