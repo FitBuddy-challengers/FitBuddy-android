@@ -20,6 +20,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.cookandroid.challengers.api.RetrofitClient
 import com.cookandroid.challengers.data.ExercisePlanDao
 import com.cookandroid.challengers.data.PlanDetail
 import com.cookandroid.challengers.data.PlanDetailDao
@@ -73,10 +74,34 @@ class ExerciseFragment : Fragment() {
         }
 
         adapter = ExerciseAdapter(requireContext(), this, db) {
-            findNavController().navigate(
-                R.id.action_exercise_to_exerciseAdd,
-                Bundle().apply { putLong("planId", planId) }
-            )
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    val response = RetrofitClient.scheduleApi.getTodayPlan(userId = 21) // 유저 ID 실제 값으로!
+                    if (response.isSuccessful) {
+                        val schedules = response.body()?.schedules.orEmpty()
+
+                        val newScheduleId = (schedules.maxOfOrNull { it.id } ?: 0) + 1 // 예측된 다음 스케줄 ID
+
+                        Log.d("ExerciseFragment", "🔥 예측된 다음 scheduleId: $newScheduleId")
+
+                        withContext(Dispatchers.Main) {
+                            val args = Bundle().apply {
+                                putLong("planId", planId) // ✅ 정확한 키
+                            }
+                            Log.d("ExerciseFragment", "💡 Add로 넘기는 planId = $planId") // ✅ Log는 밖에서 찍어야 정확히 찍힘
+
+                            findNavController().navigate(
+                                R.id.action_exercise_to_exerciseAdd,
+                                args
+                            )
+                        }
+                    } else {
+                        Log.e("ExerciseFragment", "❌ 오늘 스케줄 불러오기 실패: ${response.code()}")
+                    }
+                } catch (e: Exception) {
+                    Log.e("ExerciseFragment", "❗ 네트워크 오류: ${e.localizedMessage}")
+                }
+            }
         }
         binding.exerciseListRecyclerView.apply {
             layoutManager = LinearLayoutManager(requireContext())

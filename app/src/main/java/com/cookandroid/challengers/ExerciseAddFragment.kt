@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.cookandroid.challengers.api.RetrofitClient
 import com.cookandroid.challengers.data.Exercise
 import com.cookandroid.challengers.data.ExerciseSet
 import com.cookandroid.challengers.data.PlanDetail
@@ -40,6 +41,7 @@ import kotlin.collections.forEach
 import kotlin.collections.forEachIndexed
 import kotlin.collections.map
 import kotlin.collections.none
+import java.time.LocalDate
 
 class ExerciseAddFragment : Fragment() {
 
@@ -147,27 +149,86 @@ class ExerciseAddFragment : Fragment() {
                 val defaultReps = 15
 
                 selectedExercises.forEachIndexed { idx, ex ->
-                    val planDetail = PlanDetail(
-                        exercisePlanId = planId,
-                        exerciseId = ex.id,
-                        exOrder = existingExercises.size + idx + 1
-                    )
-                    planDetailDao.insert(planDetail)
+                    val isTimeType = ex.isTimeType
+                    val exerciseOrder = existingExercises.size + idx + 1
+                    val dateString = LocalDate.now().toString() // 예: "2025-05-23"
 
-                    for (i in 1..defaultSets) {
-                        val exerciseSet = ExerciseSet(
-                            exercisePlanId  = planId,
-                            exerciseId      = ex.id,
-                            setNumber       = i,
-                            weight          = 0,
-                            reps            = defaultReps,
-                            isCompleted     = false,
-                            isHighlighted   = (i == 1 && idx == 0 && existingExercises.isEmpty())
+                    // ✅ 1. 먼저 서버에 schedule 생성 요청
+                    Log.d("AddExercise", "📤 schedule 요청: planId=$planId, date=$dateString, order=$exerciseOrder")
+                    val scheduleResponse = try {
+                        RetrofitClient.scheduleApi.createSchedule(
+                            RetrofitClient.CreateScheduleRequest(
+                                planId = planId.toInt(),
+                                date = dateString,
+                                exerciseOrder = exerciseOrder
+                            )
                         )
-                        db.exerciseSetDao().insert(exerciseSet)
+                    } catch (e: Exception) {
+                        Log.e("AddExercise", "❗ schedule 생성 실패: ${e.localizedMessage}")
+                        null
                     }
+                    // ✅ 2. schedule 응답 상세 로그 출력
+                    if (scheduleResponse != null) {
+                        val errorBody = scheduleResponse.errorBody()?.string()
+                        Log.d("AddExercise", "📥 응답 code=${scheduleResponse.code()}, error=$errorBody")
+                    } else {
+                        Log.e("AddExercise", "❌ schedule 응답이 null임")
+                    }
+                    Log.e("AddExercise", "❌ 서버 응답 코드: ${scheduleResponse?.code()}")
 
-                    Log.d("AddExercise", "Inserted PlanDetail for ${ex.name}")
+                    val scheduleId = scheduleResponse?.body()?.scheduleId
+
+                    if (scheduleResponse?.isSuccessful == true && scheduleId != null) {
+                        // ✅ 2. scheduleId 기반으로 운동 추가
+                        val setList = (1..defaultSets).map { i ->
+                            if (isTimeType) {
+                                RetrofitClient.SetData(setNumber = i, seconds = 30)
+                            } else {
+                                RetrofitClient.SetData(setNumber = i, reps = defaultReps, weight = 0)
+                            }
+                        }
+
+                        val request = RetrofitClient.AddExerciseRequest(
+                            exerciseId = ex.id.toInt(),
+                            setList = setList
+                        )
+
+                        val response = try {
+                            RetrofitClient.scheduleApi.addExerciseToSchedule(scheduleId = scheduleId.toLong(), request = request)
+                        } catch (e: Exception) {
+                            Log.e("AddExercise", "❗ 운동 추가 실패: ${e.localizedMessage}")
+                            null
+                        }
+
+                        if (response?.isSuccessful == true) {
+                            // ✅ 3. Room에 저장
+                            val planDetail = PlanDetail(
+                                exercisePlanId = planId,
+                                exerciseId = ex.id,
+                                exOrder = exerciseOrder
+                            )
+                            planDetailDao.insert(planDetail)
+
+                            for (i in 1..defaultSets) {
+                                val exerciseSet = ExerciseSet(
+                                    exercisePlanId = planId,
+                                    exerciseId = ex.id,
+                                    setNumber = i,
+                                    weight = 0,
+                                    reps = defaultReps,
+                                    isCompleted = false,
+                                    isHighlighted = (i == 1 && idx == 0 && existingExercises.isEmpty())
+                                )
+                                db.exerciseSetDao().insert(exerciseSet)
+                            }
+
+                            Log.d("AddExercise", "✅ ${ex.name} → 서버 + Room 저장 성공")
+                        } else {
+                            Log.e("AddExercise", "❌ ${ex.name} → 서버 운동 저장 실패")
+                        }
+                    } else {
+                        Log.e("AddExercise", "❌ scheduleId 생성 실패")
+                    }
                 }
 
                 withContext(Dispatchers.Main) {
