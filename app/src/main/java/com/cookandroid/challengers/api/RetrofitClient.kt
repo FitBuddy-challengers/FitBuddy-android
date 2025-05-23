@@ -5,6 +5,8 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import com.cookandroid.challengers.BuildConfig // ★ 명시적으로 추가!
 import com.cookandroid.challengers.auth.login.LoginService
+import com.cookandroid.challengers.network.dto.PlanDto
+import com.cookandroid.challengers.network.dto.ScheduleDto
 import com.google.gson.annotations.SerializedName
 
 // 서버와 애뮬레이터 연동을 위한 코드 절대 수정 XXX
@@ -51,7 +53,7 @@ object RetrofitClient {
         retrofit.create(ScheduleApi::class.java)
     }
 
-    data class CreateScheduleRequest(
+    data class  CreateScheduleRequest(
         @SerializedName("planId") val planId: Int,
         @SerializedName("date") val date: String,
         @SerializedName("exerciseOrder") val exerciseOrder: Int
@@ -62,5 +64,37 @@ object RetrofitClient {
         @SerializedName("scheduleId") val scheduleId: Int
     )
 
+    data class ScheduleIdResponse(val scheduleId: Long)
+
+    data class TodayPlanResponse(
+        val plan: PlanDto,
+        val schedules: List<ScheduleDto>
+    )
+
+//    data class PlanDto(
+//        val id: Int,
+//        @SerializedName("date") val date: String
+//    )
+//
+//    data class ScheduleDto(
+//        @SerializedName("id") val id: Int,
+//        @SerializedName("exerciseId") val exerciseId: Int
+//        // 필요 시 더 많은 필드 추가 가능
+//    )
+
+    data class ExerciseUpdateRequest(
+        val exercise_id: Int,
+        val set_list: List<SetDto>
+    )
+
+    data class SetDto(
+        val set_number: Int,
+        val reps: Int? = null,
+        val weight: Int? = null,
+        val seconds: Int? = null
+    )
+    data class ServerResponse(
+        val message: String
+    )
 
 }

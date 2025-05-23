@@ -11,11 +11,14 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ExerciseSetDao {
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insert(exerciseSet: ExerciseSet): Long
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(set: ExerciseSet): Long
 
     @Update
     suspend fun update(exerciseSet: ExerciseSet)
+
+    @Query("DELETE FROM exercise_sets")
+    suspend fun deleteAll() //데이터베이스 -> 룸db
 
     @Delete
     suspend fun delete(exerciseSet: ExerciseSet)
@@ -103,5 +106,9 @@ interface ExerciseSetDao {
     // 특정 운동의 모든 세트 삭제
     @Query("DELETE FROM exercise_sets WHERE exerciseId = :exerciseId")
     suspend fun deleteSetsByExerciseId(exerciseId: Long)
+
+
+
+
 
 }

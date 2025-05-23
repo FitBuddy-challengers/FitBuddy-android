@@ -20,6 +20,8 @@ import com.cookandroid.challengers.data.ChallengePersonal
 import com.cookandroid.challengers.data.ChallengePersonalDao
 import com.cookandroid.challengers.data.CoolDownStretch
 import com.cookandroid.challengers.data.CoolDownStretchDao
+import com.cookandroid.challengers.data.ExerciseSetEntity
+import com.cookandroid.challengers.data.ExerciseSetEntityDao
 import com.cookandroid.challengers.data.WeightRecord
 import com.cookandroid.challengers.data.WeightRecordDao
 import com.cookandroid.challengers.data.converters.ListConverter
@@ -33,8 +35,11 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 @Database(
-    entities = [ExercisePlan::class, Exercise::class, ExerciseSet::class, WeightRecord::class,
-        PlanDetail::class, ChallengePersonal::class, CoolDownStretch::class],
+    entities = [
+        ExercisePlan::class, Exercise::class, ExerciseSet::class, WeightRecord::class,
+        PlanDetail::class, ChallengePersonal::class, CoolDownStretch::class,
+
+    ],
     version = 1,
     exportSchema = false
 )

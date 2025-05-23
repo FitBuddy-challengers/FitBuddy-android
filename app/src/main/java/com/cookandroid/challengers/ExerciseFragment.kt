@@ -163,43 +163,8 @@ class ExerciseFragment : Fragment() {
             // 로그 추가: 어떤 날짜 범위를 찾는지 확인
             Log.d("ExerciseFragment", "Searching for plans between: $todayStart and $todayEnd")
 
-            planDao.getExercisePlansByDate(todayStart, todayEnd)
-                .collectLatest { plans ->
-                    if (!isAdded || _binding == null) return@collectLatest
 
-                    if (plans.isNotEmpty()) {
-                        planId = plans.first().id
-                        Log.d("ExerciseFragment", "Found plan for today with ID: $planId")
 
-                        planDao.getPlanDetailsWithExerciseFlow(planId)
-                            .collectLatest { exercises ->
-                                if (!isAdded || _binding == null) return@collectLatest
-
-                                val sorted = exercises.sortedBy { it.planDetail.exOrder }
-
-                                withContext(Dispatchers.Main) {
-                                    if (!isAdded || _binding == null) return@withContext
-
-                                    adapter.submitList(sorted.toList())
-                                    Log.d(
-                                        "ExerciseFragment",
-                                        "Loaded ${sorted.size} exercises for plan ID: $planId"
-                                    )
-                                    binding.startExerciseButton.visibility = View.VISIBLE
-                                    binding.menuBtn.visibility = View.VISIBLE
-                                }
-                            }
-
-                    } else {
-                        withContext(Dispatchers.Main) {
-                            if (!isAdded || _binding == null) return@withContext
-
-                            adapter.submitList(emptyList())
-                            planId = -1L
-                            Log.d("ExerciseFragment", "No plan found for today.")
-                        }
-                    }
-                }
 
         }
     }
@@ -264,6 +229,9 @@ class ExerciseFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
+
+
+
 
     private class ExerciseAdapter(
         private val context: Context,

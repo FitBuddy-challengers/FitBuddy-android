@@ -21,6 +21,7 @@ import com.bumptech.glide.Glide
 import com.cookandroid.challengers.api.RetrofitClient
 import com.cookandroid.challengers.data.Exercise
 import com.cookandroid.challengers.data.ExerciseSet
+import com.cookandroid.challengers.data.ExerciseSetEntity
 import com.cookandroid.challengers.data.PlanDetail
 import com.cookandroid.challengers.data.PlanDetailDao
 import com.cookandroid.challengers.data.db.AppDatabase
@@ -34,6 +35,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 import kotlin.collections.any
 import kotlin.collections.filter
 import kotlin.collections.find
@@ -151,10 +155,8 @@ class ExerciseAddFragment : Fragment() {
                 selectedExercises.forEachIndexed { idx, ex ->
                     val isTimeType = ex.isTimeType
                     val exerciseOrder = existingExercises.size + idx + 1
-                    val dateString = LocalDate.now().toString() // 예: "2025-05-23"
+                    val dateString = LocalDate.now().toString()
 
-                    // ✅ 1. 먼저 서버에 schedule 생성 요청
-                    Log.d("AddExercise", "📤 schedule 요청: planId=$planId, date=$dateString, order=$exerciseOrder")
                     val scheduleResponse = try {
                         RetrofitClient.scheduleApi.createSchedule(
                             RetrofitClient.CreateScheduleRequest(
@@ -167,19 +169,10 @@ class ExerciseAddFragment : Fragment() {
                         Log.e("AddExercise", "❗ schedule 생성 실패: ${e.localizedMessage}")
                         null
                     }
-                    // ✅ 2. schedule 응답 상세 로그 출력
-                    if (scheduleResponse != null) {
-                        val errorBody = scheduleResponse.errorBody()?.string()
-                        Log.d("AddExercise", "📥 응답 code=${scheduleResponse.code()}, error=$errorBody")
-                    } else {
-                        Log.e("AddExercise", "❌ schedule 응답이 null임")
-                    }
-                    Log.e("AddExercise", "❌ 서버 응답 코드: ${scheduleResponse?.code()}")
 
                     val scheduleId = scheduleResponse?.body()?.scheduleId
 
                     if (scheduleResponse?.isSuccessful == true && scheduleId != null) {
-                        // ✅ 2. scheduleId 기반으로 운동 추가
                         val setList = (1..defaultSets).map { i ->
                             if (isTimeType) {
                                 RetrofitClient.SetData(setNumber = i, seconds = 30)
@@ -194,14 +187,42 @@ class ExerciseAddFragment : Fragment() {
                         )
 
                         val response = try {
-                            RetrofitClient.scheduleApi.addExerciseToSchedule(scheduleId = scheduleId.toLong(), request = request)
+                            RetrofitClient.scheduleApi.addExerciseToSchedule(
+                                scheduleId = scheduleId.toLong(),
+                                request = request
+                            )
                         } catch (e: Exception) {
                             Log.e("AddExercise", "❗ 운동 추가 실패: ${e.localizedMessage}")
                             null
                         }
 
                         if (response?.isSuccessful == true) {
-                            // ✅ 3. Room에 저장
+                            // ✅ [추가] 서버에 ExerciseSetEntity 직접 삽입
+                            for (i in 1..defaultSets) {
+                                val serverSet = ExerciseSetEntity(
+                                    scheduleId = scheduleId.toLong(),
+                                    exerciseId = ex.id,
+                                    setNumber = i,
+                                    reps = defaultReps,
+                                    weight = 0
+                                )
+                                try {
+                                    RetrofitClient.scheduleApi.insertSet(serverSet).enqueue(object :
+                                        Callback<Void> {
+                                        override fun onResponse(call: Call<Void>, res: Response<Void>) {
+                                            Log.d("AddExercise", "✅ 서버 세트 insert 성공: set #$i")
+                                        }
+
+                                        override fun onFailure(call: Call<Void>, t: Throwable) {
+                                            Log.e("AddExercise", "❌ 서버 세트 insert 실패: ${t.localizedMessage}")
+                                        }
+                                    })
+                                } catch (e: Exception) {
+                                    Log.e("AddExercise", "❌ 서버 세트 insert try 블록 실패: ${e.localizedMessage}")
+                                }
+                            }
+
+                            // ✅ Room 저장
                             val planDetail = PlanDetail(
                                 exercisePlanId = planId,
                                 exerciseId = ex.id,

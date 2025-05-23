@@ -14,6 +14,7 @@ data class PlanDto(
 
 data class ScheduleDto(
     val id: Int,
+    val exercise_id: Int,
     val exercise_order: Int,
     val is_completed: Boolean,
     val date: String,

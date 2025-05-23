@@ -27,8 +27,19 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 import com.cookandroid.challengers.api.RetrofitClient
+import com.cookandroid.challengers.data.ExerciseSet
+import com.cookandroid.challengers.data.ExerciseSetEntity
+import com.cookandroid.challengers.data.PlanDetail
 import com.cookandroid.challengers.network.dto.DummyPlanRequest
 import com.cookandroid.challengers.network.dto.DummyPlanResponse
+import kotlinx.coroutines.Dispatchers
+
+import java.time.format.DateTimeFormatter
+
+import com.cookandroid.challengers.network.dto.PlanDto
+import com.cookandroid.challengers.network.dto.ScheduleDto
+import com.cookandroid.challengers.network.dto.TodayPlanResponse
+import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
 
@@ -86,9 +97,11 @@ class MainActivity : AppCompatActivity() {
                 navController.navigate(R.id.homeFragment)
                 binding.mainBnv.visibility = View.VISIBLE
 
-                // 여기에서 서버에 더미 플랜 생성 요청 넣기(채윤지 추가)
-                createDummyPlanOnServer()
+                // Step 1: 서버 → Room 동기화 시도
+                syncWithServerDatabase()
 
+                // Step 2: 동기화 후 더미 없으면 생성
+                createDummyPlanOnServer()
             } else {
                 binding.mainBnv.visibility = View.GONE
             }
@@ -117,6 +130,7 @@ class MainActivity : AppCompatActivity() {
                             // 다이얼로그로 띄우는 Fragment 들
                             binding.mainBnv.visibility = View.GONE
                         }
+
                         else -> {
                             binding.mainBnv.visibility = View.VISIBLE
                         }
@@ -139,14 +153,23 @@ class MainActivity : AppCompatActivity() {
 
         val request = DummyPlanRequest(userId = userId, date = date)
 
-        
+
         //서버 시준으로 플랜이 없는 경우, 사용자의 편의성을 위해 더미 플랜을 생성
         RetrofitClient.exerciseApi.createDummyPlan(request)
             .enqueue(object : Callback<DummyPlanResponse> {
-                override fun onResponse(call: Call<DummyPlanResponse>, response: Response<DummyPlanResponse>) {
+                override fun onResponse(
+                    call: Call<DummyPlanResponse>,
+                    response: Response<DummyPlanResponse>
+                ) {
                     if (response.isSuccessful) {
                         val planId = response.body()?.planId
-                        Log.d("DummyPlan", "✅ 더미 운동 계획 생성됨 - planId: $planId")
+                        val dateStr = response.body()?.date
+
+                        // 날짜 파싱 추가
+                        val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+                        val date = dateStr?.let { LocalDate.parse(it, dateFormatter) }
+
+                        Log.d("DummyPlan", "✅ 더미 운동 계획 생성됨 - planId: $planId, date: $date")
                     } else {
                         Log.w("DummyPlan", "⚠️ 서버 응답 오류: ${response.code()}")
                     }
@@ -161,5 +184,96 @@ class MainActivity : AppCompatActivity() {
 
     fun showBottomNav() {
         binding.mainBnv.visibility = View.VISIBLE
+    }
+
+
+    //Room DB 보완! 앱 실행시 서버 DB를 기준으로 room을 구성함.
+    private fun syncWithServerDatabase() {
+        val db = AppDatabase.getDatabase(this@MainActivity, lifecycleScope)
+        val userId = getSharedPreferences("UserPrefs", MODE_PRIVATE).getInt("userId", -1)
+        if (userId == -1) return
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val response = RetrofitClient.scheduleApi.getTodayPlan(userId)
+                if (response.isSuccessful) {
+                    val todayPlan = response.body()
+
+                    if (todayPlan != null) {
+                        // ✅ 1. 실제 플랜 존재 → Room 초기화 및 저장
+                        val planId = todayPlan.plan.id.toLong()
+
+                        db.exercisePlanDao().deleteAll()
+                        db.planDetailDao().deleteAll()
+                        db.exerciseSetDao().deleteAll()
+
+                        val dateMillis = LocalDate.parse(todayPlan.plan.start_date)
+                            .atStartOfDay(ZoneId.of("Asia/Seoul"))
+                            .toInstant()
+                            .toEpochMilli()
+
+                        db.exercisePlanDao().insert(
+                            ExercisePlan(id = planId, plannedDate = dateMillis)
+                        )
+
+                        // 추가: planId를 SharedPreferences에 저장
+                        getSharedPreferences("UserPrefs", MODE_PRIVATE)
+                            .edit()
+                            .putLong("todayPlanId", planId)
+                            .apply()
+
+
+                        for ((index, sched) in todayPlan.schedules.withIndex()) {
+                            val exerciseId = sched.exercise_id.toLong()
+                            val scheduleId = sched.id.toLong()
+
+                            // ✅ PlanDetail 저장 (Room 화면용)
+                            val planDetail = PlanDetail(
+                                exercisePlanId = planId,
+                                exerciseId = exerciseId,
+                                exOrder = index + 1
+                            )
+                            db.planDetailDao().insert(planDetail)
+
+                            // ✅ ExerciseSet 저장 (Room 세트용)
+                            for (setNumber in 1..3) {
+                                val exerciseSet = ExerciseSet(
+                                    exercisePlanId = planId,
+                                    exerciseId = exerciseId,
+                                    setNumber = setNumber,
+                                    weight = 0,
+                                    reps = 12,
+                                    isCompleted = false,
+                                    isHighlighted = (setNumber == 1 && index == 0)
+                                )
+                                db.exerciseSetDao().insert(exerciseSet)
+
+                                // ✅ 서버 DTO 로그 출력
+                                val serverSet = ExerciseSetEntity(
+                                    scheduleId = scheduleId,
+                                    exerciseId = exerciseId,
+                                    setNumber = setNumber,
+                                    reps = 12,
+                                    weight = 0
+                                )
+                                Log.d("MainActivity", "서버 세트 DTO 생성: $serverSet")
+                            }
+                        }
+
+
+
+                    } else {
+                        // ✅ 2. 오늘 플랜 없음 → 더미 생성
+                        withContext(Dispatchers.Main) {
+                            createDummyPlanOnServer()
+                        }
+                    }
+                } else {
+                    Log.e("SyncRoom", "서버 응답 실패: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                Log.e("SyncRoom", "서버 동기화 실패: ${e.message}")
+            }
+        }
     }
 }

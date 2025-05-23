@@ -16,6 +16,9 @@ interface PlanDetailDao {
     @Delete
     suspend fun delete(planDetail: PlanDetail)
 
+    @Query("DELETE FROM plan_details")
+    suspend fun deleteAll() //데이터베이스 -> 룸db
+
     @Update
     suspend fun update(planDetail: PlanDetail)
 

@@ -11,6 +11,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.cookandroid.challengers.ExerciseEditSetFragment
+import com.cookandroid.challengers.api.RetrofitClient
 
 import com.cookandroid.challengers.data.Exercise
 import com.cookandroid.challengers.data.PlanDetail
@@ -184,8 +185,37 @@ class ExerciseEditFragment(
 
         binding.layoutDeleteExercise.setOnClickListener {
             lifecycleScope.launch(Dispatchers.IO) {
+                // ✅ 1. RoomDB 삭제
                 db.planDetailDao().delete(planDetail)
                 db.exerciseSetDao().deleteSetsByExerciseId(exercise.id)
+
+                // ✅ 2. 서버에서 scheduleId 조회 → 삭제 요청
+                try {
+                    val response = RetrofitClient.scheduleApi.getScheduleId(
+                        planId = planDetail.exercisePlanId,
+                        exerciseId = exercise.id
+                    )
+                    if (response.isSuccessful) {
+                        val scheduleId = response.body()?.scheduleId
+                        if (scheduleId != null) {
+                            val deleteResponse = RetrofitClient.scheduleApi.deleteExercise(
+                                scheduleId = scheduleId,
+                                exerciseId = exercise.id
+                            )
+                            if (!deleteResponse.isSuccessful) {
+                                Log.e("ExerciseDelete", "❌ 운동 삭제 실패: ${deleteResponse.code()}")
+                            }
+                        } else {
+                            Log.e("ExerciseDelete", "❌ scheduleId가 null입니다.")
+                        }
+                    } else {
+                        Log.e("ExerciseDelete", "❌ scheduleId 조회 실패: ${response.code()}")
+                    }
+                } catch (e: Exception) {
+                    Log.e("ExerciseDelete", "❗ 서버 운동 삭제 요청 실패: ${e.message}")
+                }
+
+                // ✅ 3. UI 갱신
                 withContext(Dispatchers.Main) {
                     Toast.makeText(requireContext(), "${exercise.name} 삭제", Toast.LENGTH_SHORT)
                         .show()
@@ -195,8 +225,16 @@ class ExerciseEditFragment(
                 }
             }
         }
-    }
 
+
+
+
+
+//    private suspend fun getScheduleId(planId: Long, exerciseId: Long): Long {
+//        val schedule = db.scheduleDao().getScheduleByPlanAndExercise(planId, exerciseId)
+//        return schedule?.id ?: throw IllegalStateException("해당 운동의 스케줄을 찾을 수 없습니다")
+//    }
+    }
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

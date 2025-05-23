@@ -19,6 +19,9 @@ interface ExercisePlanDao {
     @Update
     suspend fun update(exercisePlan: ExercisePlan)
 
+    @Query("DELETE FROM exercise_plans")
+    suspend fun deleteAll()  // ExercisePlanDao //데이터 베이스 -> 륨 db
+
     @Delete
     suspend fun delete(exercisePlan: ExercisePlan)
 
