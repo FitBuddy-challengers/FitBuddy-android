@@ -8,6 +8,7 @@
     android:layout_margin="16dp"
     tools:context=".HomeFragment">
 
+    <!-- 알림 버튼 -->
     <android.widget.Button
         android:id="@+id/btnNoti"
         android:layout_width="34dp"
@@ -17,6 +18,7 @@
         android:layout_marginTop="40dp"
         android:background="@drawable/ic_home_notification" />
 
+    <!-- 마이페이지 버튼 -->
     <android.widget.Button
         android:id="@+id/btnMypage"
         android:layout_width="34dp"
@@ -26,13 +28,158 @@
         android:layout_marginTop="40dp"
         android:background="@drawable/ic_home_mypage" />
 
-    <!-- 임시 게이지, 게이지 ui 라이브러리 참고 필요 -->
-    <ImageView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:src="@drawable/ui_gauge_gray"
-        app:layout_constraintTop_toTopOf="parent"
+    <!-- 게이지 UI, Canvas로 바꿀 것도 고려 -->
+    <ProgressBar
+        android:id="@+id/uiGauge"
+        style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+        android:layout_width="360dp"
+        android:layout_height="360dp"
+        app:layout_constraintTop_toBottomOf="@id/btnNoti"
         app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginTop="80dp"/>
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="8dp"
+        android:indeterminate="false"
+        android:max="100"
+        android:progressBackgroundTint="#D9D9D9"
+        android:progressDrawable="@drawable/ui_home_gauge" />
+
+    <ImageView
+        android:id="@+id/ivChar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:src="@drawable/temp_cat"
+        app:layout_constraintBottom_toTopOf="@+id/btnAiChat"
+        app:layout_constraintStart_toStartOf="@id/uiGauge"
+        app:layout_constraintEnd_toEndOf="@id/uiGauge"
+        android:layout_marginBottom="12dp" />
+
+    <android.widget.Button
+        android:id="@+id/btnAiChat"
+        android:layout_width="142dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="@+id/uiGauge"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:background="@drawable/btn_home_aichat"
+        android:layout_marginTop="324dp"
+        android:gravity="center"
+        android:text="AI 채팅"
+        android:textSize="20dp"
+        android:textColor="@color/white"
+        android:fontFamily="@font/pretendard_bold"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp" />
+
+    <LinearLayout
+        android:id="@+id/layoutWeek"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toBottomOf="@+id/btnAiChat"
+        android:layout_marginTop="32dp"
+        android:gravity="center"
+        android:weightSum="7">
+
+        <TextView
+            style="@style/tvWeekLayout"
+            android:text="일" />
+
+        <TextView
+            style="@style/tvWeekLayout"
+            android:text="월" />
+
+        <TextView
+            style="@style/tvWeekLayout"
+            android:text="화" />
+
+        <TextView
+            style="@style/tvWeekLayout"
+            android:text="수" />
+
+        <TextView
+            style="@style/tvWeekLayout"
+            android:text="목" />
+
+        <TextView
+            style="@style/tvWeekLayout"
+            android:text="금" />
+
+        <TextView
+            style="@style/tvWeekLayout"
+            android:text="토" />
+
+    </LinearLayout>
+
+    <!-- 날짜 크기 수정, 운동 있는 날 볼드 처리 필요 -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvDate"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:weightSum="7"
+        app:layout_constraintTop_toBottomOf="@+id/layoutWeek"
+        android:layout_marginTop="14dp"
+        android:overScrollMode="never"
+        android:orientation="horizontal" />
+
+    <LinearLayout
+        android:id="@+id/WorkoutItem"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="36dp"
+        android:background="@drawable/view_home_list_background"
+        android:orientation="vertical"
+        android:padding="16dp"
+        app:layout_constraintTop_toBottomOf="@+id/rvDate">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:background="@drawable/view_home_day_background"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="8dp">
+
+            <TextView
+                android:id="@+id/tvDay"
+                android:layout_width="wrap_content"
+                android:layout_height="20dp"
+                android:fontFamily="@font/pretendard_medium"
+                android:text="2025년 n월 n일"
+                android:textColor="#7E7E7E"
+                android:textSize="16dp" />
+
+            <View
+                android:layout_width="8dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <android.widget.Button
+                android:id="@+id/btnAddWorkout"
+                android:layout_width="19dp"
+                android:layout_height="19dp"
+                android:background="@drawable/btn_home_add" />
+
+        </LinearLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvWorkout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="24dp"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+
+    </LinearLayout>
+
+    <android.widget.Button
+        android:id="@+id/btnStartWorkout"
+        android:layout_width="35dp"
+        android:layout_height="35dp"
+        android:background="@drawable/btn_home_start"
+        app:layout_constraintTop_toTopOf="@+id/WorkoutItem"
+        app:layout_constraintEnd_toEndOf="@+id/WorkoutItem"
+        android:layout_margin="16dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
