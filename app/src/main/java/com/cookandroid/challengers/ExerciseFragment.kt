@@ -92,7 +92,8 @@ class ExerciseFragment : Fragment() {
         loadTodayPlan()
     }
 
-    private fun loadTodayPlan() {
+    // private -> public 수정
+    fun loadTodayPlan() {
         lifecycleScope.launch(Dispatchers.IO) {
             val cal = Calendar.getInstance().apply {
                 set(Calendar.HOUR_OF_DAY, 0)
