@@ -55,6 +55,10 @@ interface ExerciseDao {
     @Transaction
     @Query("SELECT * FROM exercises WHERE id IN (SELECT exerciseId FROM plan_details WHERE exercisePlanId = :planId) ORDER BY name ASC")
     suspend fun getExercisesWithPlanInfo(planId: Long): List<ExerciseWithPlanInfo>
+
+    // 운동 검색(임시)
+    @Query("SELECT * FROM exercises WHERE name = :name LIMIT 1")
+    suspend fun getExerciseByName(name: String): Exercise?
 }
 
 // Exercise와 PlanDetail 정보를 함께 담는 데이터 클래스 (필요한 정보에 따라 필드 추가)
