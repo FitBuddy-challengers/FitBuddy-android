@@ -151,21 +151,37 @@ class ExerciseFragment : Fragment() {
 
     private fun loadTodayPlan() {
         lifecycleScope.launch(Dispatchers.IO) {
-            val zoneId = ZoneId.of("Asia/Seoul") // 서울 시간대 명시
+            try {
+                val response = RetrofitClient.scheduleApi.getTodayPlan(userId = 21)
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    val todayPlanId = body?.plan?.id?.toLong() ?: -1L
+                    planId = todayPlanId
 
-            val todayStart = LocalDate.now(zoneId)
-                .atStartOfDay(zoneId)
-                .toInstant()
-                .toEpochMilli()
+                    val planDetails = planDetailDao.getPlanDetailsForPlanId(todayPlanId)
 
-            val todayEnd = todayStart + 24 * 60 * 60 * 1000 - 1 // 오늘 끝 (자정 - 1밀리초)
+                    val planDetailWithExerciseList = planDetails.mapNotNull { planDetail ->
+                        val exercise = db.exerciseDao().getExerciseById(planDetail.exerciseId)
+                        val sets = db.exerciseSetDao().getSetsByPlanAndExerciseId(
+                            planDetail.exercisePlanId,
+                            planDetail.exerciseId
+                        )
 
-            // 로그 추가: 어떤 날짜 범위를 찾는지 확인
-            Log.d("ExerciseFragment", "Searching for plans between: $todayStart and $todayEnd")
+                        if (exercise != null) {
+                            PlanDetailWithExercise(planDetail, exercise, sets)
+                        } else null
+                    }.sortedBy { it.planDetail.exOrder }
 
-
-
-
+                    withContext(Dispatchers.Main) {
+                        adapter.submitList(planDetailWithExerciseList)
+                        Log.d("ExerciseFragment", "✅ 오늘의 운동 불러오기 완료: ${planDetailWithExerciseList.size}개")
+                    }
+                } else {
+                    Log.e("ExerciseFragment", "❌ getTodayPlan 실패: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                Log.e("ExerciseFragment", "❗ 오류 발생: ${e.localizedMessage}")
+            }
         }
     }
 
