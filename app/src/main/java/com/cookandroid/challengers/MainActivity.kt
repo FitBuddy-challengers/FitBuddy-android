@@ -67,6 +67,7 @@ class MainActivity : AppCompatActivity() {
                         is com.cookandroid.challengers.auth.signup.SignUpPasswordFragment,
                         is com.cookandroid.challengers.auth.signup.SignUpOtpFragment,
                         is com.cookandroid.challengers.auth.signup.SignUpDoneFragment,
+                        is HomeAichatFragment,
                         is ExerciseListFragment,
                         is ExerciseDoingFragment,
                         is ExerciseDetailFragment,
