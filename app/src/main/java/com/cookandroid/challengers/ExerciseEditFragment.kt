@@ -187,7 +187,10 @@ class ExerciseEditFragment(
             lifecycleScope.launch(Dispatchers.IO) {
                 // ✅ 1. RoomDB 삭제
                 db.planDetailDao().delete(planDetail)
-                db.exerciseSetDao().deleteSetsByExerciseId(exercise.id)
+                db.exerciseSetDao().deleteSetsByPlanAndExerciseId(
+                    planId = planDetail.exercisePlanId,
+                    exerciseId = exercise.id
+                )
 
                 // ✅ 2. 서버에서 scheduleId 조회 → 삭제 요청
                 try {
@@ -198,13 +201,14 @@ class ExerciseEditFragment(
                     if (response.isSuccessful) {
                         val scheduleId = response.body()?.scheduleId
                         if (scheduleId != null) {
-                            val deleteResponse = RetrofitClient.scheduleApi.deleteExercise(
-                                scheduleId = scheduleId,
-                                exerciseId = exercise.id
-                            )
+                            val deleteResponse = RetrofitClient.scheduleApi.deleteExercise(scheduleId)
                             if (!deleteResponse.isSuccessful) {
                                 Log.e("ExerciseDelete", "❌ 운동 삭제 실패: ${deleteResponse.code()}")
                             }
+
+//                            if (!deleteResponse.isSuccessful) {
+//                                Log.e("ExerciseDelete", "❌ 운동 삭제 실패: ${deleteResponse.code()}")
+//                            }
                         } else {
                             Log.e("ExerciseDelete", "❌ scheduleId가 null입니다.")
                         }

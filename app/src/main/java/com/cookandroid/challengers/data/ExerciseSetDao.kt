@@ -107,6 +107,9 @@ interface ExerciseSetDao {
     @Query("DELETE FROM exercise_sets WHERE exerciseId = :exerciseId")
     suspend fun deleteSetsByExerciseId(exerciseId: Long)
 
+    @Query("DELETE FROM exercise_sets WHERE exercisePlanId = :planId AND exerciseId = :exerciseId")
+    suspend fun deleteSetsByPlanAndExerciseId(planId: Long, exerciseId: Long)
+
 
 
 

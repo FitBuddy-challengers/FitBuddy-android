@@ -39,10 +39,9 @@ interface ScheduleApi {
         @Query("exerciseId") exerciseId: Long
     ): Response<RetrofitClient.ScheduleIdResponse>
 
-    @DELETE("/api/schedule/{scheduleId}/exercise/{exerciseId}")
+    @DELETE("/api/schedule/{scheduleId}")
     suspend fun deleteExercise(
-        @Path("scheduleId") scheduleId: Long,
-        @Path("exerciseId") exerciseId: Long
+        @Path("scheduleId") scheduleId: Long
     ): Response<Void>
 
     @POST("/api/schedule/{scheduleId}/exercise")
@@ -53,4 +52,6 @@ interface ScheduleApi {
 
     @POST("/api/schedule/set")
     fun insertSet(@Body set: ExerciseSetEntity): Call<Void>
+
+
 }
