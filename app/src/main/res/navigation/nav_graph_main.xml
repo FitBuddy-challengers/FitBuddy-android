@@ -8,7 +8,54 @@
     <fragment
         android:id="@+id/homeFragment"
         android:name="com.cookandroid.challengers.HomeFragment"
-        android:label="홈" />
+        android:label="홈">
+
+        <!-- 알림 -->
+        <action
+            android:id="@+id/action_home_to_homeNotiFragment"
+            app:destination="@id/homeNotiFragment" />
+
+        <!-- 마이페이지 -->
+        <action
+            android:id="@+id/action_home_to_homeMypageFragment"
+            app:destination="@id/homeMypageFragment" />
+
+        <!-- AI 채팅 -->
+        <action
+            android:id="@+id/action_home_to_homeAichatFragment"
+            app:destination="@id/homeAichatFragment" />
+
+        <!-- 운동 추가 -->
+        <action
+            android:id="@+id/action_home_to_exerciseAddFragment"
+            app:destination="@id/exerciseAddFragment" />
+
+        <!-- 운동 시작 -->
+        <action
+            android:id="@+id/action_home_to_exerciseFragment"
+            app:destination="@id/exerciseFragment" />
+    </fragment>
+
+    <!-- 홈(알림, 마이페이지, 채팅) -->
+    <fragment
+        android:id="@+id/homeNotiFragment"
+        android:name="com.cookandroid.challengers.HomeNotiFragment"
+        android:label="알림" />
+
+    <fragment
+        android:id="@+id/homeMypageFragment"
+        android:name="com.cookandroid.challengers.HomeMypageFragment"
+        android:label="마이페이지" />
+
+    <fragment
+        android:id="@+id/homeAichatFragment"
+        android:name="com.cookandroid.challengers.HomeAichatFragment"
+        android:label="AI 채팅" >
+
+        <action
+            android:id="@+id/action_homeAichatFragment_to_homeFragment"
+            app:destination="@id/homeFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/challengeFragment"
