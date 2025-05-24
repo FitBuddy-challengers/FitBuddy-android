@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:id="@+id/workout"
+    android:layout_marginTop="8dp"
+    android:layout_marginBottom="8dp">
+
+    <android.widget.CheckBox
+        android:id="@+id/checkWorkout"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:button="@drawable/check_home_workout_selector"/>
+
+    <TextView
+        android:id="@+id/tvWorkoutName"
+        android:layout_width="wrap_content"
+        android:layout_height="20dp"
+        android:text="벤치프레스"
+        android:textSize="16dp"
+        android:fontFamily="@font/pretendard_medium"
+        android:textColor="#292929"
+        android:layout_marginStart="8dp" />
+
+    <TextView
+        android:id="@+id/tvWorkoutDetail1"
+        android:layout_width="wrap_content"
+        android:layout_height="20dp"
+        android:text="10회"
+        android:textSize="16dp"
+        android:fontFamily="@font/pretendard_medium"
+        android:textColor="#292929"
+        android:layout_marginStart="8dp"/>
+
+    <TextView
+        android:id="@+id/tvWorkoutDetail2"
+        android:layout_width="wrap_content"
+        android:layout_height="20dp"
+        android:text="3세트"
+        android:textSize="16dp"
+        android:fontFamily="@font/pretendard_medium"
+        android:textColor="#292929"
+        android:layout_marginStart="8dp"/>
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_weight="1"/>
+
+    <android.widget.Button
+        android:id="@+id/btnMore"
+        android:layout_width="4dp"
+        android:layout_height="12dp"
+        android:background="@drawable/ic_more"
+        android:layout_margin="4dp"/>
+
+</LinearLayout>
