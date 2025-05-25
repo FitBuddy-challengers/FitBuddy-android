@@ -23,6 +23,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.cookandroid.challengers.api.RetrofitClient
 import com.cookandroid.challengers.data.Exercise
 import com.cookandroid.challengers.data.PlanDetail
 import com.cookandroid.challengers.data.PlanDetailDao
@@ -43,17 +44,24 @@ import kotlinx.coroutines.withContext
 
 class ExerciseChangeFragment : BottomSheetDialogFragment() {
 
+    //private var onExerciseChanged: ((Long) -> Unit)? = null
+
     companion object {
         private const val ARG_PLAN_ID = "planId"
         private const val ARG_EXERCISE_ID = "exerciseId"
+
 
         fun newInstance(planId: Long, exerciseId: Long) = ExerciseChangeFragment().apply {
             arguments = Bundle().apply {
                 putLong(ARG_PLAN_ID, planId)
                 putLong(ARG_EXERCISE_ID, exerciseId)
             }
+
         }
     }
+
+
+
 
     override fun getTheme(): Int = R.style.BottomSheetDialogTheme
 
@@ -172,44 +180,86 @@ class ExerciseChangeFragment : BottomSheetDialogFragment() {
             }
 
             lifecycleScope.launch(Dispatchers.IO) {
+                val newId = selectedExercise!!.id
                 try {
-                    val newId = selectedExercise!!.id
-
-                    // PlanDetail 업데이트
-                    val updatedRows = planDetailDao.replaceExercise(planId, exerciseId, newId)
-                    if (updatedRows > 0) {
-                        // ExerciseSet 테이블도 업데이트
-                        db.exerciseSetDao().updateExerciseId(
+                    // 1️⃣ 서버 변경 요청
+                    val response = RetrofitClient.scheduleApi.changeExercise(
+                        RetrofitClient.ChangeExerciseRequest(
+                            planId = planId,
                             oldExerciseId = exerciseId,
                             newExerciseId = newId
                         )
+                    )
 
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(requireContext(), "운동이 변경되었습니다.", Toast.LENGTH_SHORT).show()
-                            setFragmentResult("exercise_changed", bundleOf("newId" to newId))
-                            dismiss() // 프래그먼트 종료
-                        }
-                    } else {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(requireContext(), "운동 변경 실패: PlanDetail 업데이트 안됨", Toast.LENGTH_SHORT).show()
-                            setFragmentResult("exercise_changed", bundleOf("newId" to newId))
-                            dismiss() // 프래그먼트 종료
-                        }
-                    }
+                    if (!response.isSuccessful) throw Exception("서버 변경 실패")
 
-                } catch (e: Exception) {
-                    Log.e("ExerciseChangeFragment", "Error changing exercise: ${e.message}")
+                    // 2️⃣ Room 동기화
+                    db.planDetailDao().replaceExercise(planId, exerciseId, newId)
+                    db.exerciseSetDao().updateExerciseId(exerciseId, newId)
+
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(
-                            requireContext(),
-                            "운동 변경 중 오류 발생: ${e.message}",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(requireContext(), "운동이 변경되었습니다.", Toast.LENGTH_SHORT).show()
+                        setFragmentResult("exercise_changed", bundleOf("newId" to newId))
                         dismiss()
+                    }
+                } catch (e: Exception) {
+                    Log.e("ExerciseChangeFragment", "운동 변경 오류: ${e.message}")
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(requireContext(), "운동 변경 실패", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
         }
+
+
+//        binding.changeCompleteButton.setOnClickListener {
+//            if (selectedExercise == null) {
+//
+//                Toast.makeText(requireContext(), "운동을 선택해주세요.", Toast.LENGTH_SHORT).show()
+//                return@setOnClickListener
+//            }
+//
+//            lifecycleScope.launch(Dispatchers.IO) {
+//                try {
+//                    val newId = selectedExercise!!.id
+//
+//                    // PlanDetail 업데이트
+//                    val updatedRows = planDetailDao.replaceExercise(planId, exerciseId, newId)
+//                    if (updatedRows > 0) {
+//                        // ExerciseSet 테이블도 업데이트
+//                        db.exerciseSetDao().updateExerciseId(
+//                            oldExerciseId = exerciseId,
+//                            newExerciseId = newId
+//                        )
+//
+//                        withContext(Dispatchers.Main) {
+//                            Toast.makeText(requireContext(), "운동이 변경되었습니다.", Toast.LENGTH_SHORT).show()
+//                            //setFragmentResult("exercise_changed", bundleOf("newId" to newId))
+//                            onExerciseChanged?.invoke(newId)
+//                            dismiss() // 프래그먼트 종료
+//                        }
+//                    } else {
+//                        withContext(Dispatchers.Main) {
+//                            Toast.makeText(requireContext(), "운동 변경 실패: PlanDetail 업데이트 안됨", Toast.LENGTH_SHORT).show()
+//                            //setFragmentResult("exercise_changed", bundleOf("newId" to newId))
+//                            onExerciseChanged?.invoke(newId)
+//                            dismiss() // 프래그먼트 종료
+//                        }
+//                    }
+//
+//                } catch (e: Exception) {
+//                    Log.e("ExerciseChangeFragment", "Error changing exercise: ${e.message}")
+//                    withContext(Dispatchers.Main) {
+//                        Toast.makeText(
+//                            requireContext(),
+//                            "운동 변경 중 오류 발생: ${e.message}",
+//                            Toast.LENGTH_SHORT
+//                        ).show()
+//                        dismiss()
+//                    }
+//                }
+//            }
+//        }
 
         binding.backButton.setOnClickListener {
             findNavController().popBackStack()

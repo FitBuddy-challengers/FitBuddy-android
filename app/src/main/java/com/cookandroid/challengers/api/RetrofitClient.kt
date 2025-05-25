@@ -9,6 +9,7 @@ import com.cookandroid.challengers.network.dto.PlanDto
 import com.cookandroid.challengers.network.dto.ScheduleDto
 import com.google.gson.annotations.SerializedName
 
+
 // 서버와 애뮬레이터 연동을 위한 코드 절대 수정 XXX
 object RetrofitClient {
    // private val BASE_URL: String = BuildConfig.BASE_URL // ★ 타입 명시!
@@ -96,5 +97,22 @@ object RetrofitClient {
     data class ServerResponse(
         val message: String
     )
+
+    data class ChangeExerciseRequest(
+        val planId: Long,
+        val oldExerciseId: Long,
+        val newExerciseId: Long
+    )
+
+    data class ChangeExerciseResponse(
+        val success: Boolean,
+        val scheduleIds: List<Long>
+    )
+
+    data class ChangeExerciseServerRequest(
+        val newExerciseId: Long
+    )
+
+
 
 }

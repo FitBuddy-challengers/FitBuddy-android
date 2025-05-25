@@ -80,7 +80,7 @@ class ExerciseFragment : Fragment() {
                     if (response.isSuccessful) {
                         val schedules = response.body()?.schedules.orEmpty()
 
-                        val newScheduleId = (schedules.maxOfOrNull { it.id } ?: 0) + 1 // 예측된 다음 스케줄 ID
+                        val newScheduleId = (schedules.maxOfOrNull { it.schedule_id } ?: 0) + 1 // 예측된 다음 스케줄 ID
 
                         Log.d("ExerciseFragment", "🔥 예측된 다음 scheduleId: $newScheduleId")
 

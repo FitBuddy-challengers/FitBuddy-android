@@ -10,6 +10,7 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.room.withTransaction
 import com.cookandroid.challengers.ExerciseEditSetFragment
 import com.cookandroid.challengers.api.RetrofitClient
 
@@ -23,6 +24,9 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+import com.cookandroid.challengers.api.ScheduleApi
+import com.cookandroid.challengers.data.ExerciseSet
 
 class ExerciseEditFragment(
     private val planDetail: PlanDetail,
@@ -77,22 +81,7 @@ class ExerciseEditFragment(
         binding.iconFavorite.isSelected = exercise.isFavorite
 
         binding.layoutSetEdit.setOnClickListener {
-            lifecycleScope.launch(Dispatchers.IO) {
-                val exerciseSets = db.exerciseSetDao().getSetsByExerciseId(exercise.id)
-                withContext(Dispatchers.Main) {
-                    val sheet = ExerciseEditSetFragment.newInstance(
-                        planDetail.exercisePlanId,  // planId
-                        exercise.id,                // exerciseId
-                        exerciseSets,               // initialSetList
-                        -1,                          // 하이라이트 인덱스
-                        exercise.equip
-                    )
-                    sheet.show(
-                        childFragmentManager,
-                        ExerciseEditSetFragment.TAG
-                    )
-                }
-            }
+            // 생략됨
         }
 
         binding.layoutExerciseChange.setOnClickListener {
@@ -101,62 +90,125 @@ class ExerciseEditFragment(
                 exercise.id
             )
 
+            // ✅ 콜백 방식 제거하고 다시 리스너 등록
             parentFragmentManager.setFragmentResultListener(
                 "exercise_changed", viewLifecycleOwner
             ) { _, bundle ->
-                val newId = bundle.getLong("newId")
+                val serverExerciseId = bundle.getLong("newId")
+
                 lifecycleScope.launch(Dispatchers.IO) {
                     try {
-                        val updatedRows = db.planDetailDao().replaceExercise(
-                            planDetail.exercisePlanId,
-                            exercise.id,
-                            newId
+                        // ✅ 0. 서버에서 scheduleId 조회
+                        val scheduleIdResponse = RetrofitClient.scheduleApi.getScheduleId(
+                            planId = planDetail.exercisePlanId,
+                            exerciseId = exercise.id
                         )
-                        if (updatedRows > 0) {
-                            db.exerciseSetDao().updateExerciseId(
-                                oldExerciseId = exercise.id,
-                                newExerciseId = newId
-                            )
-                            db.exerciseDao().getExerciseById(newId)?.let { newEx ->
-                                withContext(Dispatchers.Main) {
-                                    binding.textTitle.text = newEx.name
-                                    Toast.makeText(
-                                        requireContext(),
-                                        "운동이 ${newEx.name}으로 변경되었습니다.",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                    parentFragmentManager.setFragmentResult(
-                                        "sets_updated",
-                                        Bundle()
+
+                        if (!scheduleIdResponse.isSuccessful || scheduleIdResponse.body() == null) {
+                            throw IllegalStateException("서버에서 scheduleId를 찾을 수 없습니다.")
+                        }
+
+                        val scheduleId = scheduleIdResponse.body()!!.scheduleId
+
+                        // ✅ 1. Room 트랜잭션
+                        val refreshedExercise = db.withTransaction {
+                            // ✅ ① 새 운동이 Room에 없으면 insert
+                            var newExercise = db.exerciseDao().getExerciseById(serverExerciseId)
+                            if (newExercise == null) {
+                                db.exerciseDao().insert(
+                                    Exercise(
+                                        id = serverExerciseId,
+                                        name = "신규 운동",
+                                        part = "기타",
+                                        equip = "없음",
+                                        mets = 4.0
                                     )
-                                    dismiss()
-                                }
+                                )
+                                newExercise = db.exerciseDao().getExerciseById(serverExerciseId)
+                                    ?: throw IllegalStateException("운동 삽입 후 조회 실패")
                             }
-                        } else {
-                            withContext(Dispatchers.Main) {
+                            val roomExerciseId = newExercise.id
+
+                            // ✅ ② PlanDetail 존재 여부 확인 후 없으면 insert
+                            val planDetailExists = db.planDetailDao().getByPlanAndExercise(planDetail.exercisePlanId, roomExerciseId)
+                            Log.d("ForeignKeyCheck", "roomExerciseId=$roomExerciseId / planId=${planDetail.exercisePlanId}")
+                            Log.d("ForeignKeyCheck", "PlanDetail exists? ${planDetailExists != null}")
+                            if (planDetailExists == null) {
+                                Log.d("ForeignKeyCheck", "❗ PlanDetail이 없어서 insert 진행")
+                                db.planDetailDao().insert(
+                                    PlanDetail(
+                                        exercisePlanId = planDetail.exercisePlanId,
+                                        exerciseId = roomExerciseId,
+                                        exOrder = 0
+                                    )
+                                )
+                            }
+
+                            // ✅ ③ 기존 ExerciseSet 삭제
+                            db.exerciseSetDao().deleteSetsByPlanAndExerciseId(
+                                planId = planDetail.exercisePlanId,
+                                exerciseId = planDetail.exerciseId
+                            )
+
+                            // ✅ ④ PlanDetail 교체
+                            val updated = db.planDetailDao().replaceExercise(
+                                planId = planDetail.exercisePlanId,
+                                oldExerciseId = planDetail.exerciseId,
+                                newExerciseId = roomExerciseId
+                            )
+                            Log.d("PlanDetail", "업데이트된 행 수: $updated")
+
+                            // ✅ ⑤ 세트 insert
+                            for (setNumber in 1..3) {
+                                Log.d("InsertSet", "세트 삽입 진행: setNumber=$setNumber / roomExerciseId=$roomExerciseId")
+                                db.exerciseSetDao().insert(
+                                    ExerciseSet(
+                                        exercisePlanId = planDetail.exercisePlanId,
+                                        exerciseId = roomExerciseId,
+                                        setNumber = setNumber,
+                                        weight = 0,
+                                        reps = 12,
+                                        isCompleted = false
+                                    )
+                                )
+                            }
+
+                            newExercise
+                        }
+                        // ✅ 2. 서버 반영
+                        val changeResponse = RetrofitClient.scheduleApi.changeExerciseServer(
+                            scheduleId = scheduleId,
+                            request = RetrofitClient.ChangeExerciseServerRequest(newExerciseId = serverExerciseId)
+                        )
+
+                        // ✅ 3. UI 갱신
+                        withContext(Dispatchers.Main) {
+                            if (changeResponse.isSuccessful) {
+                                binding.textTitle.text = refreshedExercise?.name ?: "운동 변경됨"
                                 Toast.makeText(
                                     requireContext(),
-                                    "운동 변경 실패: PlanDetail 업데이트 안됨",
+                                    "운동이 ${refreshedExercise?.name}으로 변경되었습니다.",
                                     Toast.LENGTH_SHORT
                                 ).show()
+                                parentFragmentManager.setFragmentResult("sets_updated", Bundle())
+                                dismiss()
+                            } else {
+                                Toast.makeText(requireContext(), "서버 운동 변경 실패", Toast.LENGTH_SHORT).show()
                             }
                         }
+
                     } catch (e: Exception) {
-                        Log.e("ExerciseChange", "Error updating exercise: ${e.message}")
+                        Log.e("ExerciseEditFragment", "❗ 오류 발생: ${e.message}")
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(
-                                requireContext(),
-                                "운동 변경 중 오류 발생: ${e.message}",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            Toast.makeText(requireContext(), "운동 변경 중 오류", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
             }
 
+            // ✅ 콜백 제거된 채로 show
             sheet.show(childFragmentManager, "ExerciseChange")
         }
-
         binding.layoutExerciseGuide.setOnClickListener {
             dismiss()
             findNavController().navigate(
@@ -205,10 +257,6 @@ class ExerciseEditFragment(
                             if (!deleteResponse.isSuccessful) {
                                 Log.e("ExerciseDelete", "❌ 운동 삭제 실패: ${deleteResponse.code()}")
                             }
-
-//                            if (!deleteResponse.isSuccessful) {
-//                                Log.e("ExerciseDelete", "❌ 운동 삭제 실패: ${deleteResponse.code()}")
-//                            }
                         } else {
                             Log.e("ExerciseDelete", "❌ scheduleId가 null입니다.")
                         }
@@ -229,16 +277,8 @@ class ExerciseEditFragment(
                 }
             }
         }
-
-
-
-
-
-//    private suspend fun getScheduleId(planId: Long, exerciseId: Long): Long {
-//        val schedule = db.scheduleDao().getScheduleByPlanAndExercise(planId, exerciseId)
-//        return schedule?.id ?: throw IllegalStateException("해당 운동의 스케줄을 찾을 수 없습니다")
-//    }
     }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

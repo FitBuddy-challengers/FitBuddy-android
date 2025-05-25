@@ -10,6 +10,7 @@ import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -32,12 +33,19 @@ interface ScheduleApi {
     suspend fun createSchedule(@Body request: RetrofitClient.CreateScheduleRequest): Response<RetrofitClient.CreateScheduleResponse>
 
 
+    @PUT("/api/schedule/change-exercise")
+    suspend fun changeExercise(
+        @Body request: RetrofitClient.ChangeExerciseRequest
+    ): Response<RetrofitClient.ChangeExerciseResponse>
+
 
     @GET("/api/schedule-id")
     suspend fun getScheduleId(
         @Query("planId") planId: Long,
         @Query("exerciseId") exerciseId: Long
     ): Response<RetrofitClient.ScheduleIdResponse>
+
+
 
     @DELETE("/api/schedule/{scheduleId}")
     suspend fun deleteExercise(
@@ -52,6 +60,12 @@ interface ScheduleApi {
 
     @POST("/api/schedule/set")
     fun insertSet(@Body set: ExerciseSetEntity): Call<Void>
+
+    @POST("/api/schedule/{scheduleId}/change-exercise")
+    suspend fun changeExerciseServer(
+        @Path("scheduleId") scheduleId: Long,
+        @Body request: RetrofitClient.ChangeExerciseServerRequest
+    ): Response<RetrofitClient.ServerResponse>
 
 
 }

@@ -44,6 +44,9 @@ interface ExerciseDao {
     // 층간소음이 없는 운동만 가져옴
     @Query("SELECT * FROM exercises WHERE isNoise = false")
     fun getNonNoisyExercises(): Flow<List<Exercise>>
+
+    @Query("SELECT * FROM exercises WHERE name = :name LIMIT 1")
+    suspend fun getExerciseByName(name: String): Exercise?
 }
 
 // Exercise와 PlanDetail 정보를 함께 담는 데이터 클래스 (필요한 정보에 따라 필드 추가)

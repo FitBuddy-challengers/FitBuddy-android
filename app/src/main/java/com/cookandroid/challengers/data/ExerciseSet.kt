@@ -27,6 +27,7 @@ data class ExerciseSet(
     val id: Long = 0, // 아이디, 자동생성
     val exercisePlanId: Long, // *외래키: exercisePlan
     val exerciseId: Long, // *외래키: exercise
+    //val scheduleId: Long,
     var setNumber: Int, // (세트)
     var weight: Int? = null, // 무게(아령, 케틀벨 등)
     var reps: Int, // 횟수

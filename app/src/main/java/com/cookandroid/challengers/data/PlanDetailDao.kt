@@ -30,6 +30,9 @@ interface PlanDetailDao {
     @Query("SELECT exerciseId FROM plan_details WHERE exercisePlanId = :planId ORDER BY exOrder ASC")
     suspend fun getExerciseIdsForPlan(planId: Long): List<Long>
 
+    @Query("SELECT * FROM plan_details WHERE exercisePlanId = :planId AND exerciseId = :exerciseId LIMIT 1")
+    fun getByPlanAndExercise(planId: Long, exerciseId: Long): PlanDetail?
+
     // 특정 계획과 운동 연결 해제(삭제)
     @Query("DELETE FROM plan_details WHERE exercisePlanId = :planId AND exerciseId = :exerciseId")
     suspend fun deletePlanDetail(planId: Long, exerciseId: Long)
