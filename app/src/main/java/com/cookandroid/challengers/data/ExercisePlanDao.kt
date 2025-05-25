@@ -28,6 +28,9 @@ interface ExercisePlanDao {
     @Query("SELECT * FROM exercise_plans WHERE id = :id")
     suspend fun getPlanById(id: Long): ExercisePlan?
 
+    @Query("SELECT * FROM exercise_plans WHERE id = :id LIMIT 1")
+    suspend fun getById(id: Long): ExercisePlan?
+
     @Query("SELECT * FROM exercise_plans ORDER BY plannedDate DESC")
     fun getAllExercisePlans(): Flow<List<ExercisePlan>>
 

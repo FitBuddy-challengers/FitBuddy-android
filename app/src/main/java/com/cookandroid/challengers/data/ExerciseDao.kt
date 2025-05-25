@@ -16,15 +16,29 @@ interface ExerciseDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(exercise: Exercise): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(exercises: List<Exercise>)
+
     @Update
     suspend fun update(exercise: Exercise)
+
+
 
     @Delete
     suspend fun delete(exercise: Exercise)
 
+    @Query("DELETE FROM exercises")
+    suspend fun deleteAll()
+
     // 숨겨진 상태가 아닌 운동을 조회
     @Query("SELECT * FROM exercises WHERE isHidden = 0 ORDER BY name ASC")
     fun getAllExercises(): Flow<List<Exercise>>
+
+    //모든 운동은 default를  12회 3세트로 통일함.
+    @Query("SELECT * FROM exercises")
+    suspend fun getAllExercisesOnce(): List<Exercise>
+
+
 
     // 숨겨진 상태인 운동을 조회
     @Query("SELECT * FROM exercises WHERE isHidden = 1 ORDER BY name ASC")
@@ -47,6 +61,12 @@ interface ExerciseDao {
 
     @Query("SELECT * FROM exercises WHERE name = :name LIMIT 1")
     suspend fun getExerciseByName(name: String): Exercise?
+
+    @Query("SELECT * FROM exercises ORDER BY id ASC")
+    suspend fun getAllOnce(): List<Exercise>
+
+    @Query("SELECT COUNT(*) FROM exercises")
+    suspend fun getCount(): Int
 }
 
 // Exercise와 PlanDetail 정보를 함께 담는 데이터 클래스 (필요한 정보에 따라 필드 추가)

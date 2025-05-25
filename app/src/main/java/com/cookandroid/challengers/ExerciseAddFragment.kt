@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.ContextThemeWrapper
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
@@ -85,13 +86,28 @@ class ExerciseAddFragment : Fragment() {
         db = AppDatabase.getDatabase(requireContext(), viewLifecycleOwner.lifecycleScope)
         planDetailDao = db.planDetailDao()
 
+        setupAdapter()
+        setupRecyclerView()
+        loadExistingExercisesAndAllExercises()
+        setupChipFilters()
+
+        binding.addCompleteButton.setOnClickListener {
+            addSelectedExercisesToServerAndRoom()
+        }
+
+        binding.backButton.setOnClickListener {
+            findNavController().popBackStack()
+        }
+    }
+
+    private fun setupAdapter() {
         adapter = AddExerciseAdapter(
             emptyList(),
             onExerciseSelected = { ex, isSelected ->
                 if (isSelected) selectedExercises.add(ex) else selectedExercises.remove(ex)
                 updateSelectedText()
                 updateSelectedChips()
-                checkMaxSelection() // 선택 상태 변경 시 최대 선택 여부 확인
+                checkMaxSelection()
             },
             onFavoriteClicked = { ex ->
                 lifecycleScope.launch(Dispatchers.IO) {
@@ -99,29 +115,29 @@ class ExerciseAddFragment : Fragment() {
                 }
             },
             onMaxSelectionReached = { reached ->
-                val maxSelect = maxSlots - existingExercises.size
                 isMaxSelectionReached = reached
+                val maxSelect = maxSlots - existingExercises.size
                 if (reached) {
                     Toast.makeText(requireContext(), "최대 ${maxSelect}개까지 선택 가능합니다.", Toast.LENGTH_SHORT).show()
                 }
-                // 필요에 따라 UI 업데이트 (예: 더 이상 선택 못하도록 시각적으로 변경)
             }
         )
         adapter.setContext(requireContext())
+    }
 
+    private fun setupRecyclerView() {
         binding.exerciseListRecyclerView.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = this@ExerciseAddFragment.adapter
             addOnItemTouchListener(object : RecyclerView.OnItemTouchListener {
-                override fun onInterceptTouchEvent(rv: RecyclerView, e: android.view.MotionEvent): Boolean {
-                    return isMaxSelectionReached // 최대 선택 도달 시 true를 반환하여 터치 이벤트 가로챔
-                }
-
-                override fun onTouchEvent(rv: RecyclerView, e: android.view.MotionEvent) {}
+                override fun onInterceptTouchEvent(rv: RecyclerView, e: MotionEvent): Boolean = isMaxSelectionReached
+                override fun onTouchEvent(rv: RecyclerView, e: MotionEvent) {}
                 override fun onRequestDisallowInterceptTouchEvent(disallowIntercept: Boolean) {}
             })
         }
+    }
 
+    private fun loadExistingExercisesAndAllExercises() {
         lifecycleScope.launch(Dispatchers.IO) {
             existingExercises = planDetailDao.getPlanDetailsForPlanId(planId)
             val initialRemainingSlots = maxSlots - existingExercises.size
@@ -136,127 +152,69 @@ class ExerciseAddFragment : Fragment() {
                 }
             }
         }
+    }
 
+    private fun setupChipFilters() {
         setupChips(binding.myChipGroup, listOf("즐겨찾기", "최근 한 운동"))
         setupChips(binding.partChipGroup, listOf("가슴", "등", "하체", "어깨", "복근", "유산소"))
-        setupChips(binding.equipmentChipGroup, listOf("맨몸", "덤벨", "케틀벨", "세라밴드", "스텝박스","짐볼"))
+        setupChips(binding.equipmentChipGroup, listOf("맨몸", "덤벨", "케틀벨", "세라밴드", "스텝박스", "짐볼"))
+    }
 
-        binding.addCompleteButton.setOnClickListener {
-            val maxSelect = maxSlots - existingExercises.size
-            if (selectedExercises.size > maxSelect) {
-                Toast.makeText(requireContext(), "최대 ${maxSelect}개까지 선택 가능합니다.", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
+    private fun addSelectedExercisesToServerAndRoom() {
+        val maxSelect = maxSlots - existingExercises.size
+        if (selectedExercises.size > maxSelect) {
+            Toast.makeText(requireContext(), "최대 ${maxSelect}개까지 선택 가능합니다.", Toast.LENGTH_SHORT).show()
+            return
+        }
 
-            lifecycleScope.launch(Dispatchers.IO) {
-                val defaultSets = 3
-                val defaultReps = 15
+        lifecycleScope.launch(Dispatchers.IO) {
+            selectedExercises.forEachIndexed { idx, ex ->
+                val exerciseOrder = existingExercises.size + idx + 1
+                val dateString = LocalDate.now().toString()
 
-                selectedExercises.forEachIndexed { idx, ex ->
-                    val isTimeType = ex.isTimeType
-                    val exerciseOrder = existingExercises.size + idx + 1
-                    val dateString = LocalDate.now().toString()
+                val request = RetrofitClient.CreateScheduleRequest(
+                    planId = planId.toInt(),
+                    date = dateString,
+                    exerciseOrder = exerciseOrder,
+                    exerciseId = ex.id.toInt()
+                )
 
-                    val scheduleResponse = try {
-                        RetrofitClient.scheduleApi.createSchedule(
-                            RetrofitClient.CreateScheduleRequest(
-                                planId = planId.toInt(),
-                                date = dateString,
-                                exerciseOrder = exerciseOrder
-                            )
-                        )
-                    } catch (e: Exception) {
-                        Log.e("AddExercise", "❗ schedule 생성 실패: ${e.localizedMessage}")
-                        null
-                    }
-
-                    val scheduleId = scheduleResponse?.body()?.scheduleId
-
-                    if (scheduleResponse?.isSuccessful == true && scheduleId != null) {
-                        val setList = (1..defaultSets).map { i ->
-                            if (isTimeType) {
-                                RetrofitClient.SetData(setNumber = i, seconds = 30)
-                            } else {
-                                RetrofitClient.SetData(setNumber = i, reps = defaultReps, weight = 0)
-                            }
-                        }
-
-                        val request = RetrofitClient.AddExerciseRequest(
-                            exerciseId = ex.id.toInt(),
-                            setList = setList
-                        )
-
-                        val response = try {
-                            RetrofitClient.scheduleApi.addExerciseToSchedule(
-                                scheduleId = scheduleId.toLong(),
-                                request = request
-                            )
-                        } catch (e: Exception) {
-                            Log.e("AddExercise", "❗ 운동 추가 실패: ${e.localizedMessage}")
-                            null
-                        }
-
-                        if (response?.isSuccessful == true) {
-                            // ✅ [추가] 서버에 ExerciseSetEntity 직접 삽입
-                            for (i in 1..defaultSets) {
-                                val serverSet = ExerciseSetEntity(
-                                    scheduleId = scheduleId.toLong(),
-                                    exerciseId = ex.id,
-                                    setNumber = i,
-                                    reps = defaultReps,
-                                    weight = 0
-                                )
-                                try {
-                                    RetrofitClient.scheduleApi.insertSet(serverSet).enqueue(object :
-                                        Callback<Void> {
-                                        override fun onResponse(call: Call<Void>, res: Response<Void>) {
-                                            Log.d("AddExercise", "✅ 서버 세트 insert 성공: set #$i")
-                                        }
-
-                                        override fun onFailure(call: Call<Void>, t: Throwable) {
-                                            Log.e("AddExercise", "❌ 서버 세트 insert 실패: ${t.localizedMessage}")
-                                        }
-                                    })
-                                } catch (e: Exception) {
-                                    Log.e("AddExercise", "❌ 서버 세트 insert try 블록 실패: ${e.localizedMessage}")
-                                }
-                            }
-
-                            // ✅ Room 저장
-                            val planDetail = PlanDetail(
-                                exercisePlanId = planId,
-                                exerciseId = ex.id,
-                                exOrder = exerciseOrder
-                            )
-                            planDetailDao.insert(planDetail)
-
-                            for (i in 1..defaultSets) {
-                                val exerciseSet = ExerciseSet(
+                try {
+                    val response = RetrofitClient.scheduleApi.createSchedule(request)
+                    if (response.isSuccessful && response.body() != null) {
+                        val scheduleId = response.body()!!.scheduleId
+                        db.exerciseDao().insert(ex)
+                        val planDetail = PlanDetail(planId, ex.id, exerciseOrder)
+                        planDetailDao.insert(planDetail)
+                        for (i in 1..3) {
+                            db.exerciseSetDao().insert(
+                                ExerciseSet(
                                     exercisePlanId = planId,
                                     exerciseId = ex.id,
                                     setNumber = i,
                                     weight = 0,
-                                    reps = defaultReps,
+                                    reps = if (!ex.isTimeType) 15 else 0,
                                     isCompleted = false,
                                     isHighlighted = (i == 1 && idx == 0 && existingExercises.isEmpty())
                                 )
-                                db.exerciseSetDao().insert(exerciseSet)
-                            }
-
-                            Log.d("AddExercise", "✅ ${ex.name} → 서버 + Room 저장 성공")
-                        } else {
-                            Log.e("AddExercise", "❌ ${ex.name} → 서버 운동 저장 실패")
+                            )
                         }
                     } else {
-                        Log.e("AddExercise", "❌ scheduleId 생성 실패")
+                        Log.e("AddExercise", "❌ 서버 schedule 생성 실패: ${response.message()}")
                     }
-                }
-
-                withContext(Dispatchers.Main) {
-                    findNavController().popBackStack()
+                } catch (e: Exception) {
+                    Log.e("AddExercise", "❗ 예외 발생: ${e.localizedMessage}")
                 }
             }
+
+            withContext(Dispatchers.Main) {
+                findNavController().popBackStack()
+            }
         }
+
+
+
+
 
 
         binding.backButton.setOnClickListener {

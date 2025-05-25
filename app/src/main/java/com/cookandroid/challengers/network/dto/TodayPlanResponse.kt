@@ -1,5 +1,7 @@
 package com.cookandroid.challengers.network.dto
 
+import com.google.gson.annotations.SerializedName
+
 data class TodayPlanResponse(
     val plan: PlanDto,
     val schedules: List<ScheduleDto>
@@ -33,7 +35,11 @@ data class ScheduleDto(
     val caution: List<String>?,
     val mets: Double,
     val is_time_type: Boolean,
-    val is_noise: Boolean
+    val is_noise: Boolean,
+
+    val set_count: Int? = null,
+    val display_detail: String? = null,
+    val seconds: Int?
 )
 
 //data class ScheduleDto(
@@ -43,6 +49,7 @@ data class ScheduleDto(
 //)
 
 data class ExerciseDto(
+    val id: Long, // ✅ 이 줄 추가
     val name: String,
     val part: String,
     val equip: String,
@@ -52,6 +59,27 @@ data class ExerciseDto(
     val breathing: List<String>?,
     val caution: List<String>?,
     val mets: Double,
-    val is_time_type: Boolean,
+    @SerializedName("is_time_type")
+    val isTimeType: Boolean,
     val is_noise: Boolean
 )
+
+data class ExerciseSetDto(
+    val setNumber: Int,
+    val weight: Int,
+    val reps: Int
+)
+
+data class AddExerciseRequest(
+    val exerciseId: Int,
+    val setList: List<SetData>
+)
+
+data class SetData(
+    val setNumber: Int,
+    val reps: Int? = null,
+    val weight: Int? = null,
+    val seconds: Int? = null
+)
+
+

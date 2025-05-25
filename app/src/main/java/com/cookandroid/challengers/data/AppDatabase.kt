@@ -2145,253 +2145,302 @@ abstract class AppDatabase : RoomDatabase() {
                 )
             )
 
-            // 오늘의 ExercisePlan을 생성하는 방식 통일 (초기 데이터에도 적용)
+            // ✅ 오늘 날짜 기준으로 서버 동기화 날짜를 기반으로 plan 생성
             val todaySeoulZoneId = ZoneId.of("Asia/Seoul")
-            // 2025년 5월 15일 00:00:00.000 KST에 해당하는 밀리초 타임스탬프 계산
-            val timestampMay19Seoul = LocalDate.of(2025, 5, 19)
-                .atStartOfDay(ZoneId.of("Asia/Seoul"))
-                .toInstant()
-                .toEpochMilli()
-            // 2025년 5월 15일 00:00:00.000 KST에 해당하는 밀리초 타임스탬프 계산
-            val timestampMay15Seoul = LocalDate.of(2025, 5, 15)
-                .atStartOfDay(ZoneId.of("Asia/Seoul"))
-                .toInstant()
-                .toEpochMilli()
-            // 오늘 날짜
-            val todayMidnightMillis = LocalDate.now(todaySeoulZoneId)
-                .atStartOfDay(todaySeoulZoneId)
-                .toInstant()
-                .toEpochMilli()
+            val todayDate = LocalDate.now(todaySeoulZoneId)
+            val todayMillis = todayDate.atStartOfDay(todaySeoulZoneId).toInstant().toEpochMilli()
 
-            //  5월 15일 루틴 생성 시 안전하게 ID 확보 (더미)
-            val planMay15Id =
-                exercisePlanDao.insert(ExercisePlan(plannedDate = timestampMay15Seoul)).let {
-                    if (it == 0L) {
-                        exercisePlanDao.getPlansByDate(timestampMay15Seoul, timestampMay15Seoul)
-                            .first().id
-                    } else {
-                        it
-                    }
+            val planAId = exercisePlanDao.insert(ExercisePlan(plannedDate = todayMillis)).let {
+                if (it == 0L) {
+                    exercisePlanDao.getPlansByDate(todayMillis, todayMillis).first().id
+                } else {
+                    it
                 }
+            }
 
-            //  5월 19일 루틴 생성 시 안전하게 ID 확보 (더미)
-            val planMay19Id =
-                exercisePlanDao.insert(ExercisePlan(plannedDate = timestampMay19Seoul)).let {
-                    if (it == 0L) {
-                        exercisePlanDao.getPlansByDate(timestampMay19Seoul, timestampMay19Seoul)
-                            .first().id
-                    } else {
-                        it
-                    }
-                }
-
-            //  오늘 루틴 생성 시 안전하게 ID 확보
-            val planAId =
-                exercisePlanDao.insert(ExercisePlan(plannedDate = todayMidnightMillis)).let {
-                    if (it == 0L) {
-                        exercisePlanDao.getPlansByDate(todayMidnightMillis, todayMidnightMillis)
-                            .first().id
-                    } else {
-                        it
-                    }
-                }
-
-
-            // PlanDetail 초기 데이터 삽입 (운동 계획과 운동 연결)
+// ✅ PlanDetail: PT체조를 테스트용으로 연결
             planDetailDao.insert(
                 PlanDetail(
                     exercisePlanId = planAId,
-                    exerciseId = squatId,
-                    exOrder = 1,
-                )
-            )
-            planDetailDao.insert(
-                PlanDetail(
-                    exercisePlanId = planAId,
-                    exerciseId = pushUpId,
-                    exOrder = 2,
-                )
-            )
-            planDetailDao.insert(
-                PlanDetail(
-                    exercisePlanId = planAId,
-                    exerciseId = lungeId,
-                    exOrder = 3,
+                    exerciseId = ptDrillId, // 반드시 위에서 정의된 PT체조 id 사용
+                    exOrder = 1
                 )
             )
 
-            planDetailDao.insert(
-                PlanDetail(
-                    exercisePlanId = planMay15Id,
-                    exerciseId = squatId,
-                    exOrder = 1,
-                    isCompleted = true
+// ✅ ExerciseSet: PT체조 세트 3개 추가
+            for (i in 1..3) {
+                exerciseSetDao.insert(
+                    ExerciseSet(
+                        exercisePlanId = planAId,
+                        exerciseId = ptDrillId,
+                        setNumber = i,
+                        weight = 0,
+                        reps = 12,
+                        isCompleted = false
+                    )
                 )
-            )
-            planDetailDao.insert(
-                PlanDetail(
-                    exercisePlanId = planMay15Id,
-                    exerciseId = donkeyKickId,
-                    exOrder = 2,
-                )
-            )
-            planDetailDao.insert(
-                PlanDetail(
-                    exercisePlanId = planMay15Id,
-                    exerciseId = armWalkingId,
-                    exOrder = 3,
-                    isCompleted = true
-                )
-            )
+            }
 
-            planDetailDao.insert(
-                PlanDetail(
-                    exercisePlanId = planMay19Id,
-                    exerciseId = squatId,
-                    exOrder = 1,
-                    isCompleted = true
-                )
-            )
-            planDetailDao.insert(
-                PlanDetail(
-                    exercisePlanId = planMay19Id,
-                    exerciseId = donkeyKickId,
-                    exOrder = 2,
-                    isCompleted = true
-                )
-            )
-            planDetailDao.insert(
-                PlanDetail(
-                    exercisePlanId = planMay19Id,
-                    exerciseId = armWalkingId,
-                    exOrder = 3,
-                    isCompleted = true
-                )
+            ExerciseSet(
+                exercisePlanId = planAId,
+                exerciseId = squatId,
+                setNumber = 1,
+                weight = 0,
+                reps = 15,
+                isCompleted = false
             )
 
 
-            // ExerciseSet 초기 데이터 삽입 (각 운동 계획 내 운동의 세트)
-            exerciseSetDao.insert( //운동 계쇡별로, 어떤 운동을 몇 세트, 몇회, 무게로 수행하는지 초기화!
-                ExerciseSet(
-                    exercisePlanId = planAId,
-                    exerciseId = squatId,
-                    setNumber = 1,
-                    weight = 0,
-                    reps = 15
-                )
-            )
-            exerciseSetDao.insert(
-                ExerciseSet(
-                    exercisePlanId = planAId,
-                    exerciseId = squatId,
-                    setNumber = 2,
-                    weight = 0,
-                    reps = 15
-                )
-            )
-            exerciseSetDao.insert(
-                ExerciseSet(
-                    exercisePlanId = planAId,
-                    exerciseId = squatId,
-                    setNumber = 3,
-                    weight = 0,
-                    reps = 10
-                )
-            )
-            // Plan A - 푸쉬업
-            exerciseSetDao.insert(
-                ExerciseSet(
-                    exercisePlanId = planAId,
-                    exerciseId = pushUpId,
-                    setNumber = 1,
-                    weight = 0,
-                    reps = 15
-                )
-            )
-            exerciseSetDao.insert(
-                ExerciseSet(
-                    exercisePlanId = planAId,
-                    exerciseId = pushUpId,
-                    setNumber = 2,
-                    weight = 0,
-                    reps = 10
-                )
-            )
-            exerciseSetDao.insert(
-                ExerciseSet(
-                    exercisePlanId = planAId,
-                    exerciseId = pushUpId,
-                    setNumber = 3,
-                    weight = 0,
-                    reps = 10
-                )
-            )
-            // Plan A - 런지
-            exerciseSetDao.insert(
-                ExerciseSet(
-                    exercisePlanId = planAId,
-                    exerciseId = lungeId,
-                    setNumber = 1,
-                    weight = 0,
-                    reps = 60
-                )
-            )
 
-            exerciseSetDao.insert(
-                ExerciseSet(
-                    exercisePlanId = planMay15Id,
-                    exerciseId = donkeyKickId,
-                    setNumber = 1,
-                    weight = 0,
-                    reps = 60
-                )
-            )
-            exerciseSetDao.insert(
-                ExerciseSet(
-                    exercisePlanId = planMay15Id,
-                    exerciseId = squatId,
-                    setNumber = 1,
-                    weight = 0,
-                    reps = 60
-                )
-            )
-            exerciseSetDao.insert(
-                ExerciseSet(
-                    exercisePlanId = planMay15Id,
-                    exerciseId = armWalkingId,
-                    setNumber = 1,
-                    weight = 0,
-                    reps = 60
-                )
-            )
 
-            exerciseSetDao.insert(
-                ExerciseSet(
-                    exercisePlanId = planMay19Id,
-                    exerciseId = donkeyKickId,
-                    setNumber = 1,
-                    weight = 0,
-                    reps = 60
-                )
-            )
-            exerciseSetDao.insert(
-                ExerciseSet(
-                    exercisePlanId = planMay19Id,
-                    exerciseId = squatId,
-                    setNumber = 1,
-                    weight = 0,
-                    reps = 60
-                )
-            )
-            exerciseSetDao.insert(
-                ExerciseSet(
-                    exercisePlanId = planMay19Id,
-                    exerciseId = armWalkingId,
-                    setNumber = 1,
-                    weight = 0,
-                    reps = 60
-                )
-            )
+//
+//            // 오늘의 ExercisePlan을 생성하는 방식 통일 (초기 데이터에도 적용)
+//            val todaySeoulZoneId = ZoneId.of("Asia/Seoul")
+//            // 2025년 5월 15일 00:00:00.000 KST에 해당하는 밀리초 타임스탬프 계산
+//            val timestampMay19Seoul = LocalDate.of(2025, 5, 19)
+//                .atStartOfDay(ZoneId.of("Asia/Seoul"))
+//                .toInstant()
+//                .toEpochMilli()
+//            // 2025년 5월 15일 00:00:00.000 KST에 해당하는 밀리초 타임스탬프 계산
+//            val timestampMay15Seoul = LocalDate.of(2025, 5, 15)
+//                .atStartOfDay(ZoneId.of("Asia/Seoul"))
+//                .toInstant()
+//                .toEpochMilli()
+//            // 오늘 날짜
+//            val todayMidnightMillis = LocalDate.now(todaySeoulZoneId)
+//                .atStartOfDay(todaySeoulZoneId)
+//                .toInstant()
+//                .toEpochMilli()
+//
+//            //  5월 15일 루틴 생성 시 안전하게 ID 확보 (더미)
+//            val planMay15Id =
+//                exercisePlanDao.insert(ExercisePlan(plannedDate = timestampMay15Seoul)).let {
+//                    if (it == 0L) {
+//                        exercisePlanDao.getPlansByDate(timestampMay15Seoul, timestampMay15Seoul)
+//                            .first().id
+//                    } else {
+//                        it
+//                    }
+//                }
+//
+//            //  5월 19일 루틴 생성 시 안전하게 ID 확보 (더미)
+//            val planMay19Id =
+//                exercisePlanDao.insert(ExercisePlan(plannedDate = timestampMay19Seoul)).let {
+//                    if (it == 0L) {
+//                        exercisePlanDao.getPlansByDate(timestampMay19Seoul, timestampMay19Seoul)
+//                            .first().id
+//                    } else {
+//                        it
+//                    }
+//                }
+//
+//            //  오늘 루틴 생성 시 안전하게 ID 확보
+//            val planAId =
+//                exercisePlanDao.insert(ExercisePlan(plannedDate = todayMidnightMillis)).let {
+//                    if (it == 0L) {
+//                        exercisePlanDao.getPlansByDate(todayMidnightMillis, todayMidnightMillis)
+//                            .first().id
+//                    } else {
+//                        it
+//                    }
+//                }
+//
+//
+//            // PlanDetail 초기 데이터 삽입 (운동 계획과 운동 연결)
+//            planDetailDao.insert(
+//                PlanDetail(
+//                    exercisePlanId = planAId,
+//                    exerciseId = squatId,
+//                    exOrder = 1,
+//                )
+//            )
+//            planDetailDao.insert(
+//                PlanDetail(
+//                    exercisePlanId = planAId,
+//                    exerciseId = pushUpId,
+//                    exOrder = 2,
+//                )
+//            )
+//            planDetailDao.insert(
+//                PlanDetail(
+//                    exercisePlanId = planAId,
+//                    exerciseId = lungeId,
+//                    exOrder = 3,
+//                )
+//            )
+//
+//            planDetailDao.insert(
+//                PlanDetail(
+//                    exercisePlanId = planMay15Id,
+//                    exerciseId = squatId,
+//                    exOrder = 1,
+//                    isCompleted = true
+//                )
+//            )
+//            planDetailDao.insert(
+//                PlanDetail(
+//                    exercisePlanId = planMay15Id,
+//                    exerciseId = donkeyKickId,
+//                    exOrder = 2,
+//                )
+//            )
+//            planDetailDao.insert(
+//                PlanDetail(
+//                    exercisePlanId = planMay15Id,
+//                    exerciseId = armWalkingId,
+//                    exOrder = 3,
+//                    isCompleted = true
+//                )
+//            )
+//
+//            planDetailDao.insert(
+//                PlanDetail(
+//                    exercisePlanId = planMay19Id,
+//                    exerciseId = squatId,
+//                    exOrder = 1,
+//                    isCompleted = true
+//                )
+//            )
+//            planDetailDao.insert(
+//                PlanDetail(
+//                    exercisePlanId = planMay19Id,
+//                    exerciseId = donkeyKickId,
+//                    exOrder = 2,
+//                    isCompleted = true
+//                )
+//            )
+//            planDetailDao.insert(
+//                PlanDetail(
+//                    exercisePlanId = planMay19Id,
+//                    exerciseId = armWalkingId,
+//                    exOrder = 3,
+//                    isCompleted = true
+//                )
+//            )
+//
+//
+//            // ExerciseSet 초기 데이터 삽입 (각 운동 계획 내 운동의 세트)
+//            exerciseSetDao.insert( //운동 계쇡별로, 어떤 운동을 몇 세트, 몇회, 무게로 수행하는지 초기화!
+//                ExerciseSet(
+//                    exercisePlanId = planAId,
+//                    exerciseId = squatId,
+//                    setNumber = 1,
+//                    weight = 0,
+//                    reps = 15
+//                )
+//            )
+//            exerciseSetDao.insert(
+//                ExerciseSet(
+//                    exercisePlanId = planAId,
+//                    exerciseId = squatId,
+//                    setNumber = 2,
+//                    weight = 0,
+//                    reps = 15
+//                )
+//            )
+//            exerciseSetDao.insert(
+//                ExerciseSet(
+//                    exercisePlanId = planAId,
+//                    exerciseId = squatId,
+//                    setNumber = 3,
+//                    weight = 0,
+//                    reps = 10
+//                )
+//            )
+//            // Plan A - 푸쉬업
+//            exerciseSetDao.insert(
+//                ExerciseSet(
+//                    exercisePlanId = planAId,
+//                    exerciseId = pushUpId,
+//                    setNumber = 1,
+//                    weight = 0,
+//                    reps = 15
+//                )
+//            )
+//            exerciseSetDao.insert(
+//                ExerciseSet(
+//                    exercisePlanId = planAId,
+//                    exerciseId = pushUpId,
+//                    setNumber = 2,
+//                    weight = 0,
+//                    reps = 10
+//                )
+//            )
+//            exerciseSetDao.insert(
+//                ExerciseSet(
+//                    exercisePlanId = planAId,
+//                    exerciseId = pushUpId,
+//                    setNumber = 3,
+//                    weight = 0,
+//                    reps = 10
+//                )
+//            )
+//            // Plan A - 런지
+//            exerciseSetDao.insert(
+//                ExerciseSet(
+//                    exercisePlanId = planAId,
+//                    exerciseId = lungeId,
+//                    setNumber = 1,
+//                    weight = 0,
+//                    reps = 60
+//                )
+//            )
+//
+//            exerciseSetDao.insert(
+//                ExerciseSet(
+//                    exercisePlanId = planMay15Id,
+//                    exerciseId = donkeyKickId,
+//                    setNumber = 1,
+//                    weight = 0,
+//                    reps = 60
+//                )
+//            )
+//            exerciseSetDao.insert(
+//                ExerciseSet(
+//                    exercisePlanId = planMay15Id,
+//                    exerciseId = squatId,
+//                    setNumber = 1,
+//                    weight = 0,
+//                    reps = 60
+//                )
+//            )
+//            exerciseSetDao.insert(
+//                ExerciseSet(
+//                    exercisePlanId = planMay15Id,
+//                    exerciseId = armWalkingId,
+//                    setNumber = 1,
+//                    weight = 0,
+//                    reps = 60
+//                )
+//            )
+//
+//            exerciseSetDao.insert(
+//                ExerciseSet(
+//                    exercisePlanId = planMay19Id,
+//                    exerciseId = donkeyKickId,
+//                    setNumber = 1,
+//                    weight = 0,
+//                    reps = 60
+//                )
+//            )
+//            exerciseSetDao.insert(
+//                ExerciseSet(
+//                    exercisePlanId = planMay19Id,
+//                    exerciseId = squatId,
+//                    setNumber = 1,
+//                    weight = 0,
+//                    reps = 60
+//                )
+//            )
+//            exerciseSetDao.insert(
+//                ExerciseSet(
+//                    exercisePlanId = planMay19Id,
+//                    exerciseId = armWalkingId,
+//                    setNumber = 1,
+//                    weight = 0,
+//                    reps = 60
+//                )
+//            )
         }
     }
 }

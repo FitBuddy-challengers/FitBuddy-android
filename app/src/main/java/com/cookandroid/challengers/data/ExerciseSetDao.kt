@@ -39,6 +39,9 @@ interface ExerciseSetDao {
     @Query("DELETE FROM exercise_sets WHERE id = :id")
     suspend fun deleteById(id: Long)
 
+    @Query("DELETE FROM exercise_sets WHERE exercisePlanId = :planId AND exerciseId = :exerciseId")
+    suspend fun deleteByPlanAndExercise(planId: Long, exerciseId: Long)
+
     // 특정 운동 id에 해당하는 모든 세트 목록 조회
     @Query("SELECT * FROM exercise_sets WHERE exerciseId = :exerciseId ORDER BY setNumber ASC")
     suspend fun getSetsByExerciseId(exerciseId: Long): List<ExerciseSet>

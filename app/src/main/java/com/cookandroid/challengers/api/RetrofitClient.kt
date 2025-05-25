@@ -34,17 +34,17 @@ object RetrofitClient {
         retrofit.create(ExerciseApi::class.java)
     }
 
-    data class AddExerciseRequest(
-        @SerializedName("exercise_id") val exerciseId: Int,
-        @SerializedName("set_list") val setList: List<SetData>
-    )
-
-    data class SetData(
-        @SerializedName("set_number") val setNumber: Int,
-        val reps: Int? = null,
-        val weight: Int? = null,
-        val seconds: Int? = null
-    )
+//    data class AddExerciseRequest(
+//        @SerializedName("exercise_id") val exerciseId: Int,
+//        @SerializedName("set_list") val setList: List<SetData>
+//    )
+//
+//    data class SetData(
+//        @SerializedName("set_number") val setNumber: Int,
+//        val reps: Int? = null,
+//        val weight: Int? = null,
+//        val seconds: Int? = null
+//    )
 
     data class AddExerciseResponse(
         val message: String
@@ -57,7 +57,8 @@ object RetrofitClient {
     data class  CreateScheduleRequest(
         @SerializedName("planId") val planId: Int,
         @SerializedName("date") val date: String,
-        @SerializedName("exerciseOrder") val exerciseOrder: Int
+        @SerializedName("exerciseOrder") val exerciseOrder: Int,
+        @SerializedName("exercise_id") val exerciseId: Int
     )
 
     data class CreateScheduleResponse(
@@ -109,10 +110,54 @@ object RetrofitClient {
         val scheduleIds: List<Long>
     )
 
+//    data class ChangeExerciseServerRequest(
+//        val newExerciseId: Long
+//    )
+
+    //val scheduleApi: ScheduleApi = retrofit.create(ScheduleApi::class.java)
+
+    // ✅ 운동 변경용 요청 DTO
     data class ChangeExerciseServerRequest(
         val newExerciseId: Long
     )
 
+    // ✅ 운동 추가 요청 DTO
+    data class AddExerciseRequest(
+        val exerciseId: Int,
+        val setList: List<SetData>
+    )
 
+    // ✅ 세트 정보 DTO
+    data class SetData(
+        val setNumber: Int,
+        val reps: Int? = null,
+        val weight: Int? = null,
+        val seconds: Int? = null
+    )
+
+    data class TimeSetUiModel(
+        var setNumber: Int,
+        var minutes: Int,
+        var weight: Float
+    )
+
+    data class TimeSetDto(
+        val setNumber: Int,
+        val seconds: Int,
+        val weight: Float
+    )
+
+    data class RepsSetUiModel(
+        var setNumber: Int,
+        var reps: Int,
+        var weight: Float
+    )
+
+    data class RepsSetDto(
+        val setNumber: Int,
+        val reps: Int,
+        val weight: Float
+    )
 
 }
+
