@@ -20,6 +20,13 @@ class RepsSetAdapter(private val sets: MutableList<RepsSetUiModel>) :
 
     fun getSetList(): List<RepsSetUiModel> = sets
 
+    // ✅ 서버 응답으로 받은 세트로 전체 갱신할 때 호출
+    fun updateSets(newSets: List<RepsSetUiModel>) {
+        sets.clear()
+        sets.addAll(newSets)
+        notifyDataSetChanged()
+    }
+
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         private val repsEdit: EditText = view.findViewById(R.id.repsEditText)
         private val weightEdit: EditText = view.findViewById(R.id.weightEditText)
@@ -37,12 +44,15 @@ class RepsSetAdapter(private val sets: MutableList<RepsSetUiModel>) :
         }
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = ViewHolder(
-        LayoutInflater.from(parent.context).inflate(R.layout.item_edit_set, parent, false)
-    )
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val view = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_edit_set, parent, false)
+        return ViewHolder(view)
+    }
 
-    override fun getItemCount(): Int = sets.size
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.bind(sets[position])
     }
+
+    override fun getItemCount(): Int = sets.size
 }

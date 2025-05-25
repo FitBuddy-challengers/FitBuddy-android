@@ -100,14 +100,18 @@ interface ScheduleApi {
         @Body sets: List<RetrofitClient.TimeSetDto>
     ): Call<Void>
 
-    @GET("/api/schedule/{scheduleId}/reps-sets")
+    @GET("/api/reps-sets/{scheduleId}")
     fun getRepsSets(@Path("scheduleId") scheduleId: Long): Call<List<RetrofitClient.RepsSetDto>>
+
 
     @PATCH("/api/schedule/{scheduleId}/reps-sets")
     fun updateRepsSets(
         @Path("scheduleId") scheduleId: Long,
         @Body sets: List<RetrofitClient.RepsSetDto>
     ): Call<Void>
+
+
+
 
     @GET("/api/schedule/{scheduleId}/exercise-info")
     suspend fun getExerciseInfo(@Path("scheduleId") scheduleId: Long): Response<ExerciseDto>

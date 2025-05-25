@@ -142,7 +142,7 @@ object RetrofitClient {
     )
 
     data class TimeSetDto(
-        val setNumber: Int,
+        @SerializedName("set_number") val setNumber: Int,
         val seconds: Int,
         val weight: Float
     )
@@ -154,10 +154,13 @@ object RetrofitClient {
     )
 
     data class RepsSetDto(
-        val setNumber: Int,
+        @SerializedName("set_number") val setNumber: Int,
         val reps: Int,
         val weight: Float
     )
+
+
+
 
 }
 

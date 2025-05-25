@@ -41,7 +41,7 @@ class RepsSetEditDialogFragment : BottomSheetDialogFragment() {
         // 1. RecyclerView 레이아웃 매니저 설정
         binding.recyclerViewSetList.layoutManager = LinearLayoutManager(requireContext())
 
-        // ✅ 2. 어댑터 미리 초기화하여 빈 상태라도 연결해두기
+        // 2. 어댑터 초기화 (빈 리스트)
         adapter = RepsSetAdapter(mutableListOf())
         binding.recyclerViewSetList.adapter = adapter
 
@@ -51,11 +51,10 @@ class RepsSetEditDialogFragment : BottomSheetDialogFragment() {
                 if (response.isSuccessful) {
                     val sets = response.body()?.mapIndexed { index, dto ->
                         RepsSetUiModel(index + 1, dto.reps, dto.weight)
-                    }?.toMutableList() ?: mutableListOf()
+                    } ?: listOf()
 
-                    // ✅ 받아온 세트로 어댑터 데이터 교체
-                    adapter = RepsSetAdapter(sets)
-                    binding.recyclerViewSetList.adapter = adapter
+                    // ✅ 어댑터 내부 리스트만 갱신
+                    adapter.updateSets(sets.toMutableList())
                 } else {
                     Log.e("RepsSetEdit", "❌ 서버 응답 오류: ${response.code()}")
                 }
@@ -92,6 +91,11 @@ class RepsSetEditDialogFragment : BottomSheetDialogFragment() {
                     }
                 })
         }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 
     companion object {
