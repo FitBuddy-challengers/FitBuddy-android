@@ -116,6 +116,13 @@ interface ScheduleApi {
     @GET("/api/schedule/{scheduleId}/exercise-info")
     suspend fun getExerciseInfo(@Path("scheduleId") scheduleId: Long): Response<ExerciseDto>
 
+    @PATCH("/api/reps-sets/{scheduleId}/complete-set")
+    fun completeSet(
+        @Path("scheduleId") scheduleId: Long,
+        @Body body: RetrofitClient.CompleteSetRequest
+    ): Call<RetrofitClient.CompleteSetResponse>
+
+
 
 
 }

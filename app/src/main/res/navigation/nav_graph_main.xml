@@ -75,6 +75,12 @@
         android:name="com.cookandroid.challengers.ExerciseDoingFragment"
         android:label="운동 중"
         tools:layout="@layout/fragment_exercise_doing">
+        <!-- self navigation (자기 자신으로 이동) -->
+        <action
+            android:id="@+id/action_exerciseDoing_to_exerciseDoing"
+            app:destination="@id/exerciseDoingFragment" />
+
+        <!-- 기존 쿨다운 이동은 이걸로 수정해야 할 수도 있음 -->
         <action
             android:id="@+id/action_exerciseDoing_to_coolDownStretch"
             app:destination="@id/coolDownStretchFragment" />

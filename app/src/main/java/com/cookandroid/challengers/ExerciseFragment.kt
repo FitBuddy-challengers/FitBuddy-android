@@ -103,7 +103,12 @@ class ExerciseFragment : Fragment() {
         }
 
         binding.startExerciseButton.setOnClickListener {
-            Toast.makeText(requireContext(), "운동 시작 기능은 아직 구현되지 않았습니다.", Toast.LENGTH_SHORT).show()
+            //Toast.makeText(requireContext(), "운동 시작 기능은 아직 구현되지 않았습니다.", Toast.LENGTH_SHORT).show()
+            val args = Bundle().apply {
+                putLong("planId", planId)
+                putInt("initialExerciseIndex", 0) // 0번 운동부터 시작
+            }
+            findNavController().navigate(R.id.action_exercise_to_exerciseDoing, args)
         }
 
         binding.menuBtn.setOnClickListener {

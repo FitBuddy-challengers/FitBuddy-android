@@ -67,7 +67,8 @@ data class ExerciseDto(
 data class ExerciseSetDto(
     val setNumber: Int,
     val weight: Int,
-    val reps: Int
+    val reps: Int,
+    @SerializedName("is_completed") val isCompleted: Boolean = false
 )
 
 data class AddExerciseRequest(
@@ -82,4 +83,11 @@ data class SetData(
     val seconds: Int? = null
 )
 
+data class ServerExerciseSet(
+    val setNumber: Int,
+    val weight: Int = 0,
+    val reps: Int = 0,
+    val isCompleted: Boolean = false,
+    val isHighlighted: Boolean = false
+)
 
