@@ -1,5 +1,5 @@
 package com.cookandroid.challengers
-/*
+
 import android.content.Context
 import android.os.Bundle
 import android.util.Log
@@ -17,7 +17,6 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade
-import com.cookandroid.challengers.api.RetrofitClient
 import com.cookandroid.challengers.data.ExerciseInPlan
 import com.cookandroid.challengers.data.ExercisePlanDao
 import com.cookandroid.challengers.data.ExerciseSet
@@ -26,37 +25,32 @@ import com.cookandroid.challengers.data.PlanDetailDao
 import com.cookandroid.challengers.data.db.AppDatabase
 import com.cookandroid.challengers.databinding.FragmentExerciseDoingBinding
 import com.cookandroid.challengers.databinding.ItemExerciseSetBinding
-import com.cookandroid.challengers.network.dto.ServerExerciseSet
 import com.cookandroid.challengers.viewmodel.StopwatchViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
 
-class ExerciseDoingFragment : Fragment() { //운동 세트 수행 화면 담당.
+class ExerciseDoingFragment : Fragment() {
 
     private var _binding: FragmentExerciseDoingBinding? = null
     private val binding get() = _binding!!
 
-   private lateinit var setAdapter: ExerciseSetAdapter
-    //exercise_reps랑 연동
-    private var currentSetIndex = 0 //현재 운동의 몇 번째 세트 진행중인지
-    private var exercisePlanId: Long = -1L //오늘 플랜? 불러오기로? 
-   // private lateinit var exerciseSetDao: ExerciseSetDao 룸 데이터베이스는 사용X 
-    //private lateinit var planDao: ExercisePlanDao
-    //private lateinit var planDetailDao: PlanDetailDao
+    private lateinit var setAdapter: ExerciseSetAdapter
+    private var currentSetIndex = 0
+    private var exercisePlanId: Long = -1L
+    private lateinit var exerciseSetDao: ExerciseSetDao
+    private lateinit var planDao: ExercisePlanDao
+    private lateinit var planDetailDao: PlanDetailDao
 
-    private var currentExerciseIndex = 0 //전체 루틴 중 몇번째 운동을 진행중인디
-    private var planExerciseList: List<ExerciseInPlan> = emptyList() //운동 루틴 전체 록록
-    private var currentExerciseId: Long = -1L //현재  수행 중인 운동 id
+    private var currentExerciseIndex = 0
+    private var planExerciseList: List<ExerciseInPlan> = emptyList()
+    private var currentExerciseId: Long = -1L
     private var setStartTime: Long = 0L // 세트 시작 시간
 
     private var currentExerciseSets: MutableList<ExerciseSet> = mutableListOf()
-    //현재 운동에 속한 세트를 담는 리스트. 사용자 진행 상황에 따라 ui 표시
+
     private val stopwatchViewModel: StopwatchViewModel by activityViewModels()
-    //스톱워치 : 전체 액티비티 단위에서 공유되는 스톱워치 로직 관리 객체.(타이머 유지, 일지 정지)
+
     companion object {
         private const val PREFS_PROGRESS = "exercise_progress"
         private const val KEY_PLAN_ID = "current_plan_id"
@@ -64,7 +58,7 @@ class ExerciseDoingFragment : Fragment() { //운동 세트 수행 화면 담당.
         private const val KEY_SET_INDEX = "current_set_index"
         private const val KEY_START_TIME = "start_time" // setStartTime 저장을 위한 키
         private const val KEY_IN_PROGRESS = "is_in_progress"
-    } //-> 운동 루틴 상태를 앱의 종료되어도 저장하기 위한 키들임!
+    }
 
     private val prefs by lazy {
         requireContext().getSharedPreferences(PREFS_PROGRESS, Context.MODE_PRIVATE)
@@ -77,18 +71,9 @@ class ExerciseDoingFragment : Fragment() { //운동 세트 수행 화면 담당.
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // ExerciseFragment에서 넘겨준 planId, 운동 순서 인덱스 받기
+        // planId는 계속 받기
         exercisePlanId = arguments?.getLong("planId") ?: -1L
-        currentExerciseIndex = arguments?.getInt("initialExerciseIndex") ?: 0
-
         Log.d("ExerciseDoingFragment", "Received planId: $exercisePlanId")
-        Log.d("ExerciseDoingFragment", "Initial currentExerciseIndex: $currentExerciseIndex")
-
-
-        // 운동 시작 시간 기록
-        setStartTime = System.currentTimeMillis()
-        isInProgress = true
-
 
         // 네비게이션으로 넘어온 인덱스가 있는지 확인
         val navIndex = arguments?.getInt("initialExerciseIndex")
@@ -145,129 +130,28 @@ class ExerciseDoingFragment : Fragment() { //운동 세트 수행 화면 담당.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-//        val db = AppDatabase.getDatabase(requireContext(), lifecycleScope)
-//        exerciseSetDao = db.exerciseSetDao()
-//        planDao = db.exercisePlanDao()
-//        planDetailDao = db.planDetailDao() -> 룸 db는 제거!
+        val db = AppDatabase.getDatabase(requireContext(), lifecycleScope)
+        exerciseSetDao = db.exerciseSetDao()
+        planDao = db.exercisePlanDao()
+        planDetailDao = db.planDetailDao()
 
         setAdapter = ExerciseSetAdapter()
         binding.setsRecyclerView.apply {
             layoutManager = LinearLayoutManager(requireContext())
-            adapter = setAdapter //서버로 받은 세트를
-            //나중에 서버에서 받아온 세트를 setAdapter.submitList()로 넣어주면 됨
+            adapter = setAdapter
         }
 
-//        loadPlanExercises {  // -> 서버 연동으로 교체!
-//            updateExerciseInfo()
-//            fetchSetsForCurrentExercise()
-//        }
-        //이제는 서버에서 GET /api/plan/today?userId=... 호출 후,
-        //
-        //schedules[currentExerciseIndex]로 scheduleId, exerciseId, is_time_type을 가져와야 함
-        //
-        //→ 이 부분은 loadTodayPlanFromServer() 또는 loadCurrentExerciseFromServer() 함수로 새로 구현해야 함.
-
-        // 서버에서 오늘 루틴을 불러와 현재 운동 세트를 로드
-        loadCurrentExerciseFromServer()
+        loadPlanExercises {
+            updateExerciseInfo()
+            fetchSetsForCurrentExercise()
+        }
 
         setupStopwatch()
         setupListeners()
         updateExerciseProgressUI()
     }
 
-    private fun loadCurrentExerciseFromServer() {
-        lifecycleScope.launch {
-            try {
-                val response = RetrofitClient.scheduleApi.getTodayPlan(userId = 21)
-                if (response.isSuccessful) {
-                    val todayPlan = response.body()
-                    val schedules = todayPlan?.schedules ?: emptyList()
-
-                    if (currentExerciseIndex >= schedules.size) {
-                        Log.e("ExerciseDoing", "⚠️ 운동 인덱스 범위 초과")
-                        return@launch
-                    }
-
-                    val current = schedules[currentExerciseIndex]
-                    currentExerciseId = current.exercise_id.toLong()
-                    val scheduleId = current.schedule_id.toLong()
-                    val isTimeType = current.is_time_type
-
-                    if (isTimeType) {
-                        fetchTimeSets(scheduleId)
-                    } else {
-                        fetchRepsSets(scheduleId)
-                    }
-
-                    binding.exerciseNameTextView.text = current.exercise_name
-                } else {
-                    Log.e("ExerciseDoing", "❌ 서버 응답 실패: ${response.code()}")
-                }
-            } catch (e: Exception) {
-                Log.e("ExerciseDoing", "❌ 네트워크 오류: ${e.message}")
-            }
-        }
-    }
-    private fun fetchRepsSets(scheduleId: Long) {
-        lifecycleScope.launch {
-            try {
-                val response = RetrofitClient.scheduleApi.getRepsSets(scheduleId).execute()  // suspend fun 아니면 execute()
-
-                if (response.isSuccessful) {
-                    val repsDtoList = response.body() ?: emptyList()
-
-                    currentExerciseSets = repsDtoList.map { dto ->
-                        Exercise_Set(
-                            setNumber = dto.setNumber,
-                            reps = dto.reps,
-                            weight = dto.weight.toInt(),
-                            isCompleted = dto.isCompleted
-                        )
-                    }.toMutableList()
-
-                    Log.d("fetchRepsSets", "✅ 세트 ${currentExerciseSets.size}개 불러옴")
-                    updateSetListUI()
-                } else {
-                    Log.e("fetchRepsSets", "❌ 서버 오류: ${response.code()}")
-                }
-            } catch (e: Exception) {
-                Log.e("fetchRepsSets", "❌ 예외 발생: ${e.localizedMessage}")
-            }
-        }*/
-    //시간은 구현X
-//    private fun fetchTimeSets(scheduleId: Long) {
-//        RetrofitClient.scheduleApi.getTimeSets(scheduleId).enqueue(object : Callback<List<RetrofitClient.TimeSetDto>> {
-//            override fun onResponse(
-//                call: Call<List<RetrofitClient.TimeSetDto>>,
-//                response: Response<List<RetrofitClient.TimeSetDto>>
-//            ) {
-//                if (response.isSuccessful) {
-//                    val sets = response.body() ?: emptyList()
-//
-//                    currentExerciseSets = sets.map { dto ->
-//                        ExerciseSet(
-//                            setNumber = dto.setNumber,
-//                            timeSeconds = dto.seconds,
-//                            weight = dto.weight.toInt(),
-//                            isCompleted = false
-//                        )
-//                    }.toMutableList()
-//
-//                    setAdapter.submitList(currentExerciseSets)
-//                    Log.d("ExerciseDoing", "✅ Time 세트 로드 완료: ${sets.size}세트")
-//                } else {
-//                    Log.e("ExerciseDoing", "❌ Time 세트 응답 실패: ${response.code()}")
-//                }
-//            }
-//
-//            override fun onFailure(call: Call<List<RetrofitClient.TimeSetDto>>, t: Throwable) {
-//                Log.e("ExerciseDoing", "❌ Time 세트 네트워크 오류: ${t.message}")
-//            }
-//        })
-//    }
-
-/*
-        override fun onSaveInstanceState(outState: Bundle) {
+    override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putInt(KEY_EXERCISE_INDEX, currentExerciseIndex)
         outState.putInt(KEY_SET_INDEX, currentSetIndex)
@@ -336,7 +220,7 @@ class ExerciseDoingFragment : Fragment() { //운동 세트 수행 화면 담당.
         planExerciseList.getOrNull(currentExerciseIndex)?.exercise?.let { ex ->
             currentExerciseId = ex.id
             lifecycleScope.launch(Dispatchers.IO) {
-                //val sets = exerciseSetDao.getSetsByPlanAndExerciseId(exercisePlanId, ex.id) //여기 룸! 수정!
+                val sets = exerciseSetDao.getSetsByPlanAndExerciseId(exercisePlanId, ex.id)
                     .sortedBy { it.setNumber }
                 currentExerciseSets = sets.toMutableList()
 
@@ -403,7 +287,7 @@ class ExerciseDoingFragment : Fragment() { //운동 세트 수행 화면 담당.
             setAdapter.submitList(updated) {
                 // DB 업데이트
                 lifecycleScope.launch(Dispatchers.IO) {
-                    //exerciseSetDao.update(completed) //여기 룸!
+                    exerciseSetDao.update(completed)
                 }
                 currentSetIndex = nextIdx
                 prefs.edit().putInt(KEY_SET_INDEX, nextIdx).apply()
@@ -427,7 +311,7 @@ class ExerciseDoingFragment : Fragment() { //운동 세트 수행 화면 담당.
                     times = currentExerciseSets.lastOrNull()?.times ?: 0,
                     isCompleted = false
                 )
-                //val insertedId = exerciseSetDao.insert(newSet) //여기 룸! 수정!
+                val insertedId = exerciseSetDao.insert(newSet)
                 if (insertedId > 0) {
                     withContext(Dispatchers.Main) {
                         currentExerciseSets.add(newSet.copy(id = insertedId))
@@ -606,4 +490,4 @@ class ExerciseDoingFragment : Fragment() { //운동 세트 수행 화면 담당.
         override fun onBindViewHolder(holder: ViewHolder, position: Int) =
             holder.bind(getItem(position))
     }
-}*/
+}
