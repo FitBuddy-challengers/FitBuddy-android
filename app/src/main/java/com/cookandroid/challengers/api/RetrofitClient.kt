@@ -160,6 +160,13 @@ object RetrofitClient {
         , @SerializedName("is_completed") val isCompleted: Boolean = false
     )
 
+    data class Exercise_Set(
+        val setNumber: Int,
+        val reps: Int,
+        val weight: Int,
+        val isCompleted: Boolean
+    )
+
     data class CompleteSetRequest(
         val setNumber: Int
     )

@@ -10,7 +10,8 @@ import kotlinx.coroutines.NonCancellable.isCompleted
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface ExerciseSetDao {
+interface
+ExerciseSetDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(set: ExerciseSet): Long
 
