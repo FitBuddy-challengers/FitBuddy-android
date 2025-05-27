@@ -20,7 +20,7 @@ class RepsSetAdapter(private val sets: MutableList<RepsSetUiModel>) :
 
     fun getSetList(): List<RepsSetUiModel> = sets
 
-    // ✅ 서버 응답으로 받은 세트로 전체 갱신할 때 호출
+    // 서버 응답으로 받은 세트로 전체 갱신할 때 호출
     fun updateSets(newSets: List<RepsSetUiModel>) {
         sets.clear()
         sets.addAll(newSets)

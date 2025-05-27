@@ -140,6 +140,9 @@ class ExerciseChangeFragment : BottomSheetDialogFragment() {
                     val scheduleId = scheduleIdRes.body()?.scheduleId
                         ?: throw IllegalStateException("❌ scheduleId 조회 실패")
 
+                    Log.d("ExerciseChange", "📤 서버에 운동 변경 요청 - scheduleId: $scheduleId, newExerciseId: $newId")
+
+
                     // ✅ 서버에 운동 변경
                     val changeRes = RetrofitClient.scheduleApi.changeExerciseServer(
                         scheduleId,
@@ -154,8 +157,8 @@ class ExerciseChangeFragment : BottomSheetDialogFragment() {
                         else RetrofitClient.SetData(it, reps = 12, weight = 0)
                     }
                     val addReq = RetrofitClient.AddExerciseRequest(newId.toInt(), setList)
-                    val addRes = RetrofitClient.scheduleApi.addExerciseToSchedule(scheduleId, addReq)
-                    if (!addRes.isSuccessful) throw Exception("❌ 세트 추가 실패")
+                    //val addRes = RetrofitClient.scheduleApi.addExerciseToSchedule(scheduleId, addReq)
+                    //if (!addRes.isSuccessful) throw Exception("❌ 세트 추가 실패")
 
                     withContext(Dispatchers.Main) {
                         Toast.makeText(requireContext(), "운동이 변경되었습니다.", Toast.LENGTH_SHORT).show()
@@ -256,7 +259,8 @@ class ExerciseChangeFragment : BottomSheetDialogFragment() {
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ExerciseViewHolder {
-            val binding = ItemAddExerciseBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+            val binding =
+                ItemAddExerciseBinding.inflate(LayoutInflater.from(parent.context), parent, false)
             return ExerciseViewHolder(binding)
         }
 
@@ -271,34 +275,37 @@ class ExerciseChangeFragment : BottomSheetDialogFragment() {
 
             init {
                 binding.itemContentLayout.setOnClickListener {
-                    val ex = items[adapterPosition]
-                    val wasSelected = selectedId == ex.id
-                    selectedId = if (wasSelected) null else ex.id
-                    onExerciseSelected(ex, !wasSelected)
-                    notifyDataSetChanged()
+                    val position = bindingAdapterPosition
+                    if (position != RecyclerView.NO_POSITION) {
+                        val ex = items[position]
+                        val wasSelected = selectedId == ex.id
+                        selectedId = if (wasSelected) null else ex.id
+                        onExerciseSelected(ex, !wasSelected)
+                        notifyDataSetChanged()
+                    }
                 }
             }
+                fun bind(exercise: Exercise) {
+                    binding.exerciseNameTextView.text = exercise.name
+                    val resId = context.resources.getIdentifier(
+                        exercise.imagePath ?: "",
+                        "drawable",
+                        context.packageName
+                    ).takeIf { it != 0 } ?: R.drawable.ic_launcher_background
 
-            fun bind(exercise: Exercise) {
-                binding.exerciseNameTextView.text = exercise.name
-                val resId = context.resources.getIdentifier(
-                    exercise.imagePath ?: "",
-                    "drawable",
-                    context.packageName
-                ).takeIf { it != 0 } ?: R.drawable.ic_launcher_background
+                    Glide.with(binding.exerciseImageView)
+                        .load(resId)
+                        .into(binding.exerciseImageView)
 
-                Glide.with(binding.exerciseImageView)
-                    .load(resId)
-                    .into(binding.exerciseImageView)
-
-                val isSelected = exercise.id == selectedId
-                binding.itemRootLayout.setBackgroundColor(
-                    if (isSelected) Color.parseColor("#d6d6d6") else Color.TRANSPARENT
-                )
+                    val isSelected = exercise.id == selectedId
+                    binding.itemRootLayout.setBackgroundColor(
+                        if (isSelected) Color.parseColor("#d6d6d6") else Color.TRANSPARENT
+                    )
+                }
             }
         }
     }
-}
+
 //
 //class ExerciseChangeFragment : BottomSheetDialogFragment() {
 //

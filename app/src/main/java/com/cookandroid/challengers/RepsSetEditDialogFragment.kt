@@ -29,6 +29,7 @@ class RepsSetEditDialogFragment : BottomSheetDialogFragment() {
         super.onCreate(savedInstanceState)
         arguments?.let {
             scheduleId = it.getLong("scheduleId")
+            Log.d("세트수정", "✅ onCreate()에서 받은 scheduleId = $scheduleId")
         }
     }
 
@@ -52,9 +53,14 @@ class RepsSetEditDialogFragment : BottomSheetDialogFragment() {
                     val sets = response.body()?.mapIndexed { index, dto ->
                         RepsSetUiModel(index + 1, dto.reps, dto.weight)
                     } ?: listOf()
+                    parentFragmentManager.setFragmentResult("sets_updated", bundleOf())
+                    //dismiss() // 저장 성공 시 결과 전달
+
+                    Log.d("세트수정", "✅ 받아온 세트 수: ${sets.size}")
 
                     // ✅ 어댑터 내부 리스트만 갱신
                     adapter.updateSets(sets.toMutableList())
+                    adapter.notifyDataSetChanged()
                 } else {
                     Log.e("RepsSetEdit", "❌ 서버 응답 오류: ${response.code()}")
                 }
@@ -103,4 +109,6 @@ class RepsSetEditDialogFragment : BottomSheetDialogFragment() {
             arguments = bundleOf("scheduleId" to scheduleId)
         }
     }
+
+
 }

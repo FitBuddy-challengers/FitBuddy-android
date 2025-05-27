@@ -29,6 +29,11 @@ import com.cookandroid.challengers.viewmodel.StopwatchViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import com.cookandroid.challengers.api.RetrofitClient
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 class ExerciseDoingFragment : Fragment() {
 
@@ -42,14 +47,21 @@ class ExerciseDoingFragment : Fragment() {
     private lateinit var planDao: ExercisePlanDao
     private lateinit var planDetailDao: PlanDetailDao
 
+    private var scheduleId: Long = -1L
+
     private var currentExerciseIndex = 0
     private var planExerciseList: List<ExerciseInPlan> = emptyList()
     private var currentExerciseId: Long = -1L
     private var setStartTime: Long = 0L // 세트 시작 시간
 
+    private var passedExerciseName: String? = null
+    private var passedImagePath: String? = null
+    private var passedEquip: String? = null
+
     private var currentExerciseSets: MutableList<ExerciseSet> = mutableListOf()
 
     private val stopwatchViewModel: StopwatchViewModel by activityViewModels()
+
 
     companion object {
         private const val PREFS_PROGRESS = "exercise_progress"
@@ -70,6 +82,15 @@ class ExerciseDoingFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+
+        passedExerciseName = arguments?.getString("exerciseName")
+        passedImagePath = arguments?.getString("imagePath")
+        passedEquip = arguments?.getString("equip")
+
+        scheduleId = arguments?.getLong("scheduleId") ?: -1L
+        exercisePlanId = arguments?.getLong("planId") ?: -1L
+
 
         // planId는 계속 받기
         exercisePlanId = arguments?.getLong("planId") ?: -1L
@@ -125,15 +146,21 @@ class ExerciseDoingFragment : Fragment() {
     ): View {
         _binding = FragmentExerciseDoingBinding.inflate(inflater, container, false)
         return binding.root
+
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        parentFragmentManager.setFragmentResultListener("sets_updated", viewLifecycleOwner) { _, _ ->
+            fetchSetsForCurrentExercise() // 세트 갱신
+        }
+
         val db = AppDatabase.getDatabase(requireContext(), lifecycleScope)
         exerciseSetDao = db.exerciseSetDao()
         planDao = db.exercisePlanDao()
         planDetailDao = db.planDetailDao()
+        //val passedImagePath = arguments?.getString("imagePath") ?: ""
 
         setAdapter = ExerciseSetAdapter()
         binding.setsRecyclerView.apply {
@@ -149,6 +176,11 @@ class ExerciseDoingFragment : Fragment() {
         setupStopwatch()
         setupListeners()
         updateExerciseProgressUI()
+
+        loadPlanExercises {
+            updateExerciseInfo() // 이미지 경로 함께 전달
+            fetchSetsForCurrentExercise()
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -248,20 +280,21 @@ class ExerciseDoingFragment : Fragment() {
     }
 
     private fun updateExerciseInfo() {
-        planExerciseList.getOrNull(currentExerciseIndex)?.exercise?.let { ex ->
-            binding.exerciseNameTextView.text = ex.name
-            val resId = resources.getIdentifier(
-                ex.imagePath ?: "",
-                "drawable",
-                requireContext().packageName
-            )
-            Glide.with(requireContext())
-                .load(if (resId != 0) resId else R.drawable.ic_launcher_background)
-                .transition(withCrossFade())
-                .into(binding.exerciseImageView)
-            setAdapter.updateEquip(ex.equip)
-            binding.titleTextView.text = "오늘의 운동 중"
-        }
+        binding.exerciseNameTextView.text = passedExerciseName ?: "이름 없음"
+
+        val resId = resources.getIdentifier(
+            passedImagePath ?: "",
+            "drawable",
+            requireContext().packageName
+        )
+
+        Glide.with(requireContext())
+            .load(if (resId != 0) resId else R.drawable.ic_launcher_background)
+            .transition(DrawableTransitionOptions.withCrossFade())
+            .into(binding.exerciseImageView)
+
+        setAdapter.updateEquip(passedEquip)
+        binding.titleTextView.text = "오늘의 운동 중"
     }
 
     private fun completeCurrentSet() {
@@ -270,13 +303,28 @@ class ExerciseDoingFragment : Fragment() {
             val elapsed = now - setStartTime // 세트 수행 시간 계산
             Log.d("ExerciseDoingFragment", "Completing set ${currentSetIndex + 1}. Elapsed time: $elapsed ms")
 
-            val completed =
-                currentExerciseSets[currentSetIndex].copy(
-                    isCompleted = true,
-                    isHighlighted = false,
-                    elapsedTimeMillis = elapsed // 수행 시간 기록
-                )
+            val completed = currentExerciseSets[currentSetIndex].copy(
+                isCompleted = true,
+                isHighlighted = false,
+                elapsedTimeMillis = elapsed
+            )
+
             currentExerciseSets[currentSetIndex] = completed
+
+            // 서버에 완료 상태 반영 여기로 옮김
+            RetrofitClient.scheduleApi.updateRepsSetCompletion(
+                scheduleId = scheduleId,
+                setNumber = completed.setNumber,
+                isCompleted = true
+            ).enqueue(object : Callback<Void> {
+                override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                    Log.d("세트완료", "✅ 서버 반영 성공: 세트 ${completed.setNumber}")
+                }
+
+                override fun onFailure(call: Call<Void>, t: Throwable) {
+                    Log.e("세트완료", "❌ 서버 반영 실패", t)
+                }
+            })
 
             val nextIdx = currentSetIndex + 1
             val highlightNext = nextIdx < currentExerciseSets.size
@@ -285,9 +333,8 @@ class ExerciseDoingFragment : Fragment() {
             }
 
             setAdapter.submitList(updated) {
-                // DB 업데이트
                 lifecycleScope.launch(Dispatchers.IO) {
-                    exerciseSetDao.update(completed)
+                    exerciseSetDao.update(completed) // Room 업데이트
                 }
                 currentSetIndex = nextIdx
                 prefs.edit().putInt(KEY_SET_INDEX, nextIdx).apply()
@@ -296,6 +343,7 @@ class ExerciseDoingFragment : Fragment() {
             }
         }
     }
+
 
     private fun addNewSet() {
         planExerciseList.getOrNull(currentExerciseIndex)?.exercise?.let { ex ->

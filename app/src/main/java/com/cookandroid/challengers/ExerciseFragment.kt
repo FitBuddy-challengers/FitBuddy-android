@@ -103,12 +103,28 @@ class ExerciseFragment : Fragment() {
         }
 
         binding.startExerciseButton.setOnClickListener {
-            //Toast.makeText(requireContext(), "운동 시작 기능은 아직 구현되지 않았습니다.", Toast.LENGTH_SHORT).show()
-            val args = Bundle().apply {
-                putLong("planId", planId)
-                putInt("initialExerciseIndex", 0) // 0번 운동부터 시작
+            val scheduleList = serverAdapter.getItems()
+
+            // ✅ 첫 번째 미완료 운동 찾기
+            val firstIncompleteIndex = scheduleList.indexOfFirst { !it.is_completed }
+
+            if (firstIncompleteIndex != -1) {
+                val target = scheduleList[firstIncompleteIndex]
+
+                val args = Bundle().apply {
+                    putLong("planId", planId)
+                    putInt("initialExerciseIndex", firstIncompleteIndex)
+                    putLong("scheduleId", target.schedule_id.toLong())     // 서버 스케줄 ID
+                    putLong("exerciseId", target.exercise_id.toLong())     // 운동 ID
+                    putString("exerciseName", target.exercise_name)        // 이름 (Room 보완)
+                    putString("imagePath", target.image_path)              // 이미지 (Room 보완)
+                    putString("equip", target.equip)                       // 장비 정보 (Room 보완)
+                }
+
+                findNavController().navigate(R.id.action_exercise_to_exerciseDoing, args)
+            } else {
+                Toast.makeText(requireContext(), "진행할 운동이 없습니다.", Toast.LENGTH_SHORT).show()
             }
-            findNavController().navigate(R.id.action_exercise_to_exerciseDoing, args)
         }
 
         binding.menuBtn.setOnClickListener {
@@ -120,6 +136,8 @@ class ExerciseFragment : Fragment() {
         }
 
         loadTodayPlanFromServer()
+
+
     }
 
     override fun onResume() {
@@ -127,6 +145,7 @@ class ExerciseFragment : Fragment() {
         loadTodayPlanFromServer()
     }
 
+    // 서버로 부터 연동! -> 되었으면 좋겠다...
     private fun loadTodayPlanFromServer() {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
@@ -136,11 +155,21 @@ class ExerciseFragment : Fragment() {
                     planId = data?.plan?.id?.toLong() ?: -1L
 
                     val validSchedules = data?.schedules?.filter { it.exercise_id != 0 } ?: emptyList()
+
+                    // 🧠 Room에서 운동 정보 보완
                     val enriched = validSchedules.map { schedule ->
                         val ex = db.exerciseDao().getExerciseById(schedule.exercise_id.toLong())
+                        Log.d("ExerciseFragment", "🧪 exercise_id: ${schedule.exercise_id} → Room에서 찾은 운동: $ex")
                         schedule.copy(
                             exercise_name = schedule.exercise_name.ifBlank { ex?.name ?: "운동 이름 없음" },
-                            image_path = ex?.imagePath
+                            image_path = ex?.imagePath ?: "", // drawable 리소스 이름
+                            equip = ex?.equip ?: "정보 없음",
+                            part = ex?.part ?: "부위 없음",
+                            start_position = ex?.startPosition,
+                            exercise_motion = ex?.exerciseMotion,
+                            breathing = ex?.breathing,
+                            caution = ex?.caution,
+                            mets = ex?.mets ?: 0.0
                         )
                     }
 
@@ -156,11 +185,136 @@ class ExerciseFragment : Fragment() {
         }
     }
 
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
     }
 }
+
+
+//class ExerciseFragment : Fragment() {
+//
+//    private var _binding: FragmentExerciseBinding? = null
+//    private val binding get() = _binding!!
+//
+//    private lateinit var serverAdapter: ServerExerciseAdapter
+//    private lateinit var db: AppDatabase
+//    private var planId: Long = -1L
+//
+//    override fun onCreateView(
+//        inflater: LayoutInflater,
+//        container: ViewGroup?,
+//        savedInstanceState: Bundle?
+//    ): View {
+//        _binding = FragmentExerciseBinding.inflate(inflater, container, false)
+//        return binding.root
+//    }
+//
+//    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+//        super.onViewCreated(view, savedInstanceState)
+//
+//        db = AppDatabase.getDatabase(requireContext(), viewLifecycleOwner.lifecycleScope)
+//
+//        serverAdapter = ServerExerciseAdapter(emptyList(), db.exerciseDao()) { schedule ->
+//            if (schedule.schedule_id == -1) {
+//                val args = Bundle().apply { putLong("planId", planId) }
+//                findNavController().navigate(R.id.action_exercise_to_exerciseAdd, args)
+//            } else {
+//                val editFragment = ExerciseEditFragment(
+//                    planId = planId,
+//                    exerciseId = schedule.exercise_id.toLong(),
+//                    exerciseName = schedule.exercise_name
+//                ) {
+//                    loadTodayPlanFromServer()
+//                }
+//                editFragment.show(parentFragmentManager, "ExerciseEdit")
+//            }
+//        }
+//
+//        binding.exerciseListRecyclerView.apply {
+//            layoutManager = LinearLayoutManager(requireContext())
+//            adapter = serverAdapter
+//
+//            val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
+//                ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0
+//            ) {
+//                override fun onMove(
+//                    recyclerView: RecyclerView,
+//                    viewHolder: RecyclerView.ViewHolder,
+//                    target: RecyclerView.ViewHolder
+//                ): Boolean {
+//                    val from = viewHolder.adapterPosition
+//                    val to = target.adapterPosition
+//                    if (from >= serverAdapter.getItems().size || to >= serverAdapter.getItems().size) return false
+//                    serverAdapter.moveItem(from, to)
+//                    return true
+//                }
+//
+//                override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {}
+//            })
+//            itemTouchHelper.attachToRecyclerView(this)
+//        }
+//
+//        binding.startExerciseButton.setOnClickListener {
+//            //Toast.makeText(requireContext(), "운동 시작 기능은 아직 구현되지 않았습니다.", Toast.LENGTH_SHORT).show()
+//            val args = Bundle().apply {
+//                putLong("planId", planId)
+//                putInt("initialExerciseIndex", 0) // 0번 운동부터 시작
+//            }
+//            findNavController().navigate(R.id.action_exercise_to_exerciseDoing, args)
+//        }
+//
+//        binding.menuBtn.setOnClickListener {
+//            findNavController().navigate(R.id.action_exercise_to_exerciseList)
+//        }
+//
+//        parentFragmentManager.setFragmentResultListener("sets_updated", viewLifecycleOwner) { _, _ ->
+//            loadTodayPlanFromServer()
+//        }
+//
+//        loadTodayPlanFromServer()
+//    }
+//
+//    override fun onResume() {
+//        super.onResume()
+//        loadTodayPlanFromServer()
+//    }
+//
+//    private fun loadTodayPlanFromServer() {
+//        lifecycleScope.launch(Dispatchers.IO) {
+//            try {
+//                val response = RetrofitClient.scheduleApi.getTodayPlan(userId = 21)
+//                if (response.isSuccessful) {
+//                    val data = response.body()
+//                    planId = data?.plan?.id?.toLong() ?: -1L
+//
+//                    val validSchedules = data?.schedules?.filter { it.exercise_id != 0 } ?: emptyList()
+//                    val enriched = validSchedules.map { schedule ->
+//                        val ex = db.exerciseDao().getExerciseById(schedule.exercise_id.toLong())
+//                        schedule.copy(
+//                            exercise_name = schedule.exercise_name.ifBlank { ex?.name ?: "운동 이름 없음" },
+//                            image_path = ex?.imagePath
+//                        )
+//                    }
+//
+//                    withContext(Dispatchers.Main) {
+//                        serverAdapter.submitList(enriched)
+//                    }
+//                } else {
+//                    Log.e("ExerciseFragment", "❌ 서버 오류: ${response.code()}")
+//                }
+//            } catch (e: Exception) {
+//                Log.e("ExerciseFragment", "❗ 네트워크 오류: ${e.message}")
+//            }
+//        }
+//    }
+//
+//    override fun onDestroyView() {
+//        super.onDestroyView()
+//        _binding = null
+//    }
+//}
 
 
 // 운동탭 메인화면

@@ -134,6 +134,7 @@ class ExerciseEditFragment(
                         } else {
                             RepsSetEditDialogFragment.newInstance(scheduleId)
                                 .show(parentFragmentManager, "RepsSetEdit")
+                            Log.d("세트수정", "📦 다이얼로그 호출 전 scheduleId = $scheduleId")
                         }
                     }
 

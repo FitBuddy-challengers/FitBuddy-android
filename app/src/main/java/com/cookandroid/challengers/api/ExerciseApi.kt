@@ -43,9 +43,10 @@ interface ScheduleApi {
     suspend fun createSchedule(@Body request: RetrofitClient.CreateScheduleRequest): Response<RetrofitClient.CreateScheduleResponse>
 
 
-    @PUT("/api/schedule/change-exercise")
+    @POST("/api/schedule/{scheduleId}/change-exercise")
     suspend fun changeExercise(
-        @Body request: RetrofitClient.ChangeExerciseRequest
+        @Path("scheduleId") scheduleId: Long,
+        @Body request: RetrofitClient.ChangeExerciseServerRequest
     ): Response<RetrofitClient.ChangeExerciseResponse>
 
 
@@ -123,6 +124,16 @@ interface ScheduleApi {
     ): Call<RetrofitClient.CompleteSetResponse>
 
 
+    @PATCH("/api/sets/reps/complete")
+    fun updateRepsSetCompletion(
+        @Query("scheduleId") scheduleId: Long,
+        @Query("setNumber") setNumber: Int,
+        @Query("isCompleted") isCompleted: Boolean
+    ): Call<Void>
 
+    @PATCH("/api/sets/reps/complete")
+    fun updateRepsSetCompletion(
+        @Body body: RetrofitClient.SetCompletionRequest
+    ): Call<Void>
 
 }

@@ -118,6 +118,7 @@ object RetrofitClient {
 
     // ✅ 운동 변경용 요청 DTO
     data class ChangeExerciseServerRequest(
+        @SerializedName("newExerciseId")
         val newExerciseId: Long
     )
 
@@ -174,6 +175,12 @@ object RetrofitClient {
     data class CompleteSetResponse(
         val message: String,
         val isWorkoutCompleted: Boolean
+    )
+
+    data class SetCompletionRequest(
+        val scheduleId: Long,
+        val setNumber: Int,
+        val isCompleted: Boolean
     )
 
 
