@@ -8,7 +8,6 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
-import com.cookandroid.challengers.ui.record.RecordWeightFragment
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 
@@ -27,6 +26,9 @@ class RecordFragment : Fragment() {
         val tabLayout = view.findViewById<TabLayout>(R.id.RecordTabLayout)
         val viewPager = view.findViewById<ViewPager2>(R.id.RecordViewPager)
         val RecordTextView = view.findViewById<TextView>(R.id.recordTextView)
+
+        // 스와이프 전환 비활성화
+        viewPager.isUserInputEnabled = false
 
         // ViewPager 어댑터 설정 (내부 클래스 사용)
         val adapter = RecordPagerAdapter(this)

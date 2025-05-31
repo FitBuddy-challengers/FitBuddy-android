@@ -139,33 +139,6 @@
     </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/layout_hide_exercise"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginTop="24dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/layout_favorite"
-        app:layout_constraintEnd_toEndOf="parent">
-        <ImageView
-            android:id="@+id/icon_hide_exercise"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:src="@drawable/ic_hide_black" />
-        <TextView
-            android:id="@+id/menu_hide_exercise"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:text="운동숨기기"
-            android:textSize="20sp"
-            android:textColor="@color/black"
-            android:fontFamily="@font/pretendard_semi_bold"
-            android:layout_marginStart="16dp"
-            android:layout_weight="1" />
-    </LinearLayout>
-
-    <LinearLayout
         android:id="@+id/layout_delete_exercise"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -173,7 +146,7 @@
         android:gravity="center_vertical"
         android:layout_marginTop="24dp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/layout_hide_exercise"
+        app:layout_constraintTop_toBottomOf="@id/layout_favorite"
         app:layout_constraintEnd_toEndOf="parent">
         <ImageView
             android:id="@+id/icon_delete_exercise"

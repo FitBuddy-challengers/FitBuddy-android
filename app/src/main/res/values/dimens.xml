@@ -9,10 +9,14 @@
 
     <dimen name="rest_timer_peek_height">700dp</dimen>
     <dimen name="exercise_set_peek_height">500dp</dimen>
+    <dimen name="exChange_peek_height">800dp</dimen>
 
     <dimen name="swipe_button_width">100dp</dimen>
     <dimen name="favorite_button_touch_increase">12dp</dimen>
 
     <dimen name="item_reps_margin_end_no_weight">36dp</dimen>
     <dimen name="item_reps_margin_end_default">0dp</dimen>
+
+    <dimen name="calendar_header_bottom_margin">32dp</dimen>
+
 </resources>

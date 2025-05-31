@@ -13,6 +13,7 @@
         android:padding="16dp">
 
         <LinearLayout
+            android:id="@+id/recordCalendarButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
@@ -20,6 +21,8 @@
             android:backgroundTint="@color/light_gray2"
             android:gravity="center_vertical"
             android:orientation="horizontal"
+            android:clickable="true"
+            android:focusable="true"
             android:padding="12dp">
 
             <ImageView
@@ -52,7 +55,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="32dp"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:paddingHorizontal="32dp">
 
             <TextView
                 android:id="@+id/topWorkoutTextView"
@@ -75,12 +79,53 @@
                 android:fontFamily="@font/pretendard_regular"
                 android:text="놓치고 있는 운동 부위는 없는지 확인해보세요" />
 
-            <ImageView
+            <com.github.mikephil.charting.charts.RadarChart
+                android:id="@+id/radarChart"
                 android:layout_width="match_parent"
-                android:layout_height="150dp"
-                android:layout_marginTop="16dp"
-                android:background="@color/light_gray"
-                android:contentDescription="운동 부위별 그래프" />
+                android:layout_height="300dp"
+                android:layout_marginTop="40dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <com.google.android.material.button.MaterialButtonToggleGroup
+                android:id="@+id/periodToggleWeight"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="24dp"
+                app:selectionRequired="true"
+                app:singleSelection="true">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnWeekDate"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1주" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnMonthDate"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1달" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnYearDate"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1년" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAllDate"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="전체" />
+            </com.google.android.material.button.MaterialButtonToggleGroup>
         </LinearLayout>
 
         <LinearLayout

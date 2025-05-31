@@ -105,6 +105,6 @@
         android:layout_marginTop="16dp"
         android:layout_weight="1"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-        tools:listitem="@layout/item_personal_challenge" />
+        tools:listitem="@layout/item_challenge_personal" />
 
 </LinearLayout>

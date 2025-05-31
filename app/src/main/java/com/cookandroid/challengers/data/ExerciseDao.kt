@@ -16,49 +16,59 @@ interface ExerciseDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(exercise: Exercise): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(exercises: List<Exercise>)
+
     @Update
     suspend fun update(exercise: Exercise)
+
+
 
     @Delete
     suspend fun delete(exercise: Exercise)
 
+    @Query("DELETE FROM exercises")
+    suspend fun deleteAll()
+
+    // 숨겨진 상태가 아닌 운동을 조회
     @Query("SELECT * FROM exercises WHERE isHidden = 0 ORDER BY name ASC")
     fun getAllExercises(): Flow<List<Exercise>>
 
+    //모든 운동은 default를  12회 3세트로 통일함.
+    @Query("SELECT * FROM exercises")
+    suspend fun getAllExercisesOnce(): List<Exercise>
+
+
+
+    // 숨겨진 상태인 운동을 조회
     @Query("SELECT * FROM exercises WHERE isHidden = 1 ORDER BY name ASC")
     fun getHiddenExercises(): Flow<List<Exercise>>
 
     @Query("SELECT * FROM exercises WHERE id = :id")
     suspend fun getExerciseById(id: Long): Exercise?
 
-    // 특정 운동 계획에 속한 운동 목록 조회 (PlanExercise Join 테이블 사용)
-    @Query("SELECT e.* FROM exercises e INNER JOIN plan_details pd ON e.id = pd.exerciseId WHERE pd.exercisePlanId = :planId ORDER BY pd.exOrder ASC")
-    fun getExercisesByPlanId(planId: Long): List<Exercise>
+    // 운동 이름을 가져오기 위해 필요
+    @Query("SELECT name FROM exercises WHERE id = :exerciseId")
+    suspend fun getExerciseNameById(exerciseId: Long): String
 
-    // 특정 부위의 운동 목록 조회
-    @Query("SELECT * FROM exercises WHERE part = :part ORDER BY name ASC")
-    fun getExercisesByPart(part: String): Flow<List<Exercise>>
+    // 운동의 mets(운동계수)를 가져옴
+    @Query("SELECT mets FROM exercises WHERE part = :part LIMIT 1")
+    suspend fun getExerciseMets(part: String): Float
 
-    // 특정 장비의 운동 목록 조회
-    @Query("SELECT * FROM exercises WHERE equip = :equip ORDER BY name ASC")
-    fun getExercisesByEquipment(equip: String): Flow<List<Exercise>>
+    // 층간소음이 없는 운동만 가져옴
+    @Query("SELECT * FROM exercises WHERE isNoise = false")
+    fun getNonNoisyExercises(): Flow<List<Exercise>>
 
-    // 북마크된 운동 목록 조회
-    @Query("SELECT * FROM exercises WHERE isFavorite = 1 ORDER BY name ASC")
-    fun getFavoriteExercises(): Flow<List<Exercise>>
-
-    // 북마크 상태 업데이트
-    @Query("UPDATE exercises SET isFavorite = :isFavorite WHERE id = :id")
-    suspend fun updateFavoriteStatus(id: Long, isFavorite: Boolean)
-
-    // PlanDetail에 연결된 정보까지 함께 조회 (Transaction 처리 권장)
-    @Transaction
-    @Query("SELECT * FROM exercises WHERE id IN (SELECT exerciseId FROM plan_details WHERE exercisePlanId = :planId) ORDER BY name ASC")
-    suspend fun getExercisesWithPlanInfo(planId: Long): List<ExerciseWithPlanInfo>
-
-    // 운동 검색(임시)
     @Query("SELECT * FROM exercises WHERE name = :name LIMIT 1")
     suspend fun getExerciseByName(name: String): Exercise?
+
+    @Query("SELECT * FROM exercises ORDER BY id ASC")
+    suspend fun getAllOnce(): List<Exercise>
+
+
+    @Query("SELECT COUNT(*) FROM exercises")
+    suspend fun getCount(): Int
+
 }
 
 // Exercise와 PlanDetail 정보를 함께 담는 데이터 클래스 (필요한 정보에 따라 필드 추가)

@@ -9,7 +9,8 @@ import java.time.LocalDate
 @Entity(tableName = "weight_records")
 @TypeConverters(LocalDateConverter::class)
 data class WeightRecord(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
     val date: LocalDate, // 기록 날짜
     val weight: Double, // 몸무게 (kg)
     val bodyFatPercentage: Double?, // 체지방률 (%) - nullable

@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/exerciseItem"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:id="@+id/exerciseItem">
+    android:orientation="vertical">
 
     <LinearLayout
+        android:id="@+id/contentLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
         android:background="@drawable/btn_rectangle_round5_white"
+        android:orientation="horizontal"
         android:paddingTop="16dp"
         android:paddingBottom="16dp">
 
@@ -20,8 +21,8 @@
             android:layout_marginStart="16dp"
             android:layout_marginEnd="10dp"
             android:background="@drawable/bg_rounded_image"
-            android:src="@drawable/ic_launcher_background"
-            android:clipToOutline="true" />
+            android:clipToOutline="true"
+            android:src="@drawable/ic_launcher_background" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -34,18 +35,20 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="운동 이름"
-                android:textSize="20sp"
                 android:textColor="@color/black"
+                android:textSize="20sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/exerciseDetailTextView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/black"
                 android:layout_marginTop="4dp"
-                android:textSize="12sp"
-                android:text="운동 상세 정보. 세트 수" />
+                android:text="세트 수"
+                android:textColor="@color/black"
+                android:textSize="12sp" />
+
+
 
         </LinearLayout>
 
@@ -53,15 +56,10 @@
             android:id="@+id/btnMore"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:padding="15dp"
+            android:layout_gravity="center_vertical"
             android:background="@android:color/transparent"
-            android:src="@drawable/ic_more"
             android:contentDescription="더보기"
-            android:layout_gravity="center_vertical"/>
+            android:padding="15dp"
+            android:src="@drawable/ic_more" />
     </LinearLayout>
-<!--    <View-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="1dp"-->
-<!--        android:background="#DADADA"-->
-<!--        android:layout_marginEnd="16dp"/>-->
 </LinearLayout>

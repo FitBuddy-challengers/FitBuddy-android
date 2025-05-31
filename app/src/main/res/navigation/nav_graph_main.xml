@@ -65,7 +65,14 @@
     <fragment
         android:id="@+id/recordFragment"
         android:name="com.cookandroid.challengers.RecordFragment"
-        android:label="기록" />
+        android:label="기록" >
+        <action
+            android:id="@+id/action_recordFragment_to_recordAddWeight"
+            app:destination="@+id/recordAddWeightFragment" />
+        <action
+            android:id="@+id/action_record_to_recordCalendar"
+            app:destination="@+id/recordCalendarFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/storeFragment"
@@ -115,6 +122,12 @@
         android:name="com.cookandroid.challengers.ExerciseDoingFragment"
         android:label="운동 중"
         tools:layout="@layout/fragment_exercise_doing">
+        <!-- self navigation (자기 자신으로 이동) -->
+        <action
+            android:id="@+id/action_exerciseDoing_to_exerciseDoing"
+            app:destination="@id/exerciseDoingFragment" />
+
+        <!-- 기존 쿨다운 이동은 이걸로 수정해야 할 수도 있음 -->
         <action
             android:id="@+id/action_exerciseDoing_to_coolDownStretch"
             app:destination="@id/coolDownStretchFragment" />
@@ -167,5 +180,25 @@
         android:id="@+id/action_global_exerciseEditSetFragment"
         app:destination="@id/exerciseEditSetFragment" />
 
+    <fragment
+        android:id="@+id/recordWeightFragment"
+        android:name="com.cookandroid.challengers.RecordWeightFragment"
+        android:label="체중기록"
+        tools:layout="@layout/fragment_record_weight">
+    </fragment>
+
+    <fragment
+        android:id="@+id/recordAddWeightFragment"
+        android:name="com.cookandroid.challengers.RecordAddWeightFragment"
+        android:label="체중 기록 추가"
+        tools:layout="@layout/fragment_record_add_weight">
+    </fragment>
+
+    <fragment
+        android:id="@+id/recordCalendarFragment"
+        android:name="com.cookandroid.challengers.RecordCalendarFragment"
+        android:label="운동 기록 달력"
+        tools:layout="@layout/fragment_record_calendar">
+    </fragment>
 
 </navigation>

@@ -141,8 +141,7 @@ git push origin <브랜치명>
 
 ## 운동 탭 기능 
 - Exercise : 운동 탭 메인화면, 오늘의 운동투틴을 볼 수 있음. 길게 눌러 순서 바꾸기 
-- -TODO: exerciseFragment의 ... 버튼 기능 추가하기,
-- -운동 중일 때 exerciseFragment - 현재 진행 중 운동 표시, 완료한 운동은 반투명하게 표시
+- TODO: Exercise(운동중) - 현재 진행 중 운동 표시, 완료한 운동은 반투명하게 표시
 - ExerciseAdd : 운동 추가하기 화면,
 - ExerciseList : 운동 목록 화면, 운동 아이템을 클릭해 운동 상세 화면으로 이동, 
 - 운동 아이템을 왼쪽으로 스와이프해서 운동 숨기기, 오늘 루틴에 있는 운동은 숨기기 불가
@@ -150,6 +149,11 @@ git push origin <브랜치명>
 - ExerciseHidden : 숨겨진 운동 목록 화면, 운동 아이템을 스와이프해서 숨기기 해제
 - ExerciseDoing : 오늘의 운동 중 화면, 세트 추가를 누르면 마지막 세트내용을 맨 밑에 복제 
 - ExerciseEditSet : 오늘의 운동 중 - 세트 수정 (일단은 숫자키보드로 입력하는 방식 유지!)
-- -TODO: 맨몸운동은 무게 숨기기
-
 - TODO: 운동 완료 화면(지금은 토스트 메시지 뜨고 홈프래그먼트로 이동함)
+
+## 기록 탭 기능
+- Record : 기록 탭 메인화면, 뷰페이저만 있음
+- RecordDate : 운동 기록탭
+- RecordWeight : 체중 기록탭
+- RecorAddWeight : 체중 기록 추가
+- RecordCalendar : 운동 기록 캘린더 

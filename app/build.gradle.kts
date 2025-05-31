@@ -97,7 +97,11 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-
+    // 캘린더
+    implementation("com.github.prolificinteractive:material-calendarview:2.0.1"){
+        exclude ("org.threeten", "threetenbp")
+    }
+    implementation("org.threeten:threetenbp:1.6.8")
     // 체중 그래프 
     implementation ("com.github.PhilJay:MPAndroidChart:v3.1.0")
 }

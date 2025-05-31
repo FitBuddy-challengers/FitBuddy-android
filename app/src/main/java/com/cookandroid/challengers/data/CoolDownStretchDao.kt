@@ -5,7 +5,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 
 
-//스트레칭의 경우, 별도로 변경될 사항이 없음. 이건 유지!
+
 @Dao
 interface CoolDownStretchDao {
 
