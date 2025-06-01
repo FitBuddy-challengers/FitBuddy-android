@@ -105,6 +105,8 @@ class RepsSetEditDialogFragment : BottomSheetDialogFragment() {
     }
 
     companion object {
+        const val TAG = "RepsSetEditDialogFragment"
+
         fun newInstance(scheduleId: Long) = RepsSetEditDialogFragment().apply {
             arguments = bundleOf("scheduleId" to scheduleId)
         }

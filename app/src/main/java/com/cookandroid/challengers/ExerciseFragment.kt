@@ -150,6 +150,8 @@ class ExerciseFragment : Fragment() {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val response = RetrofitClient.scheduleApi.getTodayPlan(userId = 21)
+
+
                 if (response.isSuccessful) {
                     val data = response.body()
                     planId = data?.plan?.id?.toLong() ?: -1L

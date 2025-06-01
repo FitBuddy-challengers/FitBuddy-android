@@ -111,9 +111,6 @@ interface ScheduleApi {
         @Body sets: List<RetrofitClient.RepsSetDto>
     ): Call<Void>
 
-
-
-
     @GET("/api/schedule/{scheduleId}/exercise-info")
     suspend fun getExerciseInfo(@Path("scheduleId") scheduleId: Long): Response<ExerciseDto>
 
@@ -135,5 +132,13 @@ interface ScheduleApi {
     fun updateRepsSetCompletion(
         @Body body: RetrofitClient.SetCompletionRequest
     ): Call<Void>
+
+    // ✅ 특정 운동의 즐겨찾기 상태 변경 (토글)
+    @PATCH("/api/exercises/{exerciseId}/favorite")
+    suspend fun toggleExerciseFavorite(
+        @Path("exerciseId") exerciseId: Long,
+        @Body request: RetrofitClient.ToggleFavoriteRequest // 요청 본문에 새로운 즐겨찾기 상태 전달
+    ): Response<RetrofitClient.ToggleFavoriteResponse> // 변경된 상태와 메시지 등 응답
+
 
 }

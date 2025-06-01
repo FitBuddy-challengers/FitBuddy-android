@@ -68,8 +68,44 @@ class ExerciseEditFragment(
         // 운동 이름 반영
         binding.textTitle.text = exerciseName
 
+        parentFragmentManager.setFragmentResultListener("dialog_sets_updated", viewLifecycleOwner) { requestKey, bundle ->
+            if (requestKey == "dialog_sets_updated") {
+                Log.d("ExerciseEditFragment", "dialog_sets_updated 결과 수신. 부모에게 sets_updated 전달.")
+                // ExerciseEditFragment의 부모(주요 화면)에게 "sets_updated" 결과 전달
+                parentFragmentManager.setFragmentResult("sets_updated", Bundle())
+                dismiss() // ExerciseEditFragment 자신을 닫음
+            }
+        }
+
         binding.layoutSetEdit.setOnClickListener {
-            Toast.makeText(requireContext(), "세트 수정 기능은 추후 구현됩니다.", Toast.LENGTH_SHORT).show()
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    val scheduleIdRes = RetrofitClient.scheduleApi.getScheduleId(planId, exerciseId)
+                    val scheduleId = scheduleIdRes.body()?.scheduleId
+                        ?: throw IllegalStateException("❌ scheduleId 가져오기 실패")
+
+                    val exerciseInfoRes = RetrofitClient.scheduleApi.getExerciseInfo(scheduleId)
+                    val isTimeType = exerciseInfoRes.body()?.isTimeType
+                        ?: throw IllegalStateException("❌ 운동 타입 정보 없음")
+
+                    withContext(Dispatchers.Main) {
+                        if (isTimeType) {
+                            TimeSetEditDialogFragment.newInstance(scheduleId)
+                                .show(parentFragmentManager, TimeSetEditDialogFragment.TAG)
+                        } else {
+                            RepsSetEditDialogFragment.newInstance(scheduleId)
+                                .show(parentFragmentManager, RepsSetEditDialogFragment.TAG)
+                            Log.d("세트수정", "📦 다이얼로그 호출 전 scheduleId = $scheduleId")
+                        }
+                    }
+
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        Log.e("ExerciseEditFragment", "세트 수정 불러오기 실패", e) // 에러 로그에 예외 포함
+                        Toast.makeText(requireContext(), "세트 수정 불러오기 실패: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
         }
 
         binding.layoutExerciseChange.setOnClickListener {

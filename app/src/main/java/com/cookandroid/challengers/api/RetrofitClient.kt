@@ -12,8 +12,8 @@ import com.google.gson.annotations.SerializedName
 
 // 서버와 애뮬레이터 연동을 위한 코드 절대 수정 XXX
 object RetrofitClient {
-   // private val BASE_URL: String = BuildConfig.BASE_URL // ★ 타입 명시!
-   private const val BASE_URL = "http://10.0.2.2:3000/"
+    // private val BASE_URL: String = BuildConfig.BASE_URL // ★ 타입 명시!
+    private const val BASE_URL = "http://10.0.2.2:3000/"
     val retrofit: Retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
         .addConverterFactory(GsonConverterFactory.create())
@@ -28,7 +28,7 @@ object RetrofitClient {
         retrofit.create(LoginService::class.java)
     }
 
-    
+
     //더미 스케줄을 담음(채윤지 05.22 추가)
     val exerciseApi: ExerciseApi by lazy {
         retrofit.create(ExerciseApi::class.java)
@@ -54,7 +54,7 @@ object RetrofitClient {
         retrofit.create(ScheduleApi::class.java)
     }
 
-    data class  CreateScheduleRequest(
+    data class CreateScheduleRequest(
         @SerializedName("planId") val planId: Int,
         @SerializedName("date") val date: String,
         @SerializedName("exerciseOrder") val exerciseOrder: Int,
@@ -95,6 +95,7 @@ object RetrofitClient {
         val weight: Int? = null,
         val seconds: Int? = null
     )
+
     data class ServerResponse(
         val message: String
     )
@@ -136,11 +137,19 @@ object RetrofitClient {
         val seconds: Int? = null
     )
 
+    //    data class TimeSetUiModel(
+//        var setNumber: Int,
+//        var minutes: Int,
+//        var weight: Float
+//    )
     data class TimeSetUiModel(
         var setNumber: Int,
+        var hours: Int,
         var minutes: Int,
-        var weight: Float
+        var seconds: Int,
+        var weight: Float // 무게 필드가 이 UI에 필요 없다면 제거 가능
     )
+
 
     data class TimeSetDto(
         @SerializedName("set_number") val setNumber: Int,
@@ -157,8 +166,7 @@ object RetrofitClient {
     data class RepsSetDto(
         @SerializedName("set_number") val setNumber: Int,
         val reps: Int,
-        val weight: Float
-        , @SerializedName("is_completed") val isCompleted: Boolean = false
+        val weight: Float, @SerializedName("is_completed") val isCompleted: Boolean = false
     )
 
     data class Exercise_Set(
@@ -183,10 +191,18 @@ object RetrofitClient {
         val isCompleted: Boolean
     )
 
+    // 북마크 설정
+    // 즐겨찾기 상태 변경 요청 시 본문 (선택적, 서버 API 설계에 따라 다름)
+    data class ToggleFavoriteRequest(
+        @SerializedName("isFavorite") val isFavorite: Boolean
+    )
 
-
-
-
+    // 즐겨찾기 상태 변경 응답 (성공 여부 및 변경된 상태 포함 가능)
+    data class ToggleFavoriteResponse(
+        @SerializedName("exerciseId") val exerciseId: Long,
+        @SerializedName("isFavorite") val isFavorite: Boolean,
+        @SerializedName("message") val message: String? = null // 또는 SimpleSuccessResponse 등 사용
+    )
 
 }
 
