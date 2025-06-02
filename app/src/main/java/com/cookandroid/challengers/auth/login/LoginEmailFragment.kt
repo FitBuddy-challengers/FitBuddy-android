@@ -24,6 +24,7 @@ import com.cookandroid.challengers.HomeFragment
 import com.cookandroid.challengers.auth.LoginActivity
 
 import com.cookandroid.challengers.databinding.FragmentLoginEmailBinding
+import com.cookandroid.challengers.util.UserPreference
 
 class LoginEmailFragment : Fragment() {
 
@@ -69,9 +70,9 @@ class LoginEmailFragment : Fragment() {
                     val userId = response.body()!!.user!!.id
                     Log.d("Login", "로그인 성공 - userId: $userId")
 
-                    // SharedPreferences에 userId 저장
-                    val prefs = requireContext().getSharedPreferences("UserPrefs", AppCompatActivity.MODE_PRIVATE)
-                    prefs.edit().putInt("userId", userId).apply()
+                    // SharedPreferences에 userId 저장 -> 자동로그인을 위해!
+                    val userPref = UserPreference(requireContext())
+                    userPref.saveLogin(userId)
 
                     Toast.makeText(requireContext(), "로그인 성공!", Toast.LENGTH_SHORT).show()
                     (requireActivity() as? LoginActivity)?.navigateToMain()

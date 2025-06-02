@@ -21,31 +21,19 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.cookandroid.challengers.api.RetrofitClient
 import com.cookandroid.challengers.data.Exercise
-import com.cookandroid.challengers.data.ExerciseSet
-import com.cookandroid.challengers.data.ExerciseSetEntity
-import com.cookandroid.challengers.data.PlanDetail
-import com.cookandroid.challengers.data.PlanDetailDao
-import com.cookandroid.challengers.data.db.AppDatabase
+import com.cookandroid.challengers.data.PlanDetail // PlanDetail은 이제 서버 DTO로 대체될 수 있음
+// import com.cookandroid.challengers.data.PlanDetailDao // 서버에서 로드하므로 직접 사용 안 함
+import com.cookandroid.challengers.data.db.AppDatabase // 운동 정보 보완용으로만 사용
 import com.cookandroid.challengers.databinding.FragmentExerciseAddBinding
 import com.cookandroid.challengers.databinding.ItemAddExerciseBinding
+import com.cookandroid.challengers.network.dto.ExerciseDto
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.shape.CornerFamily
 import com.google.android.material.shape.ShapeAppearanceModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
-import kotlin.collections.any
-import kotlin.collections.filter
-import kotlin.collections.find
-import kotlin.collections.forEach
-import kotlin.collections.forEachIndexed
-import kotlin.collections.map
-import kotlin.collections.none
 import java.time.LocalDate
 
 class ExerciseAddFragment : Fragment() {
@@ -61,38 +49,42 @@ class ExerciseAddFragment : Fragment() {
     private val binding get() = _binding!!
 
     private lateinit var adapter: AddExerciseAdapter
-    private lateinit var planDetailDao: PlanDetailDao
-    private lateinit var db: AppDatabase
+    private lateinit var dbForEnrich: AppDatabase // 운동 이름/이미지 보완용
 
     private var planId: Long = -1L
     private val maxSlots = 20
-    private var existingExercises = listOf<PlanDetail>()
+    private var countOfExistingExercisesInPlan: Int = 0
+    private var idsOfExistingExercisesInPlan = listOf<Long>()
+
     private val selectedExercises = mutableListOf<Exercise>()
     private var isMaxSelectionReached = false
 
+    private var allExercisesFromServer = listOf<Exercise>()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        planId = arguments?.getLong(ARG_PLAN_ID) ?: -1L
+        arguments?.let {
+            planId = it.getLong(ARG_PLAN_ID, -1L)
+        }
+        Log.d("ExerciseAddFragment", "onCreate - planId: $planId")
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentExerciseAddBinding.inflate(inflater, container, false)
+        dbForEnrich = AppDatabase.getDatabase(requireContext(), lifecycleScope)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        db = AppDatabase.getDatabase(requireContext(), viewLifecycleOwner.lifecycleScope)
-        planDetailDao = db.planDetailDao()
-
         setupAdapter()
         setupRecyclerView()
-        loadExistingExercisesAndAllExercises()
+        loadInitialDataFromServer()
         setupChipFilters()
 
         binding.addCompleteButton.setOnClickListener {
-            addSelectedExercisesToServerAndRoom()
+            addSelectedExercisesToServer()
         }
 
         binding.backButton.setOnClickListener {
@@ -102,27 +94,66 @@ class ExerciseAddFragment : Fragment() {
 
     private fun setupAdapter() {
         adapter = AddExerciseAdapter(
-            emptyList(),
-            onExerciseSelected = { ex, isSelected ->
-                if (isSelected) selectedExercises.add(ex) else selectedExercises.remove(ex)
+            onExerciseItemClicked = { exercise ->
+                val currentMaxSelectable = maxSlots - countOfExistingExercisesInPlan
+                val isCurrentlySelected = selectedExercises.any { it.id == exercise.id }
+
+                if (!isCurrentlySelected) {
+                    if (selectedExercises.size < currentMaxSelectable || currentMaxSelectable < 0) {
+                        selectedExercises.add(exercise)
+                    } else {
+                        Toast.makeText(requireContext(), "최대 ${if (currentMaxSelectable < 0) 0 else currentMaxSelectable}개까지 선택 가능합니다.", Toast.LENGTH_SHORT).show()
+                        adapter.updateSelectionState(selectedExercises.map { it.id })
+                        return@AddExerciseAdapter
+                    }
+                } else {
+                    selectedExercises.removeAll { it.id == exercise.id }
+                }
+                adapter.updateSelectionState(selectedExercises.map { it.id })
                 updateSelectedText()
                 updateSelectedChips()
-                checkMaxSelection()
+                checkMaxSelectionAndUpdateAdapterState()
             },
-            onFavoriteClicked = { ex ->
+            onFavoriteClicked = { exerciseToToggle ->
+                val newFavoriteState = !(exerciseToToggle.isFavorite ?: false)
                 lifecycleScope.launch(Dispatchers.IO) {
-                    db.exerciseDao().update(ex.copy(isFavorite = !ex.isFavorite))
-                }
-            },
-            onMaxSelectionReached = { reached ->
-                isMaxSelectionReached = reached
-                val maxSelect = maxSlots - existingExercises.size
-                if (reached) {
-                    Toast.makeText(requireContext(), "최대 ${maxSelect}개까지 선택 가능합니다.", Toast.LENGTH_SHORT).show()
+                    try {
+                        val response = RetrofitClient.exerciseApi.toggleExerciseFavorite(
+                            exerciseToToggle.id,
+                            RetrofitClient.ToggleFavoriteRequest(newFavoriteState)
+                        )
+                        if (response.isSuccessful && response.body() != null) {
+                            val serverResponse = response.body()!!
+                            withContext(Dispatchers.Main) {
+                                if(_binding == null) return@withContext
+                                Toast.makeText(
+                                    requireContext(),
+                                    if (serverResponse.isFavorite) "'${exerciseToToggle.name}' 즐겨찾기 추가" else "'${exerciseToToggle.name}' 즐겨찾기 해제",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                updateExerciseStateInAllExercisesList(
+                                    exerciseToToggle.id,
+                                    newIsFavorite = serverResponse.isFavorite,
+                                    newIsHidden = serverResponse.isHidden
+                                )
+                            }
+                        } else {
+                            withContext(Dispatchers.Main) {
+                                if(_binding == null) return@withContext
+                                Log.e("ExerciseAddFragment", "즐겨찾기 변경 실패: ${response.code()} ${response.message()}")
+                                Toast.makeText(requireContext(), "즐겨찾기 변경에 실패했습니다.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            if(_binding == null) return@withContext
+                            Log.e("ExerciseAddFragment", "즐겨찾기 업데이트 오류", e)
+                            Toast.makeText(requireContext(), "즐겨찾기 변경 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 }
             }
         )
-        adapter.setContext(requireContext())
     }
 
     private fun setupRecyclerView() {
@@ -130,25 +161,108 @@ class ExerciseAddFragment : Fragment() {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = this@ExerciseAddFragment.adapter
             addOnItemTouchListener(object : RecyclerView.OnItemTouchListener {
-                override fun onInterceptTouchEvent(rv: RecyclerView, e: MotionEvent): Boolean = isMaxSelectionReached
+                override fun onInterceptTouchEvent(rv: RecyclerView, e: MotionEvent): Boolean {
+                    val childView = rv.findChildViewUnder(e.x, e.y)
+                    val position = if (childView != null) rv.getChildAdapterPosition(childView) else RecyclerView.NO_POSITION
+                    if (position != RecyclerView.NO_POSITION && position < this@ExerciseAddFragment.adapter.currentList.size) {
+                        val exercise = this@ExerciseAddFragment.adapter.currentList.getOrNull(position)
+                        if (exercise != null && !selectedExercises.any{ it.id == exercise.id} && isMaxSelectionReached) {
+                            return true
+                        }
+                    }
+                    return false
+                }
                 override fun onTouchEvent(rv: RecyclerView, e: MotionEvent) {}
                 override fun onRequestDisallowInterceptTouchEvent(disallowIntercept: Boolean) {}
             })
         }
     }
 
-    private fun loadExistingExercisesAndAllExercises() {
+    private fun loadInitialDataFromServer() {
         lifecycleScope.launch(Dispatchers.IO) {
-            existingExercises = planDetailDao.getPlanDetailsForPlanId(planId)
-            val initialRemainingSlots = maxSlots - existingExercises.size
-            withContext(Dispatchers.Main) {
-                adapter.setMaxSelectableCount(initialRemainingSlots)
-                db.exerciseDao().getAllExercises().collectLatest { all ->
-                    val filtered = all.filter { e -> existingExercises.none { it.exerciseId == e.id.toLong() } }
-                    adapter.submitList(filtered)
-                    updateCount(filtered.size)
+            var initialRemainingSlots = maxSlots
+            var tempExistingExerciseIds = emptyList<Long>()
+
+            try {
+                Log.d("ExerciseAddFragment", "loadInitialDataFromServer - 시작, planId: $planId")
+                if (planId == -1L) {
+                    Log.w("ExerciseAddFragment", "유효하지 않은 planId: $planId. 기존 운동 없이 진행.")
+                    countOfExistingExercisesInPlan = 0
+                    idsOfExistingExercisesInPlan = emptyList()
+                } else {
+                    // ★ 1. 서버에서 현재 planId에 이미 추가된 운동 목록(SimpleScheduleItemDto 리스트) 가져오기
+                    val existingSchedulesResponse = RetrofitClient.scheduleApi.getSchedulesForPlan(planId) // API 호출
+                    if (existingSchedulesResponse.isSuccessful) {
+                        val existingItems = existingSchedulesResponse.body() ?: emptyList()
+                        countOfExistingExercisesInPlan = existingItems.size
+                        idsOfExistingExercisesInPlan = existingItems.map { it.exerciseId } // SimpleScheduleItemDto에 exerciseId가 있다고 가정
+                        Log.d("ExerciseAddFragment", "서버에서 가져온 existingExercises 개수: $countOfExistingExercisesInPlan for planId: $planId")
+                    } else {
+                        Log.e("ExerciseAddFragment", "기존 스케줄 로드 실패: ${existingSchedulesResponse.code()} - ${existingSchedulesResponse.message()}")
+                        countOfExistingExercisesInPlan = 0 // 오류 시 0으로 처리
+                        idsOfExistingExercisesInPlan = emptyList()
+                        withContext(Dispatchers.Main) {
+                            if(_binding == null) return@withContext
+                            Toast.makeText(requireContext(), "기존 운동 목록을 가져오지 못했습니다. (${existingSchedulesResponse.code()})", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+                tempExistingExerciseIds = idsOfExistingExercisesInPlan
+                initialRemainingSlots = maxSlots - countOfExistingExercisesInPlan
+
+                withContext(Dispatchers.Main) {
+                    if(_binding == null) return@withContext
                     updateSelectedText()
-                    updateSelectedChips()
+                    adapter.setMaxSelectableCountAndCurrentSelection(
+                        if(initialRemainingSlots < 0) 0 else initialRemainingSlots,
+                        selectedExercises.map { it.id }.toSet()
+                    )
+                }
+
+                // 2. 서버에서 모든 운동 목록 가져오기
+                val allExercisesResponse = RetrofitClient.exerciseApi.getAllExercises()
+                if (allExercisesResponse.isSuccessful) {
+                    val serverDtoList = allExercisesResponse.body() ?: emptyList()
+                    Log.d("ExerciseAddFragment", "서버에서 전체 운동 DTO ${serverDtoList.size}개 로드")
+                    // val localDbForEnrich = AppDatabase.getDatabase(requireContext(), lifecycleScope) // 이미 멤버 변수로 dbForEnrich 있음
+                    allExercisesFromServer = serverDtoList.map { dto ->
+                        val localExercise = dbForEnrich.exerciseDao().getExerciseById(dto.id)
+                        Exercise( // ★★★ 요청하신 매핑 로직 유지 ★★★
+                            id = dto.id,
+                            name = dto.name.ifBlank { localExercise?.name ?: "이름 없음" },
+                            part = dto.part,
+                            equip = dto.equip,
+                            imagePath = if (dto.image_path.isNullOrBlank()) localExercise?.imagePath else dto.image_path,
+                            startPosition = dto.start_position ?: localExercise?.startPosition,
+                            exerciseMotion = dto.exercise_motion ?: localExercise?.exerciseMotion,
+                            breathing = dto.breathing ?: localExercise?.breathing,
+                            caution = dto.caution ?: localExercise?.caution,
+                            mets = dto.mets,
+                            isFavorite = dto.isFavorite,
+                            isTimeType = dto.isTimeType,
+                            isNoise = dto.is_noise,
+                            isHidden = dto.isHidden
+                        )
+                    }
+                    Log.d("ExerciseAddFragment", "서버 DTO 매핑 후 allExercisesFromServer 개수: ${allExercisesFromServer.size}")
+                    withContext(Dispatchers.Main) {
+                        if(_binding == null) return@withContext
+                        applyFilters(tempExistingExerciseIds)
+                        updateSelectedChips()
+                        checkMaxSelectionAndUpdateAdapterState()
+                    }
+                } else {
+                    Log.e("ExerciseAddFragment", "❌ 모든 운동 목록 가져오기 실패: ${allExercisesResponse.code()}")
+                    withContext(Dispatchers.Main) {
+                        if(_binding == null) return@withContext
+                        Toast.makeText(requireContext(), "운동 목록을 불러오지 못했습니다. (${allExercisesResponse.code()})", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("ExerciseAddFragment", "❗ 데이터 로드 중 예외 발생: ${e.message}", e)
+                withContext(Dispatchers.Main) {
+                    if(_binding == null) return@withContext
+                    Toast.makeText(requireContext(), "데이터 로드 중 오류가 발생했습니다: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -160,16 +274,22 @@ class ExerciseAddFragment : Fragment() {
         setupChips(binding.equipmentChipGroup, listOf("맨몸", "덤벨", "케틀벨", "세라밴드", "스텝박스", "짐볼"))
     }
 
-    private fun addSelectedExercisesToServerAndRoom() {
-        val maxSelect = maxSlots - existingExercises.size
-        if (selectedExercises.size > maxSelect) {
-            Toast.makeText(requireContext(), "최대 ${maxSelect}개까지 선택 가능합니다.", Toast.LENGTH_SHORT).show()
+    private fun addSelectedExercisesToServer() {
+        val currentMaxSelectable = maxSlots - countOfExistingExercisesInPlan
+        if (selectedExercises.isEmpty()){
+            Toast.makeText(requireContext(), "운동을 선택해주세요.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (selectedExercises.size > currentMaxSelectable && currentMaxSelectable >= 0) {
+            Toast.makeText(requireContext(), "최대 ${currentMaxSelectable}개까지만 선택 가능합니다.", Toast.LENGTH_SHORT).show()
             return
         }
 
         lifecycleScope.launch(Dispatchers.IO) {
+            var successCount = 0
+            val totalSelected = selectedExercises.size
             selectedExercises.forEachIndexed { idx, ex ->
-                val exerciseOrder = existingExercises.size + idx + 1
+                val exerciseOrder = countOfExistingExercisesInPlan + successCount + 1
                 val dateString = LocalDate.now().toString()
 
                 val request = RetrofitClient.CreateScheduleRequest(
@@ -178,60 +298,48 @@ class ExerciseAddFragment : Fragment() {
                     exerciseOrder = exerciseOrder,
                     exerciseId = ex.id.toInt()
                 )
-
                 try {
                     val response = RetrofitClient.scheduleApi.createSchedule(request)
                     if (response.isSuccessful && response.body() != null) {
-                        val scheduleId = response.body()!!.scheduleId
-                        db.exerciseDao().insert(ex)
-                        val planDetail = PlanDetail(planId, ex.id, exerciseOrder)
-                        planDetailDao.insert(planDetail)
-                        for (i in 1..3) {
-                            db.exerciseSetDao().insert(
-                                ExerciseSet(
-                                    exercisePlanId = planId,
-                                    exerciseId = ex.id,
-                                    setNumber = i,
-                                    weight = 0,
-                                    reps = if (!ex.isTimeType) 15 else 0,
-                                    isCompleted = false,
-                                    isHighlighted = (i == 1 && idx == 0 && existingExercises.isEmpty())
-                                )
-                            )
-                        }
+                        successCount++
                     } else {
-                        Log.e("AddExercise", "❌ 서버 schedule 생성 실패: ${response.message()}")
+                        Log.e("ExerciseAddFragment", "❌ 서버 schedule 생성 실패: ${ex.name} - ${response.code()} ${response.message()}")
+                        withContext(Dispatchers.Main) {
+                            if(_binding == null) return@withContext
+                            Toast.makeText(requireContext(), "'${ex.name}' 추가 실패: ${response.message()}", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 } catch (e: Exception) {
-                    Log.e("AddExercise", "❗ 예외 발생: ${e.localizedMessage}")
+                    Log.e("ExerciseAddFragment", "'${ex.name}' 추가 중 오류", e)
+                    withContext(Dispatchers.Main) {
+                        if(_binding == null) return@withContext
+                        Toast.makeText(requireContext(), "'${ex.name}' 추가 중 오류 발생: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
-
             withContext(Dispatchers.Main) {
-                findNavController().popBackStack()
+                if(_binding == null) return@withContext
+                if (successCount > 0) {
+                    Toast.makeText(requireContext(), "${successCount}개의 운동이 추가되었습니다.", Toast.LENGTH_SHORT).show()
+                }
+                if (successCount == totalSelected || (totalSelected == 0 && successCount == 0) ) {
+                    parentFragmentManager.setFragmentResult("plan_updated_from_add", Bundle())
+                    findNavController().popBackStack()
+                }
             }
-        }
-
-
-
-
-
-
-        binding.backButton.setOnClickListener {
-            findNavController().popBackStack()
         }
     }
 
-
     private fun setupChips(group: ChipGroup, texts: List<String>) {
+        val context = requireContext()
         val spacing = resources.getDimensionPixelSize(R.dimen.chip_spacing)
         group.chipSpacingHorizontal = spacing
         val defaultCornerRadius = resources.getDimension(R.dimen.default_chip_corner_radius)
         val selectedCornerRadius = resources.getDimension(R.dimen.selected_chip_corner_radius)
         val selectedPaddingHorizontal = resources.getDimensionPixelSize(R.dimen.selected_chip_padding_horizontal)
-        val selectedPaddingVertical = resources.getDimensionPixelSize(R.dimen.selected_chip_padding_vertical)
         val selectedCloseIconStartPadding = resources.getDimensionPixelSize(R.dimen.selected_close_icon_start_padding).toFloat()
 
+        group.removeAllViews()
         texts.forEach { txt ->
             Chip(ContextThemeWrapper(context, R.style.TextChip)).apply {
                 text = txt
@@ -242,13 +350,9 @@ class ExerciseAddFragment : Fragment() {
                 shapeAppearanceModel = ShapeAppearanceModel.builder()
                     .setAllCorners(CornerFamily.ROUNDED, defaultCornerRadius)
                     .build()
-                setPadding(0, 0, 0, 0)
-                textStartPadding = 0f
-                textEndPadding = 0f
+                setTextAppearance(R.style.TextChip)
+                setChipBackgroundColorResource(android.R.color.transparent)
             }.also { chip ->
-                chip.setTextAppearance(R.style.TextChip)
-                chip.setChipBackgroundColorResource(android.R.color.transparent)
-
                 chip.setOnCheckedChangeListener { _, isChecked ->
                     if (isChecked) {
                         chip.setTextAppearance(R.style.SelectedChip)
@@ -258,12 +362,9 @@ class ExerciseAddFragment : Fragment() {
                             .build()
                         chip.setCloseIconResource(R.drawable.ic_close)
                         chip.closeIconTint = ColorStateList.valueOf(Color.WHITE)
-                        chip.isChipIconVisible = false
                         chip.isCloseIconVisible = true
-                        chip.setPadding(selectedPaddingHorizontal, 0, selectedPaddingHorizontal, 0)
+                        chip.setPadding(selectedPaddingHorizontal, chip.paddingTop, selectedPaddingHorizontal, chip.paddingBottom)
                         chip.closeIconStartPadding = selectedCloseIconStartPadding
-                        chip.closeIconEndPadding = 0f
-                        chip.textEndPadding = if (chip.isCloseIconVisible) selectedCloseIconStartPadding else 0f
                     } else {
                         chip.setTextAppearance(R.style.TextChip)
                         chip.setChipBackgroundColorResource(android.R.color.transparent)
@@ -271,11 +372,9 @@ class ExerciseAddFragment : Fragment() {
                             .setAllCorners(CornerFamily.ROUNDED, defaultCornerRadius)
                             .build()
                         chip.isCloseIconVisible = false
-                        chip.isChipIconVisible = false
-                        chip.setPadding(0, 0, 0, 0)
-                        chip.textEndPadding = 0f
+                        chip.setPadding(0, chip.paddingTop, 0, chip.paddingBottom)
                     }
-                    applyFilters()
+                    applyFilters(idsOfExistingExercisesInPlan)
                 }
                 chip.setOnCloseIconClickListener {
                     chip.isChecked = false
@@ -285,38 +384,39 @@ class ExerciseAddFragment : Fragment() {
         }
     }
 
-    private fun applyFilters() {
-        lifecycleScope.launch(Dispatchers.IO) {
-            db.exerciseDao().getAllExercises().collectLatest { all ->
-                val favFilter = binding.myChipGroup.checkedChipIds.any {
-                    binding.myChipGroup.findViewById<Chip>(it).text == "즐겨찾기"
-                }
-                val parts = binding.partChipGroup.checkedChipIds.map {
-                    binding.partChipGroup.findViewById<Chip>(it).text.toString()
-                }
-                val equips = binding.equipmentChipGroup.checkedChipIds.map {
-                    binding.equipmentChipGroup.findViewById<Chip>(it).text.toString()
-                }
+    private fun applyFilters(currentExistingExerciseIds: List<Long>) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+            if (_binding == null) return@launch
 
-                val filtered = all
-                    .filter { e -> existingExercises.none { it.exerciseId == e.id.toLong() } }
-                    .filter { e ->
-                        (!favFilter || e.isFavorite) &&
-                                (parts.isEmpty() || parts.any { e.part.contains(it) }) &&
-                                (equips.isEmpty() || equips.any { e.equip.contains(it) })
-                    }
-
-                withContext(Dispatchers.Main) {
-                    adapter.submitList(filtered)
-                    updateCount(filtered.size)
-                }
+            val favFilter = binding.myChipGroup.checkedChipIds.any {
+                binding.myChipGroup.findViewById<Chip>(it)?.text == "즐겨찾기"
             }
+            val parts = binding.partChipGroup.checkedChipIds.mapNotNull {
+                binding.partChipGroup.findViewById<Chip>(it)?.text?.toString()
+            }
+            val equips = binding.equipmentChipGroup.checkedChipIds.mapNotNull {
+                binding.equipmentChipGroup.findViewById<Chip>(it)?.text?.toString()
+            }
+
+            val filtered = allExercisesFromServer
+                .filter { exercise -> !(exercise.isHidden ?: false) }
+                .filter { exercise -> currentExistingExerciseIds.none { it == exercise.id } }
+                .filter { e ->
+                    (!favFilter || (e.isFavorite ?: false)) &&
+                            (parts.isEmpty() || parts.any { e.part.contains(it, ignoreCase = true) }) &&
+                            (equips.isEmpty() || equips.any { e.equip.contains(it, ignoreCase = true) })
+                }
+            adapter.updateSelectionState(selectedExercises.map { it.id })
+            adapter.submitList(filtered)
+            updateCount(filtered.size)
         }
     }
 
     private fun updateSelectedText() {
+        val currentMaxSelectable = maxSlots - countOfExistingExercisesInPlan // ★ countOfExistingExercisesInPlan 사용
+        Log.d("ExerciseAddFragment", "updateSelectedText - selected: ${selectedExercises.size}, maxSelectable (m): $currentMaxSelectable (maxSlots: $maxSlots, existing: $countOfExistingExercisesInPlan)")
         binding.selectedExercisesTextView.text =
-            String.format("선택한 운동: %02d / %02d", selectedExercises.size, maxSlots - existingExercises.size)
+            String.format("선택한 운동: %02d / %02d", selectedExercises.size, if (currentMaxSelectable < 0) 0 else currentMaxSelectable)
     }
 
     private fun updateCount(count: Int) {
@@ -325,75 +425,83 @@ class ExerciseAddFragment : Fragment() {
 
     private fun updateSelectedChips() {
         binding.selectedChipGroup.removeAllViews()
-        for (exercise in selectedExercises) {
+        selectedExercises.forEach { exercise ->
             val chip = Chip(requireContext(), null, R.style.SelectedExerciseChip).apply {
                 text = exercise.name
                 isCloseIconVisible = true
                 setOnCloseIconClickListener {
-                    selectedExercises.remove(exercise)
-                    updateSelectedText()
-                    updateSelectedChips()
-                    adapter.notifySelectionChanged(exercise.id.toLong(), false)
+                    val isCurrentlySelected = selectedExercises.any { it.id == exercise.id }
+                    if (isCurrentlySelected) {
+                        selectedExercises.removeAll { it.id == exercise.id }
+                        adapter.updateSelectionState(selectedExercises.map { it.id })
+                        updateSelectedText()
+                        updateSelectedChips()
+                        checkMaxSelectionAndUpdateAdapterState()
+                    }
                 }
             }
             binding.selectedChipGroup.addView(chip)
         }
     }
 
-    private fun checkMaxSelection() {
-        val maxSelect = maxSlots - existingExercises.size
-        if (selectedExercises.size >= maxSelect) {
-            if (!isMaxSelectionReached) {
-                Toast.makeText(requireContext(), "최대 ${maxSelect}개까지 선택 가능합니다.", Toast.LENGTH_SHORT).show()
-                isMaxSelectionReached = true
-            }
-        } else {
-            isMaxSelectionReached = false
-        }
-        // 필요에 따라 UI 업데이트 (예: 더 이상 선택 못하도록 시각적으로 변경)
+    private fun checkMaxSelectionAndUpdateAdapterState() { // ★ countOfExistingExercisesInPlan 사용
+        val currentMaxSelectable = maxSlots - countOfExistingExercisesInPlan
+        isMaxSelectionReached = selectedExercises.size >= currentMaxSelectable && currentMaxSelectable >= 0
+        Log.d("ExerciseAddFragment", "checkMaxSelection - isMaxReached: $isMaxSelectionReached, selected: ${selectedExercises.size}, maxSelectable: $currentMaxSelectable")
+
+        adapter.setMaxSelectableCountAndCurrentSelection(
+            if (currentMaxSelectable < 0) 0 else currentMaxSelectable,
+            selectedExercises.map { it.id }.toSet()
+        )
     }
 
+    private fun updateExerciseStateInAllExercisesList(exerciseId: Long, newIsFavorite: Boolean?, newIsHidden: Boolean?) { // ★ idsOfExistingExercisesInPlan 사용
+        val globalIndex = allExercisesFromServer.indexOfFirst { it.id == exerciseId }
+        if (globalIndex != -1) {
+            val currentItem = allExercisesFromServer[globalIndex]
+            val updatedItem = currentItem.copy(
+                isFavorite = newIsFavorite ?: currentItem.isFavorite,
+                isHidden = newIsHidden ?: currentItem.isHidden
+            )
+            val tempList = allExercisesFromServer.toMutableList()
+            if (globalIndex < tempList.size) {
+                tempList[globalIndex] = updatedItem
+                allExercisesFromServer = tempList.toList()
+            }
+        }
+        applyFilters(idsOfExistingExercisesInPlan) // ★ idsOfExistingExercisesInPlan 사용
+    }
+
+
     private class AddExerciseAdapter(
-        initialList: List<Exercise>,
-        private val onExerciseSelected: (Exercise, Boolean) -> Unit,
-        private val onFavoriteClicked: (Exercise) -> Unit,
-        private val onMaxSelectionReached: (Boolean) -> Unit // 최대 선택 도달 시 알림 콜백 추가
+        private val onExerciseItemClicked: (Exercise) -> Unit,
+        private val onFavoriteClicked: (Exercise) -> Unit
     ) : ListAdapter<Exercise, AddExerciseAdapter.ExerciseViewHolder>(ExerciseDiffCallback()) {
 
-        private lateinit var context: Context
-        private val selectedItemPositions = mutableSetOf<Int>()
-        private var maxSelectableCount: Int = 20
+        private var currentSelectedIds = setOf<Long>()
+        private var currentMaxSelectableCount: Int = Int.MAX_VALUE
 
-        fun setContext(context: Context) {
-            this.context = context
+        fun setMaxSelectableCountAndCurrentSelection(maxCount: Int, selectedIds: Set<Long>) {
+            currentMaxSelectableCount = maxCount
+            currentSelectedIds = selectedIds
+            notifyDataSetChanged()
         }
 
-        fun setMaxSelectableCount(count: Int) {
-            maxSelectableCount = count
+        fun updateSelectionState(selectedIds: List<Long>) {
+            val newSelectedIds = selectedIds.toSet()
+            if (currentSelectedIds != newSelectedIds) {
+                currentSelectedIds = newSelectedIds
+                notifyDataSetChanged()
+            }
         }
 
-        // 계획에 들어간 운동 아이템들
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ExerciseViewHolder {
-            context = parent.context
-            val binding = ItemAddExerciseBinding.inflate(LayoutInflater.from(context), parent, false)
+            val binding = ItemAddExerciseBinding.inflate(LayoutInflater.from(parent.context), parent, false)
             return ExerciseViewHolder(binding)
         }
 
         override fun onBindViewHolder(holder: ExerciseViewHolder, position: Int) {
             holder.bind(getItem(position))
-        }
-
-        fun notifySelectionChanged(exerciseId: Long, isSelected: Boolean) {
-            val exercise = currentList.find { it.id == exerciseId }
-            exercise?.let {
-                val position = currentList.indexOf(exercise)
-                if (position != -1) {
-                    if (isSelected) selectedItemPositions.add(position)
-                    else selectedItemPositions.remove(position)
-                    notifyItemChanged(position)
-                }
-            }
-            onMaxSelectionReached(selectedItemPositions.size >= maxSelectableCount)
         }
 
         inner class ExerciseViewHolder(private val binding: ItemAddExerciseBinding) :
@@ -403,11 +511,11 @@ class ExerciseAddFragment : Fragment() {
                     val position = bindingAdapterPosition
                     if (position != RecyclerView.NO_POSITION) {
                         val exercise = getItem(position)
-                        val isSelected = selectedItemPositions.contains(position)
-                        if (isSelected) selectedItemPositions.remove(position)
-                        else selectedItemPositions.add(position)
-                        onExerciseSelected(exercise, !isSelected)
-                        updateBackgroundColor(!isSelected) // 선택 상태의 반대로 색상 적용
+                        if (exercise.isHidden == true) {
+                            Toast.makeText(itemView.context, "숨김 처리된 운동은 선택할 수 없습니다.", Toast.LENGTH_SHORT).show()
+                            return@setOnClickListener
+                        }
+                        onExerciseItemClicked(exercise)
                     }
                 }
 
@@ -421,30 +529,49 @@ class ExerciseAddFragment : Fragment() {
 
             fun bind(exercise: Exercise) {
                 binding.exerciseNameTextView.text = exercise.name
-                binding.favoriteButton.isSelected = exercise.isFavorite
+                binding.favoriteButton.isSelected = exercise.isFavorite ?: false
 
-                val resId = context.resources.getIdentifier(
-                    exercise.imagePath ?: "",
-                    "drawable",
-                    context.packageName
-                ).takeIf { it != 0 } ?: R.drawable.ic_launcher_background
+                val imagePath = exercise.imagePath
+                val context = itemView.context
+                val resId = if (!imagePath.isNullOrBlank()) {
+                    context.resources.getIdentifier(
+                        imagePath, "drawable", context.packageName
+                    ).takeIf { it != 0 }
+                } else { null }
 
-                // Glide 로 이미지 로드
-                Glide.with(binding.exerciseImageView)
-                    .asBitmap() // GIF를 비트맵으로 로드하여 정지 상태로
-                    .load(resId)
-                    .placeholder(R.drawable.ic_launcher_background)   // 로딩 중 보여줄 이미지
-                    .error(R.drawable.ic_launcher_background)  // 에러 시 보여줄 이미지
+                Glide.with(context)
+                    .load(resId ?: R.drawable.ic_launcher_background)
+                    .placeholder(R.drawable.ic_launcher_background)
+                    .error(R.drawable.ic_launcher_background)
                     .into(binding.exerciseImageView)
 
-                // 아이템이 바인딩될 때 현재 선택 상태에 따라 배경색 설정 (원하는 색상으로)
-                updateBackgroundColor(selectedItemPositions.contains(adapterPosition))
+                updateViewSelectionState(currentSelectedIds.contains(exercise.id))
+
+                val isCurrentlySelected = currentSelectedIds.contains(exercise.id)
+                val canBeNewlySelected = currentSelectedIds.size < currentMaxSelectableCount
+                val isActuallyHidden = exercise.isHidden ?: false
+
+                if (isActuallyHidden) {
+                    binding.itemRootLayout.alpha = 0.4f
+                    binding.exerciseNameTextView.text = "${exercise.name} (숨김)"
+                    itemView.isEnabled = false
+                } else {
+                    binding.itemRootLayout.alpha = 1.0f
+                    binding.exerciseNameTextView.text = exercise.name
+                    val isClickable = isCurrentlySelected || canBeNewlySelected
+                    itemView.isEnabled = isClickable
+                    itemView.alpha = if (isClickable) 1.0f else 0.5f
+                }
             }
 
-            private fun updateBackgroundColor(isSelected: Boolean) {
-                // isSelected가 true (선택됨)일 때 회색, false (선택 안됨)일 때 흰색
-                val color = if (isSelected) "#d6d6d6" else "#00000000"
-                binding.itemRootLayout.setBackgroundColor(Color.parseColor(color))
+            private fun updateViewSelectionState(isSelected: Boolean) {
+                val colorString = if (isSelected) "#F0F0F0" else "#FFFFFF"
+                try {
+                    binding.itemRootLayout.setBackgroundColor(Color.parseColor(colorString))
+                } catch (e: IllegalArgumentException) {
+                    Log.e("AddExerciseAdapter", "Color parsing error: $colorString", e)
+                    binding.itemRootLayout.setBackgroundColor(Color.TRANSPARENT)
+                }
             }
         }
     }
@@ -452,5 +579,11 @@ class ExerciseAddFragment : Fragment() {
     private class ExerciseDiffCallback : DiffUtil.ItemCallback<Exercise>() {
         override fun areItemsTheSame(oldItem: Exercise, newItem: Exercise): Boolean = oldItem.id == newItem.id
         override fun areContentsTheSame(oldItem: Exercise, newItem: Exercise): Boolean = oldItem == newItem
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        binding.exerciseListRecyclerView.adapter = null
+        _binding = null
     }
 }

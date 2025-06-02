@@ -13,7 +13,11 @@
     <fragment
         android:id="@+id/challengeFragment"
         android:name="com.cookandroid.challengers.ChallengeFragment"
-        android:label="챌린지" />
+        android:label="챌린지" >
+        <action
+            android:id="@+id/action_challenge_to_uploadPhoto"
+            app:destination="@id/challengeUploadPhotoFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/recordFragment"
@@ -152,6 +156,13 @@
         android:name="com.cookandroid.challengers.RecordCalendarFragment"
         android:label="운동 기록 달력"
         tools:layout="@layout/fragment_record_calendar">
+    </fragment>
+
+    <fragment
+        android:id="@+id/challengeUploadPhotoFragment"
+        android:name="com.cookandroid.challengers.ChallengeUploadPhotoFragment"
+        android:label="챌린지 사진 업로드"
+        tools:layout="@layout/fragment_upload_photo">
     </fragment>
 
 </navigation>

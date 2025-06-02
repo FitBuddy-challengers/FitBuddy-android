@@ -1,7 +1,6 @@
 package com.cookandroid.challengers
 
 
-
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -22,12 +21,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 
-
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
@@ -81,9 +80,11 @@ class MainActivity : AppCompatActivity() {
                         is ExerciseEditSetFragment,
                         is RestTimerFragment,
                         is CoolDownStretchFragment,
-                        is RecordAddWeightFragment -> {
+                        is RecordAddWeightFragment,
+                        is ChallengeUploadPhotoFragment -> {
                             binding.mainBnv.visibility = View.GONE
                         }
+
                         else -> {
                             binding.mainBnv.visibility = View.VISIBLE
                         }

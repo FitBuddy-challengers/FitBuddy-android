@@ -7,6 +7,8 @@ import com.cookandroid.challengers.BuildConfig // ★ 명시적으로 추가!
 import com.cookandroid.challengers.auth.login.LoginService
 import com.cookandroid.challengers.network.dto.PlanDto
 import com.cookandroid.challengers.network.dto.ScheduleDto
+import com.google.gson.FieldNamingPolicy
+import com.google.gson.GsonBuilder
 import com.google.gson.annotations.SerializedName
 
 
@@ -14,10 +16,19 @@ import com.google.gson.annotations.SerializedName
 object RetrofitClient {
     // private val BASE_URL: String = BuildConfig.BASE_URL // ★ 타입 명시!
     private const val BASE_URL = "http://10.0.2.2:3000/"
+
+    //  먼저 gson 정의Add commentMore actions
+    private val gson = GsonBuilder()
+        .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+        .create()
+
     val retrofit: Retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
-        .addConverterFactory(GsonConverterFactory.create())
+        //.addConverterFactory(GsonConverterFactory.create())Add commentMore actions
+        .addConverterFactory(GsonConverterFactory.create(gson))
         .build()
+
+    val challengeApi: ChallengeApi = retrofit.create(ChallengeApi::class.java)
 
     val profileApiService: ProfileApiService by lazy {
         retrofit.create(ProfileApiService::class.java)
@@ -67,6 +78,13 @@ object RetrofitClient {
     )
 
     data class ScheduleIdResponse(val scheduleId: Long)
+
+    // 특정 Plan에 속한 Schedule 아이템을 위한 DTO (exerciseId 포함)
+    data class SimpleScheduleItemDto(
+        @SerializedName("exercise_id") val exerciseId: Long, // 서버 JSON 키가 "exercise_id"라고 가정
+        @SerializedName("schedule_id") val scheduleId: Long, // 스케줄 ID도 유용할 수 있음
+        @SerializedName("exercise_order") val exerciseOrder: Int // 순서 정보
+    )
 
     data class TodayPlanResponse(
         val plan: PlanDto,
@@ -154,7 +172,9 @@ object RetrofitClient {
     data class TimeSetDto(
         @SerializedName("set_number") val setNumber: Int,
         val seconds: Int,
-        val weight: Float
+        val weight: Float,
+        @SerializedName("is_completed") val isCompleted: Boolean = false // ★ 추가
+
     )
 
     data class RepsSetUiModel(
@@ -192,17 +212,62 @@ object RetrofitClient {
     )
 
     // 북마크 설정
-    // 즐겨찾기 상태 변경 요청 시 본문 (선택적, 서버 API 설계에 따라 다름)
     data class ToggleFavoriteRequest(
         @SerializedName("isFavorite") val isFavorite: Boolean
     )
 
-    // 즐겨찾기 상태 변경 응답 (성공 여부 및 변경된 상태 포함 가능)
-    data class ToggleFavoriteResponse(
-        @SerializedName("exerciseId") val exerciseId: Long,
-        @SerializedName("isFavorite") val isFavorite: Boolean,
-        @SerializedName("message") val message: String? = null // 또는 SimpleSuccessResponse 등 사용
+    // 숨김 상태 관련 데이터 클래스, 운동 리스트, 운동 추가페이지, 숨겨진 운동 페이지에서 사용함
+    data class ToggleHiddenRequest(
+        @SerializedName("isHidden") val isHidden: Boolean
     )
 
+    data class ExerciseStateUpdateResponse(
+        @SerializedName("exerciseId") val exerciseId: Long,
+        @SerializedName("isFavorite") val isFavorite: Boolean,   // 서버에서 항상 값을 보낸다고 가정 (non-null)
+        @SerializedName("isHidden") val isHidden: Boolean,     // 서버에서 항상 값을 보낸다고 가정 (non-null)
+        @SerializedName("message") val message: String? = null
+    )
+
+    data class ChallengeLevelDto(
+        val level: Int,
+        val requiredAttendance: Int,
+        val requiredPhoto: Int,
+        val requiredExercise: Int
+    )
+
+    data class ChallengeProgressResponse(
+        val level: Int,
+        val coin: Int,
+        val nickname: String,
+        val profileImage: String,
+        val required: Requirement,
+        val current: Requirement,
+        val progress: Progress,
+        val reward: Reward
+    )
+
+    data class Requirement(
+        val attendance: Int,
+        val photo: Int,
+        val exercise: Int
+    )
+
+    data class Progress(
+        val attendancePercent: Int,
+        val photoPercent: Int,
+        val exercisePercent: Int
+    )
+
+    data class ChallengeItemUiModel(
+        val title: String,
+        val progressPercent: Int,
+        val reward: Int // 보상 코인 (현재는 0으로 표시)
+    )
+
+    data class Reward(
+        val attendance: Int,
+        val photo: Int,
+        val exercise: Int
+    )
 }
 
