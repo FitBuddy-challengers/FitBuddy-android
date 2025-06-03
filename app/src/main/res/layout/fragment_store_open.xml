@@ -6,6 +6,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:paddingTop="8dp"
+    android:minHeight="@dimen/store_peek_height"
     tools:context=".StoreOpenFragment">
 
     <ImageView

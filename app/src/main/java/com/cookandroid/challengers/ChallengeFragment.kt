@@ -36,7 +36,7 @@ class ChallengeFragment : Fragment() {
 
         // TabLayout과 ViewPager 연결
         TabLayoutMediator(tabLayout, viewPager) { tab, position ->
-            tab.text = if (position == 0) "개인" else "그룹"
+            tab.text = if (position == 0) "개인" else "사진"
         }.attach()
 
         // "챌린지" TextView 관련 로직

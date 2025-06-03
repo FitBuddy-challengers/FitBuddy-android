@@ -2,6 +2,7 @@ package com.cookandroid.challengers
 
 import android.os.Bundle
 import android.os.CountDownTimer
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,6 +19,7 @@ import com.cookandroid.challengers.databinding.FragmentCoolDownStretchBinding
 import com.cookandroid.challengers.viewmodel.StopwatchViewModel
 import kotlinx.coroutines.launch
 import kotlin.collections.getOrNull
+import android.content.Context // Context 임포트 추가
 
 class CoolDownStretchFragment : Fragment() {
 
@@ -32,6 +34,29 @@ class CoolDownStretchFragment : Fragment() {
 
     private val stopwatchViewModel: StopwatchViewModel by activityViewModels()
 
+    // --- SharedPreferences 정의부 ---
+    companion object {
+        // ExerciseFragment와 동일한 키 값을 사용하거나, 이 프래그먼트만의 키를 정의할 수 있습니다.
+        // 여기서는 ExerciseFragment와 동일한 키를 사용하여 운동 전체 진행 상태를 초기화한다고 가정합니다.
+        private const val PREFS_PROGRESS = "exercise_progress"
+        private const val KEY_IN_PROGRESS = "is_in_progress"
+        private const val KEY_SAVED_PLAN_ID = "current_plan_id_prefs" // ExerciseFragment에서 사용하는 키
+        private const val KEY_SAVED_EXERCISE_INDEX = "current_exercise_index_prefs"
+        private const val KEY_SAVED_SCHEDULE_ID = "current_schedule_id_prefs"
+        private const val KEY_SAVED_EXERCISE_ID = "current_exercise_id_prefs"
+        // CoolDownStretchFragment에서 직접 사용하지 않더라도, clear 시 필요할 수 있는 키들
+        private const val KEY_SET_INDEX = "current_set_index"
+        private const val KEY_START_TIME = "start_time"
+        private const val KEY_ELAPSED_TIME = "stopwatch_elapsed_time_prefs"
+        private const val KEY_EXERCISE_NAME = "current_exercise_name_prefs"
+        private const val KEY_IMAGE_PATH = "current_image_path_prefs"
+        private const val KEY_EQUIP = "current_equip_prefs"
+    }
+
+    private val prefs by lazy {
+        requireContext().getSharedPreferences(PREFS_PROGRESS, Context.MODE_PRIVATE)
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
@@ -40,60 +65,67 @@ class CoolDownStretchFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
         val db = AppDatabase.getDatabase(requireContext(), viewLifecycleOwner.lifecycleScope)
         viewLifecycleOwner.lifecycleScope.launch {
             stretchList = db.coolDownStretchDao().getAllStretches()
-            showStretch(currentIndex)
-            setupButtons()
+            if (stretchList.isNotEmpty()) {
+                showStretch(currentIndex)
+                setupButtons()
+            } else {
+                Log.e("CoolDownStretchFragment", "스트레칭 목록이 비어있습니다.")
+                Toast.makeText(requireContext(), "표시할 스트레칭 정보가 없습니다.", Toast.LENGTH_LONG).show()
+                try {
+                    findNavController().navigate(R.id.action_coolDownStretch_to_home)
+                } catch (e: Exception) {
+                    Log.e("CoolDownStretchFragment", "네비게이션 오류 (홈으로 이동 실패)", e)
+                    if (findNavController().previousBackStackEntry != null) {
+                        findNavController().popBackStack()
+                    }
+                }
+            }
             setupStopwatch()
         }
 
         binding.skipStretchButton.setOnClickListener {
-            // 스트레칭 생략 버튼 클릭 시 운동 완료 처리
             Toast.makeText(requireContext(), "스트레칭을 생략하고 운동을 완료합니다.", Toast.LENGTH_SHORT).show()
-            findNavController().navigate(R.id.action_coolDownStretch_to_home)
-        // TODO: 실제 운동 완료 로직 (추후 구현)
+            completeWorkoutSession() // ★ 운동 완료 처리 함수 호출
         }
     }
 
-    // ⏱️ 스톱워치: 운동 전체 시간
     private fun setupStopwatch() {
         stopwatchViewModel.elapsedTime.observe(viewLifecycleOwner) { time ->
-            binding.stopwatchTextView.text = stopwatchViewModel.formatElapsedTime(time)
+            _binding?.let {
+                it.stopwatchTextView.text = stopwatchViewModel.formatElapsedTime(time)
+            }
         }
-
         stopwatchViewModel.isRunning.observe(viewLifecycleOwner) { isRunning ->
-            binding.pauseButton.setImageResource(
-                if (isRunning) R.drawable.ic_pause_black else R.drawable.ic_play_black
-            )
-        }
-
-        if (stopwatchViewModel.elapsedTime.value == 0L && stopwatchViewModel.isRunning.value == false) {
-            stopwatchViewModel.startStopwatch()
-        }
-
-        binding.pauseButton.setOnClickListener {
-            if (stopwatchViewModel.isRunning.value == true) {
-                stopwatchViewModel.pauseStopwatch()
-            } else {
-                stopwatchViewModel.startStopwatch(stopwatchViewModel.elapsedTime.value ?: 0L)
+            _binding?.let {
+                it.pauseButton.setImageResource(
+                    if (isRunning) R.drawable.ic_pause_black else R.drawable.ic_play_black
+                )
             }
         }
     }
 
-    // ▶️ 스트레칭 타이머: 20초
     private fun playStretchTimer() {
+        if (!isAdded || _binding == null) return
         isPlaying = true
         binding.btnPlayPause.setImageResource(R.drawable.ic_pause_white)
 
         timer?.cancel()
         timer = object : CountDownTimer(stretchDuration, 1000) {
             override fun onTick(millisUntilFinished: Long) {
+                if (!isAdded || _binding == null) {
+                    this.cancel()
+                    return
+                }
                 val seconds = millisUntilFinished / 1000
                 binding.timerText.text = String.format("00:%02d", seconds)
             }
 
             override fun onFinish() {
+                if (!isAdded || _binding == null) return
                 isPlaying = false
                 binding.btnPlayPause.setImageResource(R.drawable.ic_play_white)
                 goToNext()
@@ -104,41 +136,52 @@ class CoolDownStretchFragment : Fragment() {
     private fun pauseStretchTimer() {
         isPlaying = false
         timer?.cancel()
-        binding.btnPlayPause.setImageResource(R.drawable.ic_play_white)
+        if (isAdded && _binding != null) {
+            binding.btnPlayPause.setImageResource(R.drawable.ic_play_white)
+        }
     }
 
     private fun setupButtons() {
+        if (!isAdded || _binding == null) return
         binding.btnPlayPause.setOnClickListener {
             if (isPlaying) pauseStretchTimer() else playStretchTimer()
         }
-
         binding.btnNext.setOnClickListener {
             goToNext()
         }
-
         binding.btnPrev.setOnClickListener {
             if (currentIndex > 0) goTo(currentIndex - 1)
         }
-
         binding.backButton.setOnClickListener {
-            requireActivity().onBackPressedDispatcher.onBackPressed()
+            if (findNavController().previousBackStackEntry != null) {
+                findNavController().popBackStack()
+            }
         }
     }
 
     private fun showStretch(index: Int) {
+        if (!isAdded || _binding == null) return
+        if (stretchList.isEmpty() || index < 0 || index >= stretchList.size) {
+            Log.e("CoolDownStretchFragment", "showStretch: Invalid index or empty list. Index: $index, Size: ${stretchList.size}")
+            Toast.makeText(requireContext(), "스트레칭 정보를 표시할 수 없습니다.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         val stretch = stretchList[index]
         binding.exerciseNameTextView.text = stretch.name
 
         stretch.imagePath?.let {
-            val resId = resources.getIdentifier(it, "drawable", requireContext().packageName)
+            val resId = try {
+                resources.getIdentifier(it, "drawable", requireContext().packageName)
+            } catch (e: Exception) { 0 }
+
             Glide.with(requireContext())
-                .load(resId)
+                .load(if (resId != 0) resId else R.drawable.ic_launcher_background)
                 .transition(withCrossFade())
-                .placeholder(R.drawable.ic_launcher_background) // 로딩 중 표시할 이미지 (선택 사항)
-                .error(R.drawable.ic_launcher_background)     // 에러 발생 시 표시할 이미지 (선택 사항)
+                .placeholder(R.drawable.ic_launcher_background)
+                .error(R.drawable.ic_launcher_background)
                 .into(binding.stretchImageView)
         } ?: run {
-            // imagePath가 null인 경우 기본 이미지 설정 (선택 사항)
             binding.stretchImageView.setImageResource(R.drawable.ic_launcher_background)
         }
 
@@ -148,29 +191,67 @@ class CoolDownStretchFragment : Fragment() {
     }
 
     private fun updateNextText() {
-        val next = stretchList.getOrNull(currentIndex + 1)?.name
-        binding.nextStretchName.text = next ?: "마지막 스트레칭"
+        if (!isAdded || _binding == null) return
+        val nextStretchName = stretchList.getOrNull(currentIndex + 1)?.name
+        binding.nextStretchName.text = nextStretchName ?: "마지막 스트레칭"
     }
 
     private fun goTo(index: Int) {
-        currentIndex = index
-        showStretch(index)
-        pauseStretchTimer()
-        playStretchTimer()
+        if (!isAdded || _binding == null) return
+        if (index >= 0 && index < stretchList.size) {
+            currentIndex = index
+            showStretch(index)
+            pauseStretchTimer()
+            playStretchTimer()
+        } else {
+            Log.w("CoolDownStretchFragment", "goTo: Invalid index $index, list size ${stretchList.size}")
+        }
     }
 
     private fun goToNext() {
+        if (!isAdded || _binding == null) return
         if (currentIndex < stretchList.size - 1) {
             goTo(currentIndex + 1)
         } else {
+            timer?.cancel()
+            isPlaying = false
+            binding.btnPlayPause.setImageResource(R.drawable.ic_play_white)
+            binding.timerText.text = "완료!"
             Toast.makeText(requireContext(), "오늘의 운동 완료!", Toast.LENGTH_SHORT).show()
-            //TODO: 운동 완료 이후
-            //findNavController().navigate(R.id.action_coolDownStretch_to_home)
+            completeWorkoutSession() // ★ 운동 완료 처리 함수 호출
+        }
+    }
+
+    // ★ 운동 세션 전체 완료 처리 함수
+    private fun completeWorkoutSession() {
+        // SharedPreferences에서 진행 상태 초기화
+        prefs.edit()
+            .putBoolean(KEY_IN_PROGRESS, false)
+            .remove(KEY_SAVED_EXERCISE_INDEX) // ExerciseFragment와 공유하는 키들
+            .remove(KEY_SET_INDEX)            // ExerciseDoingFragment와 공유하는 키들
+            .remove(KEY_START_TIME)           // ExerciseDoingFragment와 공유하는 키들
+            .remove(KEY_SAVED_SCHEDULE_ID)
+            .remove(KEY_SAVED_EXERCISE_ID)
+            .remove(KEY_SAVED_PLAN_ID)
+            .remove(KEY_ELAPSED_TIME)
+            .apply()
+        Log.d("CoolDownStretchFragment", "Workout session completed. Navigating to home.")
+        try {
+            // 홈 화면으로 네비게이션 (또는 운동 결과 화면 등)
+            // R.id.action_coolDownStretch_to_home는 nav_graph에 정의된 액션 ID여야 함
+            findNavController().navigate(R.id.action_coolDownStretch_to_home)
+        } catch (e: Exception) {
+            Log.e("CoolDownStretchFragment", "네비게이션 오류 (홈으로 이동 실패)", e)
+            // 안전하게 이전 화면으로 이동 시도
+            if (findNavController().previousBackStackEntry != null) {
+                findNavController().popBackStack(R.id.homeFragment, false) // 홈으로 바로 가기 (백스택 조정)
+            }
         }
     }
 
     override fun onDestroyView() {
         timer?.cancel()
+        timer = null
         _binding = null
         super.onDestroyView()
     }

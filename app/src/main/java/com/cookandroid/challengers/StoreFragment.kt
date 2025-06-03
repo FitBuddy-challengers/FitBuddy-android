@@ -14,14 +14,25 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.Observer
 
+private const val ELEVATION_BEHIND_CHARACTER = 1f // 캐릭터 뒤 액세서리 (날개)
+private const val ELEVATION_CHARACTER = 2f
+private const val ELEVATION_CLOTHING_BOTTOM = 3f //  바지
+private const val ELEVATION_CLOTHING_TOP = 4f    //  상의
+private const val ELEVATION_ONEPIECE = 5f      //  원피스 (상의/하의보다 위)
+private const val ELEVATION_ACCESSORY_FRONT = 6f // 캐릭터 앞 액세서리 (마법봉)
+
 class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListener {
+
 
     private lateinit var btnOpenStore: Button
     private lateinit var placeholderView: View
     private lateinit var rootLayout: ConstraintLayout
     private lateinit var storeViewModel: StoreViewModel
     private lateinit var characterImageView: ImageView
-
+    private lateinit var topItemImageView: ImageView
+    private lateinit var pantsItemImageView: ImageView
+    private lateinit var onepieceItemImageView: ImageView
+    private lateinit var accItemImageView: ImageView
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -31,7 +42,12 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
         btnOpenStore = view.findViewById(R.id.btnOpenStore)
         placeholderView = view.findViewById(R.id.view)
         rootLayout = view.findViewById(R.id.store_fragment_root)
-        characterImageView = view.findViewById(R.id.characterImageView) // ID 확인 필요
+        characterImageView = view.findViewById(R.id.baseCharacterImageView)
+        topItemImageView = view.findViewById(R.id.topItemImageView)
+        pantsItemImageView = view.findViewById(R.id.pantsItemImageView)
+        onepieceItemImageView = view.findViewById(R.id.onepieceItemImageView)
+        accItemImageView = view.findViewById(R.id.accItemImageView)
+
 
         // ViewModel 인스턴스 가져오기
         storeViewModel = ViewModelProvider(requireActivity()).get(StoreViewModel::class.java)
@@ -41,6 +57,12 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         placeholderView.visibility = View.GONE
+
+        // 기본 Elevation 설정
+        characterImageView.elevation = ELEVATION_CHARACTER
+        pantsItemImageView.elevation = ELEVATION_CLOTHING_BOTTOM
+        topItemImageView.elevation = ELEVATION_CLOTHING_TOP
+        onepieceItemImageView.elevation = ELEVATION_ONEPIECE
 
         btnOpenStore.setOnClickListener {
             openStoreBottomSheet()
@@ -57,63 +79,74 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
     }
 
     private fun updateCharacterDisplay(equippedItems: Map<String, ProductItem?>) {
-        // 1. "character" 카테고리에서 기본 캐릭터 이미지를 가져와 설정
-        val baseCharacterItem = equippedItems["character"] // "character"는 ViewModel에서 사용하는 ID와 일치해야 함
-        if (baseCharacterItem != null) {
-            characterImageView.setImageResource(baseCharacterItem.imageResId)
+        // 1. 기본 캐릭터 이미지 및 Elevation 설정
+        val baseCharacterItem = equippedItems["character"]
+        characterImageView.setImageResource(
+            baseCharacterItem?.imageResId ?: R.drawable.char_graycat
+        )
+        characterImageView.elevation = ELEVATION_CHARACTER
+
+        // 아이템 가져오기
+        val onepieceItem = equippedItems["onepiece"]
+        val topItem = equippedItems["top"]
+        val pantsItem = equippedItems["pants"]
+        val currentAccItem = equippedItems["acc"]
+
+        // 2. 원피스 vs 상/하의 처리 및 Elevation 설정
+        if (onepieceItem != null) {
+            onepieceItemImageView.setImageResource(onepieceItem.imageResId)
+            onepieceItemImageView.visibility = View.VISIBLE
+            onepieceItemImageView.elevation = ELEVATION_ONEPIECE
+            topItemImageView.visibility = View.GONE
+            pantsItemImageView.visibility = View.GONE
         } else {
-            characterImageView.setImageResource(R.drawable.avartar_sample) // 기본 캐릭터 이미지
+            onepieceItemImageView.visibility = View.GONE
+            if (topItem != null) {
+                topItemImageView.setImageResource(topItem.imageResId)
+                topItemImageView.visibility = View.VISIBLE
+                topItemImageView.elevation = ELEVATION_CLOTHING_TOP
+            } else {
+                topItemImageView.visibility = View.GONE
+            }
+            if (pantsItem != null) {
+                pantsItemImageView.setImageResource(pantsItem.imageResId)
+                pantsItemImageView.visibility = View.VISIBLE
+                pantsItemImageView.elevation = ELEVATION_CLOTHING_BOTTOM
+            } else {
+                pantsItemImageView.visibility = View.GONE
+            }
         }
 
-        // 2. 나머지 카테고리 (상의, 바지, 안경 등) 아이템들을 캐릭터 위에 덧입힘
-        // 이 부분은 실제 구현 시 복잡할 수 있습니다.
-        // 방법 1: 여러 ImageView를 FrameLayout 위에 겹쳐서 표시
-        // 방법 2: LayerDrawable을 동적으로 생성하여 하나의 ImageView에 설정
-        // 방법 3: Custom View를 만들어 직접 Canvas에 그리기
-
-        // 예시: FrameLayout에 ImageView들을 동적으로 추가/제거하거나 visibility 조절
-        // characterContainer.removeAllViews() // 이전 아이템들 제거
-        // characterContainer.addView(baseCharacterImageView) // 기본 캐릭터 ImageView 추가
-
-        // equippedItems.forEach { (category, item) ->
-        //     if (item != null && category != "character") {
-        //         val itemImageView = ImageView(requireContext())
-        //         itemImageView.setImageResource(item.imageResId)
-        //         // itemImageView 레이아웃 파라미터 설정 (FrameLayout 내 위치 등)
-        //         characterContainer.addView(itemImageView)
-        //     }
-        // }
-        // 이 부분은 상세한 UI/UX 디자인에 따라 구현 방식이 달라집니다.
-        // 현재는 characterImageView 하나에 기본 캐릭터만 설정하는 예시입니다.
-        // 아이템 덧입히기는 추가적인 ImageView 레이어링 로직이 필요합니다.
-        // 예를 들어 Glide나 Picasso 같은 라이브러리로 여러 이미지를 중첩 로드할 수도 있습니다.
+        // 3. 액세서리 처리 (단일 accItemImageView 사용)
+        if (currentAccItem != null) {
+            accItemImageView.setImageResource(currentAccItem.imageResId)
+            accItemImageView.visibility = View.VISIBLE
+            if (currentAccItem.id == "acc_1") { // "천사 날개" ID가 "acc_1"이라고 가정
+                // 천사 날개는 캐릭터 뒤로 (캐릭터보다 낮은 elevation)
+                accItemImageView.elevation = ELEVATION_BEHIND_CHARACTER
+            } else {
+                // 다른 일반 액세서리는 캐릭터 앞으로 (다른 모든 아이템보다 높은 elevation)
+                accItemImageView.elevation = ELEVATION_ACCESSORY_FRONT
+            }
+        } else {
+            // 착용한 액세서리가 없으면 숨김
+            accItemImageView.visibility = View.GONE
+        }
     }
 
     private fun openStoreBottomSheet() {
-        val transition = AutoTransition() // 사용할 트랜지션 정의
-        transition.duration = 300 // 애니메이션 지속 시간 설정
-
-        transition.addListener(object : Transition.TransitionListener {
-            override fun onTransitionStart(transition: Transition) {}
-
-            override fun onTransitionEnd(transition: Transition) {
-                // 애니메이션이 끝나면 StoreOpenFragment를 표시
-                val storeOpenFragment = StoreOpenFragment.newInstance()
-                storeOpenFragment.setStoreBottomSheetDismissListener(this@StoreFragment)
-                storeOpenFragment.show(parentFragmentManager, "StoreOpenFragmentTag")
-
-                // 리스너를 제거하여 중복 호출 방지
-                transition.removeListener(this)
-            }
-
-            override fun onTransitionCancel(transition: Transition) {
-                transition.removeListener(this)
-            }
-            override fun onTransitionPause(transition: Transition) {}
-            override fun onTransitionResume(transition: Transition) {}
-        })
-        TransitionManager.beginDelayedTransition(rootLayout, transition)
+        // 1. placeholderView 애니메이션 시작 준비
+        val placeholderTransition = AutoTransition()
+        placeholderTransition.duration = 300 // 애니메이션 효과를 원하면 지속 시간 유지
+        TransitionManager.beginDelayedTransition(rootLayout, placeholderTransition)
         placeholderView.visibility = View.VISIBLE
+
+        // 2. 바텀시트 표시 (애니메이션 시작과 거의 동시에)
+        // Handler나 짧은 delay를 사용하여 TransitionManager가 적용될 시간을 아주 약간 줄 수도 있지만,
+        // 대부분의 경우 거의 동시에 실행해도 괜찮습니다.
+        val storeOpenFragment = StoreOpenFragment.newInstance()
+        storeOpenFragment.setStoreBottomSheetDismissListener(this@StoreFragment)
+        storeOpenFragment.show(parentFragmentManager, "StoreOpenFragmentTag")
     }
 
     override fun onBottomSheetDismissed() {

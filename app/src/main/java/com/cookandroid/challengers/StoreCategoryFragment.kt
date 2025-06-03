@@ -84,18 +84,28 @@ class StoreCategoryFragment : Fragment() {
             "character" -> {
                 itemsForCategory.add(ProductItem("char_1", "회색 고양이", R.drawable.char_graycat, currentCategory))
                 itemsForCategory.add(ProductItem("char_2", "토끼", R.drawable.char_rabbit, currentCategory))
+                itemsForCategory.add(ProductItem("char_3", "곰", R.drawable.char_bear, currentCategory))
+                itemsForCategory.add(ProductItem("char_4", "오리", R.drawable.char_duck, currentCategory))
+                itemsForCategory.add(ProductItem("char_5", "수달", R.drawable.char_otter, currentCategory))
+                itemsForCategory.add(ProductItem("char_6", "치즈 고양이", R.drawable.char_gingercat, currentCategory))
             }
             "top" -> {
                 itemsForCategory.add(ProductItem("top_1", "민트 티셔츠", R.drawable.t_mint, currentCategory))
                 itemsForCategory.add(ProductItem("top_2", "핑크 티셔츠", R.drawable.t_pink, currentCategory))
+                itemsForCategory.add(ProductItem("top_3", "퍼플 티셔츠", R.drawable.t_purple, currentCategory))
+                itemsForCategory.add(ProductItem("top_4", "화이트 티셔츠", R.drawable.t_white, currentCategory))
+                itemsForCategory.add(ProductItem("top_5", "옐로우 티셔츠", R.drawable.t_yellow, currentCategory))
             }
             "onepiece" -> {
                 itemsForCategory.add(ProductItem("onepiece_1", "블루 원피스", R.drawable.opc_blue, currentCategory))
                 itemsForCategory.add(ProductItem("onepiece_2", "그린 원피스", R.drawable.opc_green, currentCategory))
+                itemsForCategory.add(ProductItem("onepiece_3", "핑크 원피스", R.drawable.opc_pink, currentCategory))
+                itemsForCategory.add(ProductItem("onepiece_4", "퍼플 원피스", R.drawable.opc_purple, currentCategory))
             }
             "pants" -> {
                 itemsForCategory.add(ProductItem("pants_1", "블루 팬츠", R.drawable.pants_blue, currentCategory))
                 itemsForCategory.add(ProductItem("pants_2", "오렌지 팬츠", R.drawable.pants_orange, currentCategory))
+                itemsForCategory.add(ProductItem("pants_2", "핑크 팬츠", R.drawable.pants_pink, currentCategory))
             }
 //            "glasses" -> {
 //                itemsForCategory.add(ProductItem("glasses_1", "둥근 안경", R.drawable.item_glasses_round, currentCategory))
@@ -104,6 +114,7 @@ class StoreCategoryFragment : Fragment() {
             "acc" -> {
                 itemsForCategory.add(ProductItem("acc_1", "천사 날개", R.drawable.acc_angel, currentCategory))
                 itemsForCategory.add(ProductItem("acc_2", "네잎클로버", R.drawable.acc_clover, currentCategory))
+                itemsForCategory.add(ProductItem("acc_3", "마법봉", R.drawable.acc_magicstick, currentCategory))
             }
             // 다른 카테고리가 있다면 여기에 추가
             else -> {

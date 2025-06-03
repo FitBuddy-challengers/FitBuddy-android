@@ -41,58 +41,68 @@ class ChallengePersonalFragment : Fragment() {
         }
     }
 
-    private fun loadUserChallengeProgress(userId: Int) {
+    // 새로 추가된 부분 → 탭 재진입 시 항상 최신 정보로 갱신
+    override fun onResume() {
+        super.onResume()
+        val userId = UserPreference(requireContext()).getUserId()
+        if (userId != -1) {
+            loadUserChallengeProgress(userId)
+        }
+    }
 
+    private fun loadUserChallengeProgress(userId: Int) {
         lifecycleScope.launch {
             try {
                 Log.d("ChallengeFragment", "📡 요청 보냄 → /api/user-challenge-progress/$userId")
                 val response = RetrofitClient.challengeApi.getUserChallengeProgress(userId)
 
-                // 👤 상단 사용자 정보 표시
+                // 👤 사용자 정보 표시
                 binding.userNameTextView.text = response.nickname
                 binding.userLevelTextView.text = "Lv.${response.level}"
                 binding.userCoinTextView.text = response.coin.toString()
-                Log.d("ChallengeFragment", "✅ loadUserChallengeProgress() 실행됨 - userId: $userId")
 
-                // 🔄 Glide로 프로필 이미지 로딩
+                // 프로필 이미지 (기본 이미지로 설정됨)
                 Glide.with(this@ChallengePersonalFragment)
-                //.load(response.profileImage)
-                //.placeholder(R.drawable.default_profile)
-                //.into(binding.userProfileImageView)
-                binding.userProfileImageView.setImageResource(R.drawable.default_profile)
+                    //.load(response.profileImage)
+                    //.placeholder(R.drawable.default_profile)
+                    //.into(binding.userProfileImageView)
+                    .load(R.drawable.default_profile)
+                    .into(binding.userProfileImageView)
 
-
-                // 여기 challengeList 정의  -> 하드 코딩 추후 수정.
+                // ✅ 퍼센트 직접 계산해서 전달
                 val challengeList = listOf(
                     RetrofitClient.ChallengeItemUiModel(
                         title = "출석 ${response.current.attendance}회 / ${response.required.attendance}회",
-                        progressPercent = response.progress.attendancePercent,
+                        progressPercent = calculatePercent(response.current.attendance, response.required.attendance),
                         reward = response.reward.attendance
                     ),
                     RetrofitClient.ChallengeItemUiModel(
-                        title = "운동 ${response.current.exercise}회 / ${response.required.exercise}회",
-                        progressPercent = response.progress.exercisePercent,
+                        title = "운동 횟수 ${response.current.exercise}회 / ${response.required.exercise}회",
+                        progressPercent = calculatePercent(response.current.exercise, response.required.exercise),
                         reward = response.reward.exercise
                     ),
                     RetrofitClient.ChallengeItemUiModel(
-                        title = "사진 ${response.current.photo}회 / ${response.required.photo}회",
-                        progressPercent = response.progress.photoPercent,
+                        title = "사진 인증 ${response.current.photo}회 / ${response.required.photo}회",
+                        progressPercent = calculatePercent(response.current.photo, response.required.photo),
                         reward = response.reward.photo
                     )
                 )
 
                 challengeAdapter.submitList(challengeList)
-                // ✅ 레벨업 버튼 표시
-                val allCompleted = response.progress.attendancePercent == 100 &&
-                        response.progress.photoPercent == 100 &&
-                        response.progress.exercisePercent == 100
+
+                // 레벨업 버튼 조건 (선택적으로 사용 가능)
+                val allCompleted = challengeList.all { it.progressPercent == 100 }
                 //binding.levelUpButton.visibility = if (allCompleted) View.VISIBLE else View.GONE
+
                 Log.d("ChallengeFragment", "✅ API 응답 nickname=${response.nickname}, level=${response.level}, coin=${response.coin}")
             } catch (e: Exception) {
                 Log.e("ChallengeFragment", "❌ 챌린지 데이터 로드 실패: ${e.message}")
             }
-
         }
+    }
+
+    private fun calculatePercent(current: Int, required: Int): Int {
+        return if (required > 0) (current * 100 / required).coerceAtMost(100) else 0
     }
 
     override fun onDestroyView() {

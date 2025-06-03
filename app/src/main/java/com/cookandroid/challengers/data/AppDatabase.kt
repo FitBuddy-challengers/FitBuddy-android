@@ -39,7 +39,7 @@ import java.time.format.DateTimeFormatter
         PlanDetail::class,  CoolDownStretch::class,
 
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(ListConverter::class, LocalDateConverter::class)

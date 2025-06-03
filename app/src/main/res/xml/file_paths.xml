@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 앱의 외부 저장소 Pictures 디렉토리에 접근 허용 -->
+    <external-files-path name="my_images" path="Pictures" />
+    <!-- 필요에 따라 다른 경로 추가 가능 -->
+    <!-- 예: 캐시 디렉토리 <cache-path name="my_cache_images" path="images/" /> -->
+</paths>

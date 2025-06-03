@@ -50,6 +50,9 @@
         <action
             android:id="@+id/action_exercise_to_exerciseDoing"
             app:destination="@id/exerciseDoingFragment" />
+        <action
+            android:id="@+id/action_exercise_to_challengeUpload"
+            app:destination="@id/challengeUploadPhotoFragment" />
     </fragment>
 
     <fragment
@@ -88,6 +91,9 @@
         <action
             android:id="@+id/action_exerciseDoing_to_coolDownStretch"
             app:destination="@id/coolDownStretchFragment" />
+        <action
+            android:id="@+id/action_exerciseDoing_to_challengeUpload"
+            app:destination="@id/challengeUploadPhotoFragment" />
     </fragment>
 
     <fragment
@@ -163,6 +169,9 @@
         android:name="com.cookandroid.challengers.ChallengeUploadPhotoFragment"
         android:label="챌린지 사진 업로드"
         tools:layout="@layout/fragment_upload_photo">
+        <action
+            android:id="@+id/action_challengeUploadPhotoFragment_to_homeFragment"
+            app:destination="@id/homeFragment" />
     </fragment>
 
 </navigation>

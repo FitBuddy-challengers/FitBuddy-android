@@ -77,7 +77,10 @@ object RetrofitClient {
         @SerializedName("scheduleId") val scheduleId: Int
     )
 
-    data class ScheduleIdResponse(val scheduleId: Long)
+    data class ScheduleIdResponse(
+        @SerializedName("scheduleId") // **** 서버가 보내는 JSON 키 "scheduleId"와 매핑 ****
+        val scheduleId: Long
+    )
 
     // 특정 Plan에 속한 Schedule 아이템을 위한 DTO (exerciseId 포함)
     data class SimpleScheduleItemDto(
@@ -142,17 +145,18 @@ object RetrofitClient {
     )
 
     // ✅ 운동 추가 요청 DTO
-    data class AddExerciseRequest(
-        val exerciseId: Int,
-        val setList: List<SetData>
+    data class AddExerciseRequest( // 세트 목록을 포함한 운동 추가 요청 (사용처 확인 필요)
+        @SerializedName("exerciseId") val exerciseId: Int, // 서버 API 스펙에 따라 키 이름 확인
+        @SerializedName("setList") val setList: List<SetData>
     )
 
     // ✅ 세트 정보 DTO
     data class SetData(
-        val setNumber: Int,
+        @SerializedName("set_number") val setNumber: Int,
         val reps: Int? = null,
         val weight: Int? = null,
-        val seconds: Int? = null
+        val seconds: Int? = null,
+        @SerializedName("is_completed") val isCompleted: Boolean? = false // 서버와 주고받는 필드라면 추가
     )
 
     //    data class TimeSetUiModel(
@@ -186,8 +190,10 @@ object RetrofitClient {
     data class RepsSetDto(
         @SerializedName("set_number") val setNumber: Int,
         val reps: Int,
-        val weight: Float, @SerializedName("is_completed") val isCompleted: Boolean = false
+        val weight: Float,
+        @SerializedName("is_completed") val isCompleted: Boolean = false
     )
+
 
     data class Exercise_Set(
         val setNumber: Int,
@@ -206,8 +212,13 @@ object RetrofitClient {
     )
 
     data class SetCompletionRequest(
+        @SerializedName("scheduleId") // JSON으로 전송될 때 "scheduleId" 키를 사용하도록 지정
         val scheduleId: Long,
+
+        @SerializedName("setNumber")
         val setNumber: Int,
+
+        @SerializedName("isCompleted")
         val isCompleted: Boolean
     )
 
