@@ -9,7 +9,7 @@ import androidx.cardview.widget.CardView
 import androidx.recyclerview.widget.RecyclerView
 
 data class ProductItem(
-    val id: String,      // 아이템을 고유하게 식별할 ID 필드 추가
+    val id: String,
     val name: String,
     val imageResId: Int,
     val category: String
@@ -23,7 +23,6 @@ class ProductAdapter(
 
     class ProductViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val imageViewProduct: ImageView = itemView.findViewById(R.id.image_view_product)
-        // MaterialCardView로 itemView를 사용
         private val materialCardView: com.google.android.material.card.MaterialCardView = itemView as com.google.android.material.card.MaterialCardView
 
         fun bind(item: ProductItem, isSelected: Boolean, onItemClick: (ProductItem) -> Unit) {

@@ -49,7 +49,7 @@ class ChallengeFragment : Fragment() {
         override fun createFragment(position: Int): Fragment {
             return when (position) {
                 0 -> ChallengePersonalFragment() // 개인 챌린지 Fragment
-                1 -> ChallengeGroupFragment()    // 그룹 챌린지 Fragment
+                1 -> ChallengePhotoFragment()    // 그룹 챌린지 Fragment
                 else -> throw IllegalArgumentException("Invalid position: $position")
             }
         }

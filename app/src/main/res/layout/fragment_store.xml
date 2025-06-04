@@ -69,12 +69,33 @@
             android:scaleType="fitCenter"
             android:visibility="gone"
             tools:src="@drawable/char_graycat" />
+        <ImageView
+            android:id="@+id/hairAccItemImageView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"
+            android:visibility="gone"
+            tools:src="@drawable/char_graycat" />
+        <ImageView
+            android:id="@+id/glassesItemImageView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"
+            android:visibility="gone"
+            tools:src="@drawable/char_graycat" />
+        <ImageView
+            android:id="@+id/costumeItemImageView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"
+            android:visibility="gone"
+            tools:src="@drawable/char_graycat" />
     </FrameLayout>
 
     <View
         android:id="@+id/view"
         android:layout_width="match_parent"
-        android:layout_height="300dp"
+        android:layout_height="400dp"
         android:visibility="invisible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

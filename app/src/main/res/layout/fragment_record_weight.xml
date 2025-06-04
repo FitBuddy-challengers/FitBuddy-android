@@ -54,10 +54,10 @@
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
                 android:layout_marginHorizontal="60dp"
-                app:strokeColor="@android:color/transparent"
+                android:layout_marginTop="24dp"
                 app:cardElevation="0dp"
+                app:strokeColor="@android:color/transparent"
                 app:strokeWidth="0dp">
 
                 <com.google.android.material.tabs.TabLayout
@@ -132,9 +132,10 @@
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginHorizontal="60dp"
                 android:layout_marginTop="24dp"
-                android:layout_marginHorizontal="60dp"                app:strokeColor="@android:color/transparent"
                 app:cardElevation="0dp"
+                app:strokeColor="@android:color/transparent"
                 app:strokeWidth="0dp">
 
                 <com.google.android.material.tabs.TabLayout
@@ -209,9 +210,10 @@
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginHorizontal="60dp"
                 android:layout_marginTop="24dp"
-                android:layout_marginHorizontal="60dp"                app:strokeColor="@android:color/transparent"
                 app:cardElevation="0dp"
+                app:strokeColor="@android:color/transparent"
                 app:strokeWidth="0dp">
 
                 <com.google.android.material.tabs.TabLayout
@@ -264,9 +266,9 @@
         android:layout_marginBottom="32dp"
         android:backgroundTint="@color/blue"
         android:src="@drawable/btn_floating"
-        app:tint="@color/white"
         app:elevation="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:tint="@color/white" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

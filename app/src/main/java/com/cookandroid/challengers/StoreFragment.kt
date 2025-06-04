@@ -14,15 +14,18 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.Observer
 
+// 캐릭터&아이템 레이어
 private const val ELEVATION_BEHIND_CHARACTER = 1f // 캐릭터 뒤 액세서리 (날개)
 private const val ELEVATION_CHARACTER = 2f
 private const val ELEVATION_CLOTHING_BOTTOM = 3f //  바지
 private const val ELEVATION_CLOTHING_TOP = 4f    //  상의
 private const val ELEVATION_ONEPIECE = 5f      //  원피스 (상의/하의보다 위)
-private const val ELEVATION_ACCESSORY_FRONT = 6f // 캐릭터 앞 액세서리 (마법봉)
+private const val ELEVATION_COUTUME = 6f      //  코스튬
+private const val ELEVATION_GLASSES = 7f      //  안경
+private const val ELEVATION_HAIR_ACC = 8f      //  헤어 액세서리
+private const val ELEVATION_ACCESSORY_FRONT = 9f // 캐릭터 앞 액세서리 (EX.마법봉)
 
 class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListener {
-
 
     private lateinit var btnOpenStore: Button
     private lateinit var placeholderView: View
@@ -33,6 +36,9 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
     private lateinit var pantsItemImageView: ImageView
     private lateinit var onepieceItemImageView: ImageView
     private lateinit var accItemImageView: ImageView
+    private lateinit var hairAccItemImageView: ImageView
+    private lateinit var glassesItemImageView: ImageView
+    private lateinit var costumeItemImageView: ImageView
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -47,7 +53,9 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
         pantsItemImageView = view.findViewById(R.id.pantsItemImageView)
         onepieceItemImageView = view.findViewById(R.id.onepieceItemImageView)
         accItemImageView = view.findViewById(R.id.accItemImageView)
-
+        hairAccItemImageView = view.findViewById(R.id.hairAccItemImageView)
+        glassesItemImageView = view.findViewById(R.id.glassesItemImageView)
+        costumeItemImageView = view.findViewById(R.id.costumeItemImageView)
 
         // ViewModel 인스턴스 가져오기
         storeViewModel = ViewModelProvider(requireActivity()).get(StoreViewModel::class.java)
@@ -63,6 +71,10 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
         pantsItemImageView.elevation = ELEVATION_CLOTHING_BOTTOM
         topItemImageView.elevation = ELEVATION_CLOTHING_TOP
         onepieceItemImageView.elevation = ELEVATION_ONEPIECE
+        accItemImageView.elevation = ELEVATION_ACCESSORY_FRONT
+        hairAccItemImageView.elevation = ELEVATION_HAIR_ACC
+        glassesItemImageView.elevation = ELEVATION_GLASSES
+        costumeItemImageView.elevation = ELEVATION_COUTUME
 
         btnOpenStore.setOnClickListener {
             openStoreBottomSheet()
@@ -86,13 +98,25 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
         )
         characterImageView.elevation = ELEVATION_CHARACTER
 
+        //토끼 아이템 y오프셋 조정 : 44f
+        if (baseCharacterItem?.id == "char_2") {
+            val rabbitOffsetY = -44f
+            characterImageView.translationY = rabbitOffsetY
+        } else {
+            // 다른 캐릭터는 기본 Y위치 (오프셋 없음)
+            characterImageView.translationY = 0f
+        }
+
         // 아이템 가져오기
         val onepieceItem = equippedItems["onepiece"]
         val topItem = equippedItems["top"]
         val pantsItem = equippedItems["pants"]
-        val currentAccItem = equippedItems["acc"]
+        val accItem = equippedItems["acc"]
+        val hairAccItem = equippedItems["hairAcc"]
+        val glassesItem = equippedItems["glasses"]
+        val costumeItem = equippedItems["costume"]
 
-        // 2. 원피스 vs 상/하의 처리 및 Elevation 설정
+        // 원피스 vs 상/하의 처리 및 Elevation 설정
         if (onepieceItem != null) {
             onepieceItemImageView.setImageResource(onepieceItem.imageResId)
             onepieceItemImageView.visibility = View.VISIBLE
@@ -117,20 +141,46 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
             }
         }
 
-        // 3. 액세서리 처리 (단일 accItemImageView 사용)
-        if (currentAccItem != null) {
-            accItemImageView.setImageResource(currentAccItem.imageResId)
+        // 액세서리 처리 (단일 accItemImageView 사용)
+        if (accItem != null) {
+            accItemImageView.setImageResource(accItem.imageResId)
             accItemImageView.visibility = View.VISIBLE
-            if (currentAccItem.id == "acc_1") { // "천사 날개" ID가 "acc_1"이라고 가정
+            if (accItem.id == "acc_1") { // "천사 날개" ID가 "acc_1"이라고 가정
                 // 천사 날개는 캐릭터 뒤로 (캐릭터보다 낮은 elevation)
                 accItemImageView.elevation = ELEVATION_BEHIND_CHARACTER
             } else {
-                // 다른 일반 액세서리는 캐릭터 앞으로 (다른 모든 아이템보다 높은 elevation)
                 accItemImageView.elevation = ELEVATION_ACCESSORY_FRONT
             }
         } else {
             // 착용한 액세서리가 없으면 숨김
             accItemImageView.visibility = View.GONE
+        }
+
+        // 헤어 액세서리
+        if(hairAccItem != null){
+            hairAccItemImageView.setImageResource(hairAccItem.imageResId)
+            hairAccItemImageView.visibility = View.VISIBLE
+            hairAccItemImageView.elevation = ELEVATION_HAIR_ACC
+        }else{
+            hairAccItemImageView.visibility = View.GONE
+        }
+
+        // 안경
+        if(glassesItem != null){
+            glassesItemImageView.setImageResource(glassesItem.imageResId)
+            glassesItemImageView.visibility = View.VISIBLE
+            glassesItemImageView.elevation = ELEVATION_GLASSES
+        }else{
+            glassesItemImageView.visibility = View.GONE
+        }
+
+        // 코스튬
+        if(costumeItem != null){
+            costumeItemImageView.setImageResource(costumeItem.imageResId)
+            costumeItemImageView.visibility = View.VISIBLE
+            costumeItemImageView.elevation = ELEVATION_COUTUME
+        }else{
+            costumeItemImageView.visibility = View.GONE
         }
     }
 

@@ -43,7 +43,10 @@ class StoreCategoryFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         setupRecyclerView() // 어댑터 설정 먼저
         observeViewModel()  // ViewModel 관찰 시작
-        loadCategoryItems() // 아이템 로드
+
+        view.post {
+            loadCategoryItems()
+        }
     }
 
     private fun setupRecyclerView() {
@@ -64,6 +67,8 @@ class StoreCategoryFragment : Fragment() {
         recyclerView.apply {
             layoutManager = GridLayoutManager(context, 3)
             adapter = productAdapter
+            setHasFixedSize(true) // <<< 이 라인 추가
+
         }
     }
 
@@ -102,6 +107,14 @@ class StoreCategoryFragment : Fragment() {
                 itemsForCategory.add(ProductItem("onepiece_3", "핑크 원피스", R.drawable.opc_pink, currentCategory))
                 itemsForCategory.add(ProductItem("onepiece_4", "퍼플 원피스", R.drawable.opc_purple, currentCategory))
             }
+            "costume" -> {
+                itemsForCategory.add(ProductItem("costume_1", "유령옷", R.drawable.cos_ghost, currentCategory))
+                itemsForCategory.add(ProductItem("costume_2", "블루 파자마", R.drawable.cos_pajama_b, currentCategory))
+                itemsForCategory.add(ProductItem("costume_3", "핑크 파자마", R.drawable.cos_pajama_p, currentCategory))
+                itemsForCategory.add(ProductItem("costume_4", "푸딩옷", R.drawable.cos_puding, currentCategory))
+                itemsForCategory.add(ProductItem("costume_5", "우비", R.drawable.cos_puding, currentCategory))
+                itemsForCategory.add(ProductItem("costume_6", "새우 튀김", R.drawable.cos_shrimp, currentCategory))
+            }
             "pants" -> {
                 itemsForCategory.add(ProductItem("pants_1", "블루 팬츠", R.drawable.pants_blue, currentCategory))
                 itemsForCategory.add(ProductItem("pants_2", "오렌지 팬츠", R.drawable.pants_orange, currentCategory))
@@ -111,6 +124,11 @@ class StoreCategoryFragment : Fragment() {
 //                itemsForCategory.add(ProductItem("glasses_1", "둥근 안경", R.drawable.item_glasses_round, currentCategory))
 //                itemsForCategory.add(ProductItem("glasses_2", "선글라스", R.drawable.item_glasses_sunnies, currentCategory))
 //            }
+            "hairAcc" -> {
+                itemsForCategory.add(ProductItem("hariAcc_1", "천사 날개", R.drawable.acc_angel, currentCategory))
+                itemsForCategory.add(ProductItem("hariAcc_2", "네잎클로버", R.drawable.acc_clover, currentCategory))
+                itemsForCategory.add(ProductItem("hariAcc_3", "마법봉", R.drawable.acc_magicstick, currentCategory))
+            }
             "acc" -> {
                 itemsForCategory.add(ProductItem("acc_1", "천사 날개", R.drawable.acc_angel, currentCategory))
                 itemsForCategory.add(ProductItem("acc_2", "네잎클로버", R.drawable.acc_clover, currentCategory))

@@ -3,7 +3,6 @@ package com.cookandroid.challengers
 import android.content.Context
 import android.graphics.Rect
 import android.os.Bundle
-import android.util.DisplayMetrics
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -12,47 +11,20 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
-import androidx.core.os.bundleOf // bundleOf 사용
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.cookandroid.challengers.databinding.FragmentChallengeGroupBinding
+import com.cookandroid.challengers.databinding.FragmentChallengePhotoBinding
 import com.google.android.material.imageview.ShapeableImageView
 
-class ChallengeGroupFragment : Fragment() {
-    private var _binding: FragmentChallengeGroupBinding? = null
+class ChallengePhotoFragment : Fragment() {
+    private var _binding: FragmentChallengePhotoBinding? = null
     private val binding get() = _binding!!
 
     companion object {
-        const val ARG_GROUP_NAME = "groupNameKey" // 그룹 이름 표시용
-        const val ARG_PAGE_GROUP_ID = "pageGroupIdKey" // 이 페이지의 그룹 ID
-        const val ARG_IS_CURRENT_USER_LEADER = "isCurrentUserLeaderKey" // 현재 사용자가 이 그룹의 리더인지
-        const val ARG_EXERCISE_TYPE = "argExerciseTypeKey" // 운동 종목을 받기 위한 키
-        const val ARG_LEADER_NAME = "argLeaderNameKey"     // 그룹장 이름을 받기 위한 키
-
         private const val SPAN_COUNT = 4
         private const val GRID_SPACING_DP = 16
-    }
-
-    private var pageGroupId: String? = null
-    private var isCurrentUserLeaderOfThisPage: Boolean = false
-    private var receivedGroupName: String? = null // onCreateView에서 사용할 수 있도록 멤버 변수로 변경
-    private var pageExerciseType: String? = null // 운동 종목 저장 변수
-    private var pageLeaderName: String? = null   // 그룹장 이름 저장 변수
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        arguments?.let {
-            receivedGroupName = it.getString(ARG_GROUP_NAME) ?: "챌린지 그룹" // onCreateView 전에 값 설정
-            pageGroupId = it.getString(ARG_PAGE_GROUP_ID)
-            isCurrentUserLeaderOfThisPage = it.getBoolean(ARG_IS_CURRENT_USER_LEADER, false)
-            pageExerciseType = it.getString(ARG_EXERCISE_TYPE) // ⭐ 운동 종목 수신
-            pageLeaderName = it.getString(ARG_LEADER_NAME)     // ⭐ 그룹장 이름 수신
-
-            Log.d("GroupPageFragment", "Received Data: GroupName=$receivedGroupName, GroupID=$pageGroupId, IsLeader=$isCurrentUserLeaderOfThisPage, Exercise=$pageExerciseType, Leader=$pageLeaderName")
-        }
     }
 
     override fun onCreateView(
@@ -60,7 +32,7 @@ class ChallengeGroupFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        _binding = FragmentChallengeGroupBinding.inflate(inflater, container, false)
+        _binding = FragmentChallengePhotoBinding.inflate(inflater, container, false)
         return binding.root
     }
 
@@ -92,7 +64,7 @@ class ChallengeGroupFragment : Fragment() {
     private fun setupExerciseNowRecyclerView() {
         val rawUsers = List(7) {
             TempUserItem(
-                name = "사용자 ${it + 1}",
+                name = "날짜 ${it + 1}",
                 progress = "${it % 3 + 1}/${it % 4 + 5}",
                 avatarResId = R.drawable.avartar_sample
             )
@@ -124,7 +96,7 @@ class ChallengeGroupFragment : Fragment() {
         (this * context.resources.displayMetrics.density).toInt()
 
     // RecyclerView 그리드 아이템 간격 균등 분배
-    // ⭐ 생성자에 applyVerticalSpacing 추가, getItemOffsets에서 세로 간격 처리 수정
+    // 생성자에 applyVerticalSpacing 추가, getItemOffsets에서 세로 간격 처리 수정
     class GridSpacingItemDecoration(
         private val spanCount: Int,
         private val spacing: Int,

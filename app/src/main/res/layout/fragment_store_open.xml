@@ -4,26 +4,27 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:minHeight="@dimen/store_peek_height"
     android:orientation="vertical"
     android:paddingTop="8dp"
-    android:minHeight="@dimen/store_peek_height"
     tools:context=".StoreOpenFragment">
 
     <ImageView
-        android:layout_marginTop="16dp"
         android:id="@+id/timer_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
         android:src="@drawable/ic_timer_bar" />
 
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tab_layout_store"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginHorizontal="6dp"
         app:tabGravity="fill"
         app:tabIconTint="@color/selector_tab_icon_tint"
         app:tabIndicatorColor="@android:color/transparent"
-        app:tabMode="scrollable" />
+       />
 
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/view_pager_store"

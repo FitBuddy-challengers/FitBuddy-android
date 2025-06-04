@@ -24,7 +24,7 @@ class StoreOpenFragment : BottomSheetDialogFragment() {
     }
     private lateinit var storeViewModel: StoreViewModel
     private var dismissListener: StoreBottomSheetDismissListener? = null
-    private val categoryIds = listOf("top", "onepiece", "pants", "glasses", "acc", "character")
+    private val categoryIds = listOf("top", "onepiece", "costume", "pants", "glasses", "hairAcc", "acc", "character")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,8 +48,10 @@ class StoreOpenFragment : BottomSheetDialogFragment() {
     private val tabIcons = listOf(
         R.drawable.ic_store_top,
         R.drawable.ic_store_onepiece,
+        R.drawable.ic_store_costume,
         R.drawable.ic_store_pants,
         R.drawable.ic_store_glasses,
+        R.drawable.ic_store_hair_acc,
         R.drawable.ic_store_acc,
         R.drawable.ic_store_character
     )
