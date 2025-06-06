@@ -136,6 +136,9 @@
         <item name="textEndPadding">4dp</item>
     </style>
 
+    <style name="AppTheme.NoDimBottomSheetDialog" parent="Theme.Design.Light.BottomSheetDialog">
+        <item name="android:backgroundDimEnabled">false</item> </style>
+
     <!--tap 스타일-->
     <style name="tab_text" parent="TextAppearance.Design.Tab">
         <item name="android:textSize">20sp</item>
@@ -186,5 +189,21 @@
         <item name="android:textColor">#7E7E7E</item>
         <item name="android:textSize">16sp</item>
     </style>
->>>>>>> potato_new
+
+    <!-- 기본 탭 텍스트 스타일 (선택되지 않은 탭) -->
+    <style name="TabTextAppearance.Default" parent="TextAppearance.Design.Tab">
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">normal</item>
+    </style>
+
+    <!-- 선택된 탭 텍스트 스타일 -->
+    <style name="TabTextAppearance.Selected" parent="TextAppearance.Design.Tab">
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="CircleShapeAppearance">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
 </resources>

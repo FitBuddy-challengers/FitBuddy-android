@@ -17,114 +17,114 @@
         android:textSize="24sp"
         android:textStyle="bold" />
 
-        <LinearLayout
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:background="@drawable/btn_gray_line_round20"
+        android:padding="16dp">
+
+        <com.prolificinteractive.materialcalendarview.MaterialCalendarView
+            android:id="@+id/calendarView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
-            android:background="@drawable/btn_gray_line_round20"
-            android:padding="16dp">
-
-            <com.prolificinteractive.materialcalendarview.MaterialCalendarView
-                android:id="@+id/calendarView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="38dp"
-                app:mcv_dateTextAppearance="@style/CalenderViewDateCustomText"
-                app:mcv_headerTextAppearance="@style/CalendarWidgetHeader"
-                app:mcv_leftArrow="@drawable/ic_cal_arrow_left"
-                app:mcv_rightArrow="@drawable/ic_cal_arrow_right"
-                app:mcv_selectionColor="@android:color/transparent"
-                app:mcv_showOtherDates="none"
-                app:mcv_weekDayLabels="@array/weekDayLabels"
-                app:mcv_weekDayTextAppearance="@style/CalendarWeekDay" />
-        </LinearLayout>
+            android:layout_marginHorizontal="38dp"
+            app:mcv_dateTextAppearance="@style/CalenderViewDateCustomText"
+            app:mcv_headerTextAppearance="@style/CalendarWidgetHeader"
+            app:mcv_leftArrow="@drawable/ic_cal_arrow_left"
+            app:mcv_rightArrow="@drawable/ic_cal_arrow_right"
+            app:mcv_selectionColor="@android:color/transparent"
+            app:mcv_showOtherDates="none"
+            app:mcv_weekDayLabels="@array/weekDayLabels"
+            app:mcv_weekDayTextAppearance="@style/CalendarWeekDay" />
+    </LinearLayout>
 
 
-        <LinearLayout
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/pretendard_regular"
+            android:text="운동 완료"
+            android:textColor="#7E7E7E"
+            android:textSize="12sp" />
+
+        <View
+            android:layout_width="10dp"
+            android:layout_height="10dp"
+            android:layout_marginStart="20dp"
+            android:background="#4D2777F0" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="5dp"
+            android:fontFamily="@font/pretendard_regular"
+            android:text="30% 완료"
+            android:textColor="#7E7E7E"
+            android:textSize="12sp" />
+
+        <View
+            android:layout_width="10dp"
+            android:layout_height="10dp"
+            android:layout_marginStart="20dp"
+            android:background="#B32777F0" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="5dp"
+            android:fontFamily="@font/pretendard_regular"
+            android:text="70% 완료"
+            android:textColor="#7E7E7E"
+            android:textSize="12sp" />
+
+        <View
+            android:layout_width="10dp"
+            android:layout_height="10dp"
+            android:layout_marginStart="20dp"
+            android:background="#2777F0" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="5dp"
+            android:fontFamily="@font/pretendard_regular"
+            android:text="100% 완료"
+            android:textColor="#7E7E7E"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:background="@drawable/btn_gray_line_round20"
+        android:backgroundTint="@color/light_gray2"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/selectedDateTextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:gravity="center"
-            android:orientation="horizontal">
+            android:text="2025년 7월 26일"
+            android:textColor="#7E7E7E"
+            android:textSize="20sp" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="@font/pretendard_regular"
-                android:text="운동 완료"
-                android:textColor="#7E7E7E"
-                android:textSize="12sp" />
-
-            <View
-                android:layout_width="10dp"
-                android:layout_height="10dp"
-                android:layout_marginStart="20dp"
-                android:background="#4D2777F0" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="5dp"
-                android:fontFamily="@font/pretendard_regular"
-                android:text="30% 완료"
-                android:textColor="#7E7E7E"
-                android:textSize="12sp" />
-
-            <View
-                android:layout_width="10dp"
-                android:layout_height="10dp"
-                android:layout_marginStart="20dp"
-                android:background="#B32777F0" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="5dp"
-                android:fontFamily="@font/pretendard_regular"
-                android:text="70% 완료"
-                android:textColor="#7E7E7E"
-                android:textSize="12sp" />
-
-            <View
-                android:layout_width="10dp"
-                android:layout_height="10dp"
-                android:layout_marginStart="20dp"
-                android:background="#2777F0" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="5dp"
-                android:fontFamily="@font/pretendard_regular"
-                android:text="100% 완료"
-                android:textColor="#7E7E7E"
-                android:textSize="12sp" />
-        </LinearLayout>
-
-        <LinearLayout
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/personalChallengeRecyclerView"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
-            android:background="@drawable/btn_gray_line_round20"
-            android:backgroundTint="@color/light_gray2"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <TextView
-                android:id="@+id/selectedDateTextView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="2025년 7월 26일"
-                android:textColor="#7E7E7E"
-                android:textSize="20sp" />
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/personalChallengeRecyclerView"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_marginTop="16dp"
-                android:layout_weight="1"
-                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-                tools:listitem="@layout/item_completed_plan" />
-        </LinearLayout>
+            android:layout_height="0dp"
+            android:layout_marginTop="16dp"
+            android:layout_weight="1"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            tools:listitem="@layout/item_completed_plan" />
+    </LinearLayout>
 </LinearLayout>

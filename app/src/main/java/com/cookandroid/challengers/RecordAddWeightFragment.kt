@@ -140,4 +140,3 @@ class DatePickerFragment(val onDateSelected: (LocalDate) -> Unit) : DialogFragme
         }, year, month, day)
     }
 }
-

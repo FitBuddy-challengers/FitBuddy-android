@@ -6,38 +6,31 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.ImageButton
-import android.widget.ImageView
 import android.widget.Toast
-import androidx.core.content.ContextCompat
+// import androidx.core.content.ContextCompat // Not directly used in this snippet, keep if used elsewhere
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
-import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.cookandroid.challengers.util.UserPreference
 import com.cookandroid.challengers.api.RetrofitClient
-import com.cookandroid.challengers.data.ExercisePlanDao
-import com.cookandroid.challengers.data.PlanDetail
-import com.cookandroid.challengers.data.PlanDetailDao
-import com.cookandroid.challengers.data.PlanDetailWithExercise
 import com.cookandroid.challengers.data.db.AppDatabase
 import com.cookandroid.challengers.databinding.FragmentExerciseBinding
-import com.cookandroid.challengers.databinding.ItemAddExerciseButtonBinding
-import com.cookandroid.challengers.databinding.ItemExerciseBinding
+import com.cookandroid.challengers.network.dto.ScheduleDto
 import com.cookandroid.challengers.viewmodel.ServerExerciseAdapter
+import com.cookandroid.challengers.viewmodel.StopwatchViewModel
+// import com.google.gson.Gson // Not directly used in this snippet, keep if used elsewhere
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
-import java.time.ZoneId
-import java.util.Calendar
-import java.util.Collections
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class ExerciseFragment : Fragment() {
 
@@ -47,6 +40,51 @@ class ExerciseFragment : Fragment() {
     private lateinit var serverAdapter: ServerExerciseAdapter
     private lateinit var db: AppDatabase
     private var planId: Long = -1L
+    private var currentScheduleList: List<ScheduleDto> = emptyList()
+
+    private val stopwatchViewModel: StopwatchViewModel by activityViewModels()
+
+    companion object {
+        private const val TAG = "ExerciseFragment"
+        private const val PREFS_PROGRESS = "exercise_progress"
+
+        // Keys for SharedPreferences, primarily for ExerciseDoingFragment state and header
+        private const val KEY_IN_PROGRESS = "is_in_progress"
+        private const val KEY_SAVED_PLAN_ID = "current_plan_id_prefs"
+        private const val KEY_SAVED_EXERCISE_INDEX = "current_exercise_index_prefs"
+        private const val KEY_SAVED_SCHEDULE_ID = "current_schedule_id_prefs"
+        private const val KEY_SAVED_EXERCISE_ID = "current_exercise_id_prefs"
+        private const val KEY_SAVED_EXERCISE_NAME = "current_exercise_name_prefs"
+        private const val KEY_SAVED_IMAGE_PATH = "current_image_path_prefs"
+        private const val KEY_SAVED_EQUIP = "current_equip_prefs"
+        private const val KEY_ELAPSED_TIME = "stopwatch_elapsed_time_prefs"
+
+        // ★ 새로운 SharedPreferences 키: 오늘 사진 인증을 완료했는지 여부
+        private const val KEY_PHOTO_UPLOAD_COMPLETED_TODAY_PREFIX =
+            "photo_upload_completed_for_date_"
+    }
+
+    private val prefs by lazy {
+        requireContext().getSharedPreferences(PREFS_PROGRESS, Context.MODE_PRIVATE)
+    }
+
+    // ★ 오늘 날짜를 YYYY-MM-DD 형식으로 가져오는 헬퍼 함수
+    private fun getTodayDateString(): String {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        return dateFormat.format(Date())
+    }
+
+    // ★ 오늘 사진 인증을 완료했는지 확인하는 함수
+    private fun hasPhotoUploadBeenCompletedToday(): Boolean {
+        val key = KEY_PHOTO_UPLOAD_COMPLETED_TODAY_PREFIX + getTodayDateString()
+        return prefs.getBoolean(key, false)
+    }
+
+    private fun markPhotoUploadAsCompletedForToday() {
+        val key = KEY_PHOTO_UPLOAD_COMPLETED_TODAY_PREFIX + getTodayDateString()
+        prefs.edit().putBoolean(key, true).apply()
+        Log.i(TAG, "Photo upload marked as completed for today: $key")
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -54,34 +92,72 @@ class ExerciseFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentExerciseBinding.inflate(inflater, container, false)
+        db = AppDatabase.getDatabase(requireContext(), viewLifecycleOwner.lifecycleScope)
+        planId = -1L
+        Log.d(TAG, "onCreateView called")
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        Log.d(TAG, "onViewCreated called")
 
-        db = AppDatabase.getDatabase(requireContext(), viewLifecycleOwner.lifecycleScope)
-
-        serverAdapter = ServerExerciseAdapter(emptyList(), db.exerciseDao()) { schedule ->
-            if (schedule.schedule_id == -1) {
-                val args = Bundle().apply { putLong("planId", planId) }
-                findNavController().navigate(R.id.action_exercise_to_exerciseAdd, args)
-            } else {
-                val editFragment = ExerciseEditFragment(
-                    planId = planId,
-                    exerciseId = schedule.exercise_id.toLong(),
-                    exerciseName = schedule.exercise_name
-                ) {
-                    loadTodayPlanFromServer()
+        serverAdapter = ServerExerciseAdapter(
+            exerciseDao = db.exerciseDao(),
+            onExerciseItemClicked = { clickedSchedule ->
+                val index = currentScheduleList.indexOf(clickedSchedule)
+                if (index != -1) {
+                    Log.d(
+                        TAG,
+                        "Exercise item clicked: ${clickedSchedule.exercise_name}, index: $index. Navigating with isContinuing = true to persist stopwatch."
+                    )
+                    // ★★★ 요구사항 반영: 어떤 운동 아이템을 클릭하든 isContinuing을 true로 설정 ★★★
+                    navigateToExerciseDoingFragment(index, clickedSchedule, true)
+                } else {
+                    Log.w(
+                        TAG,
+                        "Clicked schedule not found in current list. Attempting to navigate to first incomplete exercise."
+                    )
+                    // navigateToFirstIncompleteExercise는 일반적으로 새 시작이므로 isContinuing=false를 유지할 수 있습니다.
+                    // 만약 이 경우도 유지를 원한다면 이 부분도 수정 필요. 우선은 아이템 클릭에만 집중.
+                    navigateToFirstIncompleteExercise()
                 }
-                editFragment.show(parentFragmentManager, "ExerciseEdit")
+            },
+            onMoreButtonClicked = { schedule ->
+                Log.d(TAG, "More button clicked for: ${schedule.exercise_name}")
+                if (planId != -1L) {
+                    val editFragment = ExerciseEditFragment(
+                        initialPlanId = planId,
+                        initialExerciseId = schedule.exercise_id.toLong(),
+                        initialExerciseName = schedule.exercise_name
+                    ) {
+                        Log.d(
+                            TAG,
+                            "onExerciseDeletedAction (from ExerciseEditFragment) called for ${schedule.exercise_name}. Reloading data."
+                        )
+                        loadTodayPlanFromServer()
+                    }
+                    editFragment.show(parentFragmentManager, "ExerciseEditFragmentTag")
+                } else {
+                    Toast.makeText(requireContext(), "오늘의 운동 계획을 먼저 로드해주세요.", Toast.LENGTH_SHORT)
+                        .show()
+                }
+            },
+            onAddButtonClicked = {
+                Log.d(TAG, "Add button clicked. Current planId: $planId")
+                if (planId != -1L) {
+                    val args = Bundle().apply { putLong("planId", planId) }
+                    findNavController().navigate(R.id.action_exercise_to_exerciseAdd, args)
+                } else {
+                    Toast.makeText(requireContext(), "오늘의 운동 계획을 먼저 로드해주세요.", Toast.LENGTH_SHORT)
+                        .show()
+                }
             }
-        }
+        )
 
         binding.exerciseListRecyclerView.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = serverAdapter
-
             val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
                 ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0
             ) {
@@ -90,593 +166,668 @@ class ExerciseFragment : Fragment() {
                     viewHolder: RecyclerView.ViewHolder,
                     target: RecyclerView.ViewHolder
                 ): Boolean {
-                    val from = viewHolder.adapterPosition
-                    val to = target.adapterPosition
-                    if (from >= serverAdapter.getItems().size || to >= serverAdapter.getItems().size) return false
-                    serverAdapter.moveItem(from, to)
-                    return true
+                    val fromPosition = viewHolder.bindingAdapterPosition
+                    val toPosition = target.bindingAdapterPosition
+                    if (viewHolder.itemViewType != ServerExerciseAdapter.TYPE_EXERCISE || target.itemViewType != ServerExerciseAdapter.TYPE_EXERCISE) {
+                        return false
+                    }
+                    if (fromPosition < serverAdapter.currentList.size && toPosition < serverAdapter.currentList.size) {
+                        serverAdapter.moveItem(fromPosition, toPosition)
+                        Log.d(TAG, "Moved item from $fromPosition to $toPosition")
+                        return true
+                    }
+                    return false
                 }
 
                 override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {}
+                override fun getMovementFlags(
+                    recyclerView: RecyclerView,
+                    viewHolder: RecyclerView.ViewHolder
+                ): Int {
+                    return if (viewHolder.itemViewType == ServerExerciseAdapter.TYPE_EXERCISE) {
+                        super.getMovementFlags(recyclerView, viewHolder)
+                    } else {
+                        0
+                    }
+                }
             })
             itemTouchHelper.attachToRecyclerView(this)
         }
 
         binding.startExerciseButton.setOnClickListener {
-            val scheduleList = serverAdapter.getItems()
-
-            // ✅ 첫 번째 미완료 운동 찾기
-            val firstIncompleteIndex = scheduleList.indexOfFirst { !it.is_completed }
-
-            if (firstIncompleteIndex != -1) {
-                val target = scheduleList[firstIncompleteIndex]
-
-                val args = Bundle().apply {
-                    putLong("planId", planId)
-                    putInt("initialExerciseIndex", firstIncompleteIndex)
-                    putLong("scheduleId", target.schedule_id.toLong())     // 서버 스케줄 ID
-                    putLong("exerciseId", target.exercise_id.toLong())     // 운동 ID
-                    putString("exerciseName", target.exercise_name)        // 이름 (Room 보완)
-                    putString("imagePath", target.image_path)              // 이미지 (Room 보완)
-                    putString("equip", target.equip)                       // 장비 정보 (Room 보완)
-                }
-
-                findNavController().navigate(R.id.action_exercise_to_exerciseDoing, args)
+            Log.d(TAG, "Start exercise button clicked")
+            if (currentScheduleList.isNotEmpty() && currentScheduleList.all { it.is_completed }) {
+                Log.i(
+                    TAG,
+                    "Start button clicked when all exercises are complete. Navigating to photo upload."
+                )
+                checkAndNavigateToPhotoUploadIfNeeded(true)
             } else {
-                Toast.makeText(requireContext(), "진행할 운동이 없습니다.", Toast.LENGTH_SHORT).show()
+                navigateToFirstIncompleteExercise()
             }
         }
 
         binding.menuBtn.setOnClickListener {
+            Log.d(TAG, "Menu button clicked, navigating to exercise list")
             findNavController().navigate(R.id.action_exercise_to_exerciseList)
         }
 
-        parentFragmentManager.setFragmentResultListener("sets_updated", viewLifecycleOwner) { _, _ ->
-            loadTodayPlanFromServer()
+        parentFragmentManager.setFragmentResultListener(
+            ExerciseEditFragment.REQUEST_KEY_EXERCISE_EDIT,
+            viewLifecycleOwner
+        ) { requestKey, bundle ->
+            Log.d(TAG, "Received result from ExerciseEditFragment with key: $requestKey")
+            val updateNeeded =
+                bundle.getBoolean(ExerciseEditFragment.RESULT_KEY_UPDATE_NEEDED, false)
+            if (updateNeeded) {
+                Log.i(TAG, "Update needed from ExerciseEditFragment. Reloading data.")
+                loadTodayPlanFromServer()
+            }
         }
-
-        loadTodayPlanFromServer()
-
-
+        parentFragmentManager.setFragmentResultListener(
+            "plan_updated_from_add", viewLifecycleOwner
+        ) { _, _ ->
+            Log.i(
+                TAG,
+                "Received 'plan_updated_from_add'. Reloading data."
+            ); loadTodayPlanFromServer()
+        }
+        parentFragmentManager.setFragmentResultListener(
+            "exercise_hidden", viewLifecycleOwner
+        ) { _, _ ->
+            Log.i(
+                TAG,
+                "Received 'exercise_hidden'. Reloading data."
+            ); loadTodayPlanFromServer()
+        }
+        parentFragmentManager.setFragmentResultListener(
+            "exercise_unhidden", viewLifecycleOwner
+        ) { _, _ ->
+            Log.i(
+                TAG,
+                "Received 'exercise_unhidden'. Reloading data."
+            ); loadTodayPlanFromServer()
+        }
+        parentFragmentManager.setFragmentResultListener(
+            "sets_updated", viewLifecycleOwner
+        ) { _, _ ->
+            Log.i(
+                TAG,
+                "Received generic 'sets_updated'. Reloading data."
+            ); loadTodayPlanFromServer()
+        }
+        // ★ ChallengeUploadPhotoFragment로부터 결과를 받는 리스너 (사진 업로드 완료/건너뛰기 시)
+        parentFragmentManager.setFragmentResultListener(
+            ChallengeUploadPhotoFragment.REQUEST_KEY_UPLOAD_PHOTO,
+            viewLifecycleOwner
+        ) { requestKey, bundle ->
+            Log.d(TAG, "Received result from ChallengeUploadPhotoFragment with key: $requestKey")
+            val photoUploadedOrSkipped =
+                bundle.getBoolean(ChallengeUploadPhotoFragment.RESULT_KEY_PHOTO_ACTION_DONE, false)
+            if (photoUploadedOrSkipped) {
+                Log.i(TAG, "Photo upload action reported as done. Marking as completed for today.")
+                markPhotoUploadAsCompletedForToday()
+                loadTodayPlanFromServer() // UI 상태 갱신 (예: "사진 인증하기" 버튼 비활성화 또는 텍스트 변경)
+            }
+        }
+        setupInProgressHeaderListeners()
     }
 
     override fun onResume() {
         super.onResume()
+        Log.d(TAG, "onResume: Loading plan and updating in-progress header.")
         loadTodayPlanFromServer()
     }
 
-    // 서버로 부터 연동! -> 되었으면 좋겠다...
     private fun loadTodayPlanFromServer() {
-
+        if (!isAdded || _binding == null) {
+            Log.w(TAG, "loadTodayPlanFromServer: Fragment not added or binding is null. Aborting.")
+            return
+        }
+        Log.d(TAG, "loadTodayPlanFromServer: Fetching today's plan...")
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val response = RetrofitClient.scheduleApi.getTodayPlan(userId = 21)
+                val userPref = UserPreference(requireContext())
+                val userId = userPref.getUserId()
+                if (userId == -1) {
+                    Log.e(TAG, "loadTodayPlanFromServer: Invalid userId (-1). Cannot load plan.")
+                    withContext(Dispatchers.Main) {
+                        if (isAdded && _binding != null) Toast.makeText(
+                            requireContext(),
+                            "로그인이 필요합니다.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                    return@launch
+                }
+
+                val response = RetrofitClient.scheduleApi.getTodayPlan(userId = userId)
                 if (response.isSuccessful) {
                     val data = response.body()
                     planId = data?.plan?.id?.toLong() ?: -1L
+                    Log.d(TAG, "loadTodayPlanFromServer: Plan loaded. Plan ID: $planId")
 
-                    val validSchedules = data?.schedules?.filter { it.exercise_id != 0 } ?: emptyList()
-
-                    // 🧠 Room에서 운동 정보 보완
-                    val enriched = validSchedules.map { schedule ->
-                        val ex = db.exerciseDao().getExerciseById(schedule.exercise_id.toLong())
-                        Log.d("ExerciseFragment", "🧪 exercise_id: ${schedule.exercise_id} → Room에서 찾은 운동: $ex")
+                    val validSchedules =
+                        data?.schedules?.filter { it.exercise_id != 0 } ?: emptyList()
+                    val enrichedSchedules = validSchedules.map { schedule ->
+                        val localExercise =
+                            db.exerciseDao().getExerciseById(schedule.exercise_id.toLong())
                         schedule.copy(
-                            exercise_name = schedule.exercise_name.ifBlank { ex?.name ?: "운동 이름 없음" },
-                            image_path = ex?.imagePath ?: "", // drawable 리소스 이름
-                            equip = ex?.equip ?: "정보 없음",
-                            part = ex?.part ?: "부위 없음",
-                            start_position = ex?.startPosition,
-                            exercise_motion = ex?.exerciseMotion,
-                            breathing = ex?.breathing,
-                            caution = ex?.caution,
-                            mets = ex?.mets ?: 0.0
+                            exercise_name = schedule.exercise_name.ifBlank {
+                                localExercise?.name ?: "운동 이름 없음"
+                            },
+                            image_path = if (schedule.image_path.isNullOrBlank()) localExercise?.imagePath else schedule.image_path,
+                            equip = schedule.equip.ifBlank { localExercise?.equip ?: "정보 없음" },
+                            part = schedule.part.ifBlank { localExercise?.part ?: "부위 없음" },
+                            start_position = schedule.start_position
+                                ?: localExercise?.startPosition,
+                            exercise_motion = schedule.exercise_motion
+                                ?: localExercise?.exerciseMotion,
+                            breathing = schedule.breathing ?: localExercise?.breathing,
+                            caution = schedule.caution ?: localExercise?.caution,
+                            mets = schedule.mets.takeIf { it != 0.0 } ?: localExercise?.mets ?: 0.0
                         )
-                    }
+                    }.sortedBy { it.exercise_order }
+                    currentScheduleList = enrichedSchedules
+                    Log.d(
+                        TAG,
+                        "loadTodayPlanFromServer: Processed ${currentScheduleList.size} schedules."
+                    )
 
                     withContext(Dispatchers.Main) {
-                        serverAdapter.submitList(enriched)
+                        if (!isAdded || _binding == null) return@withContext
+                        serverAdapter.submitList(currentScheduleList.toList())
+                        checkAndShowInProgressHeader() // ★ 여기서 헤더 상태 및 스톱워치 관찰 업데이트
+                        updateStartButtonState()
+                        checkAndNavigateToPhotoUploadIfNeeded()
                     }
                 } else {
-                    Log.e("ExerciseFragment", "❌ 서버 오류: ${response.code()}")
+                    planId = -1L; currentScheduleList = emptyList()
+                    val errorCode = response.code();
+                    val errorMsg = response.errorBody()?.string() ?: response.message()
+                    Log.e(
+                        TAG,
+                        "loadTodayPlanFromServer: Failed to load plan. Code: $errorCode, Message: $errorMsg"
+                    )
+                    withContext(Dispatchers.Main) {
+                        if (!isAdded || _binding == null) return@withContext
+                        serverAdapter.submitList(emptyList())
+                        checkAndShowInProgressHeader()
+                        updateStartButtonState()
+                        val displayMessage =
+                            if (errorCode == 404) "오늘 진행할 운동 계획이 없습니다." else "운동 계획 로드 실패 (코드: $errorCode)"
+                        Toast.makeText(requireContext(), displayMessage, Toast.LENGTH_LONG).show()
+                    }
                 }
             } catch (e: Exception) {
-                Log.e("ExerciseFragment", "❗ 네트워크 오류: ${e.message}")
+                planId = -1L; currentScheduleList = emptyList()
+                Log.e(TAG, "loadTodayPlanFromServer: Network error or other exception.", e)
+                withContext(Dispatchers.Main) {
+                    if (!isAdded || _binding == null) return@withContext
+                    serverAdapter.submitList(emptyList())
+                    checkAndShowInProgressHeader()
+                    updateStartButtonState()
+                    Toast.makeText(requireContext(), "네트워크 오류가 발생했습니다.", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
 
+    private fun updateStartButtonState() {
+        if (_binding == null || !isAdded) return
+
+        if (binding.inProgressHeader.visibility == View.VISIBLE) {
+            binding.startExerciseButton.visibility = View.GONE
+        } else {
+            binding.startExerciseButton.visibility = View.VISIBLE
+            if (currentScheduleList.any { !it.is_completed }) {
+                binding.startExerciseButton.text = "운동 시작하기"
+                binding.startExerciseButton.isEnabled = true
+            } else if (currentScheduleList.isNotEmpty()) { // 모든 운동 완료
+                if (hasPhotoUploadBeenCompletedToday()) { // ★ 오늘 이미 사진 인증 완료했으면
+                    binding.startExerciseButton.text = "오늘 운동 완료" // 또는 다른 적절한 텍스트
+                    binding.startExerciseButton.isEnabled = false // 비활성화
+                } else {
+                    binding.startExerciseButton.text = "사진 인증하기"
+                    binding.startExerciseButton.isEnabled = true
+                }
+            } else { // 운동 목록 없음
+                binding.startExerciseButton.text = "운동 추가하기"
+                binding.startExerciseButton.isEnabled = planId != -1L
+            }
+        }
+        Log.d(
+            TAG,
+            "updateStartButtonState: Text='${binding.startExerciseButton.text}', Enabled=${binding.startExerciseButton.isEnabled}"
+        )
+    }
+
+    private fun checkAndShowInProgressHeader() {
+        if (_binding == null || !isAdded) return
+        val showHeader = prefs.getBoolean(KEY_IN_PROGRESS, false)
+        val savedPlanId = prefs.getLong(KEY_SAVED_PLAN_ID, -1L)
+        val savedScheduleId = prefs.getLong(KEY_SAVED_SCHEDULE_ID, -1L)
+        Log.d(
+            TAG,
+            "checkAndShowInProgressHeader: showHeader=$showHeader, savedPlanId=$savedPlanId, currentPlanId=$planId, savedScheduleId=$savedScheduleId"
+        )
+
+        if (showHeader && savedPlanId == planId && planId != -1L && savedScheduleId != -1L) {
+            val inProgressScheduleInfo =
+                currentScheduleList.find { it.schedule_id.toLong() == savedScheduleId }
+            if (inProgressScheduleInfo != null && !inProgressScheduleInfo.is_completed) {
+                val savedExerciseName = prefs.getString(KEY_SAVED_EXERCISE_NAME, null)
+                val savedImagePath = prefs.getString(KEY_SAVED_IMAGE_PATH, null)
+                // val savedElapsedTime = stopwatchViewModel.elapsedTime.value ?: prefs.getLong(KEY_ELAPSED_TIME, 0L) // ViewModel 우선
+                val displayName = inProgressScheduleInfo.exercise_name.takeIf { it.isNotBlank() }
+                    ?: savedExerciseName ?: "진행 중인 운동"
+                val displayImagePath =
+                    inProgressScheduleInfo.image_path.takeIf { !it.isNullOrBlank() }
+                        ?: savedImagePath
+
+                binding.inProgressHeader.visibility = View.VISIBLE
+                binding.startExerciseButton.visibility = View.GONE // 진행 중 헤더 보이면 시작 버튼 숨김
+                binding.inProgressExerciseName.text = displayName
+                val resId = if (!displayImagePath.isNullOrBlank()) try {
+                    resources.getIdentifier(
+                        displayImagePath,
+                        "drawable",
+                        requireContext().packageName
+                    ).takeIf { it != 0 }
+                } catch (e: Exception) {
+                    null
+                } else null
+                Glide.with(this).asBitmap().load(resId ?: R.drawable.ic_launcher_background)
+                    .error(R.drawable.ic_launcher_background).into(binding.exerciseImageView)
+                setRecyclerViewMargin(true)
+                Log.d(TAG, "In-progress header SHOWN for: $displayName")
+
+                // ★ ViewModel 관찰 시작 (ExerciseFragment2 스타일)
+                stopwatchViewModel.elapsedTime.removeObservers(viewLifecycleOwner) // 이전 관찰자 제거
+                stopwatchViewModel.isRunning.removeObservers(viewLifecycleOwner)   // 이전 관찰자 제거
+
+                stopwatchViewModel.elapsedTime.observe(viewLifecycleOwner, Observer { time ->
+                    if (binding.inProgressHeader.visibility == View.VISIBLE) { // 헤더가 보일 때만 업데이트
+                        binding.inProgressTime.text = stopwatchViewModel.formatElapsedTime(time)
+                    }
+                })
+                stopwatchViewModel.isRunning.observe(viewLifecycleOwner, Observer { running ->
+                    if (binding.inProgressHeader.visibility == View.VISIBLE) { // 헤더가 보일 때만 업데이트
+                        binding.mainStopwatchButton.setImageResource(if (running) R.drawable.ic_pause_black else R.drawable.ic_play_black)
+                    }
+                })
+
+                val initialElapsedTime =
+                    stopwatchViewModel.elapsedTime.value ?: prefs.getLong(KEY_ELAPSED_TIME, 0L)
+                binding.inProgressTime.text =
+                    stopwatchViewModel.formatElapsedTime(initialElapsedTime)
+
+                binding.mainStopwatchButton.setImageResource(if (stopwatchViewModel.isRunning.value == true) R.drawable.ic_pause_black else R.drawable.ic_play_black)
+
+            } else { // 진행 중인 운동 정보가 없거나, 완료된 경우 헤더 숨김
+                binding.inProgressHeader.visibility = View.GONE
+                if (showHeader) {
+                    Log.d(
+                        TAG,
+                        "In-progress header conditions not fully met (e.g., exercise completed or info mismatch). Clearing state."
+                    ); clearInProgressState()
+                }
+                setRecyclerViewMargin(false)
+                Log.d(TAG, "In-progress header HIDDEN (or cleared).")
+            }
+        } else {
+            binding.inProgressHeader.visibility = View.GONE
+            if (showHeader && savedPlanId != planId) {
+                Log.d(
+                    TAG,
+                    "In-progress header for a different plan. Clearing state."
+                ); clearInProgressState()
+            }
+            setRecyclerViewMargin(false)
+            Log.d(TAG, "In-progress header HIDDEN (initial state or different plan).")
+        }
+        updateStartButtonState() // 시작 버튼 상태는 헤더 표시 여부에 따라 달라지므로 항상 호출
+    }
+
+    private fun clearInProgressState() {
+        prefs.edit()
+            .putBoolean(KEY_IN_PROGRESS, false)
+            .remove(KEY_SAVED_EXERCISE_INDEX)
+            .remove(KEY_SAVED_PLAN_ID)
+            .remove(KEY_SAVED_SCHEDULE_ID)
+            .remove(KEY_SAVED_EXERCISE_ID)
+            .remove(KEY_SAVED_EXERCISE_NAME)
+            .remove(KEY_SAVED_IMAGE_PATH)
+            .remove(KEY_SAVED_EQUIP)
+            // KEY_ELAPSED_TIME은 모든 운동 완료 후 사진 인증으로 넘어갈 때 사용되므로, 여기서 바로 지우지 않도록 주의.
+            // .remove(KEY_ELAPSED_TIME) // <- 이 부분은 신중히 결정
+            .apply()
+        Log.i(TAG, "clearInProgressState: Cleared most in-progress state from SharedPreferences.")
+        if (isAdded && _binding != null) checkAndShowInProgressHeader()
+    }
+
+    private fun setRecyclerViewMargin(isHeaderVisible: Boolean) {
+        if (_binding == null || !isAdded) return
+        val params =
+            binding.exerciseListRecyclerView.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
+        params.topToBottom =
+            if (isHeaderVisible) binding.inProgressHeader.id else binding.todayExerciseText.id
+        binding.exerciseListRecyclerView.requestLayout()
+    }
+
+    private fun setupInProgressHeaderListeners() {
+        if (_binding == null || !isAdded) return
+        binding.goToDoingButton.setOnClickListener {
+            Log.d(TAG, "Go to doing button clicked.")
+            val savedExerciseIndex = prefs.getInt(KEY_SAVED_EXERCISE_INDEX, -1)
+            val savedScheduleId = prefs.getLong(KEY_SAVED_SCHEDULE_ID, -1L)
+            val savedPlanIdFromPrefs = prefs.getLong(KEY_SAVED_PLAN_ID, -1L)
+
+            if (savedPlanIdFromPrefs == planId && planId != -1L && savedScheduleId != -1L) {
+                val targetSchedule =
+                    currentScheduleList.find { it.schedule_id.toLong() == savedScheduleId }
+                val targetIndex =
+                    if (targetSchedule != null) currentScheduleList.indexOf(targetSchedule) else savedExerciseIndex
+
+                if (targetIndex != -1 && targetIndex < currentScheduleList.size) {
+                    navigateToExerciseDoingFragment(
+                        targetIndex,
+                        currentScheduleList[targetIndex],
+                        true
+                    )
+                } else {
+                    Log.w(
+                        TAG,
+                        "Could not find target for continuing. Clearing state. TargetIndex: $targetIndex, ListSize: ${currentScheduleList.size}"
+                    )
+                    Toast.makeText(requireContext(), "진행 중인 운동 정보를 찾을 수 없습니다.", Toast.LENGTH_SHORT)
+                        .show()
+                    clearInProgressState()
+                }
+            } else {
+                Log.w(TAG, "No valid in-progress data to continue.")
+                Toast.makeText(requireContext(), "진행 중인 운동 정보가 없습니다.", Toast.LENGTH_SHORT).show()
+                clearInProgressState()
+            }
+        }
+        binding.mainStopwatchButton.setOnClickListener {
+            Log.d(
+                TAG,
+                "Main stopwatch button in header clicked. ViewModel isRunning: ${stopwatchViewModel.isRunning.value}"
+            )
+
+            // 진행 중인 운동 세션이 유효한지 먼저 확인 (현재 planId와 저장된 planId 일치 여부 등)
+            val isValidInProgressSession = prefs.getBoolean(KEY_IN_PROGRESS, false) &&
+                    prefs.getLong(KEY_SAVED_PLAN_ID, -1L) == planId && // 현재 planId와 일치하는지 확인
+                    planId != -1L &&
+                    prefs.getLong(KEY_SAVED_SCHEDULE_ID, -1L) != -1L
+
+            if (!isValidInProgressSession) {
+                Toast.makeText(
+                    requireContext(),
+                    "현재 진행 중인 운동 세션 정보가 올바르지 않습니다.",
+                    Toast.LENGTH_SHORT
+                ).show()
+                // 필요하다면 clearInProgressState() 호출 또는 UI 강제 갱신
+                return@setOnClickListener
+            }
+
+            if (stopwatchViewModel.isRunning.value == true) {
+                stopwatchViewModel.pauseStopwatch()
+                // ViewModel의 현재 시간을 SharedPreferences에 백업 (앱 재시작 대비)
+                prefs.edit().putLong(KEY_ELAPSED_TIME, stopwatchViewModel.elapsedTime.value ?: 0L)
+                    .apply()
+                Log.d(
+                    TAG,
+                    "Stopwatch paused via header. Elapsed time (${stopwatchViewModel.elapsedTime.value}) saved to prefs."
+                )
+            } else {
+                // ViewModel의 현재 시간부터 이어 시작.
+                // 이 값은 이전에 pause 하면서 저장되었거나, ExerciseDoingFragment에서 업데이트된 값일 수 있음.
+                val timeToStartFrom =
+                    stopwatchViewModel.elapsedTime.value ?: 0L // ViewModel의 현재 시간 사용
+                stopwatchViewModel.startStopwatch(timeToStartFrom)
+                Log.d(TAG, "Stopwatch resumed/started via header from: $timeToStartFrom")
+            }
+        }
+        binding.completeButton.setOnClickListener {
+            Log.d(TAG, "Header Complete button clicked.")
+            val savedScheduleId = prefs.getLong(KEY_SAVED_SCHEDULE_ID, -1L)
+            if (savedScheduleId != -1L) {
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        val finalElapsedTime =
+                            stopwatchViewModel.elapsedTime.value ?: prefs.getLong(
+                                KEY_ELAPSED_TIME,
+                                0L
+                            )
+                        withContext(Dispatchers.Main) {
+                            prefs.edit().putLong(KEY_ELAPSED_TIME, finalElapsedTime).apply()
+                            Log.d(
+                                TAG,
+                                "Saved final elapsed time from header completion: $finalElapsedTime"
+                            )
+                        }
+
+                        val response =
+                            RetrofitClient.scheduleApi.markScheduleAsComplete(savedScheduleId)
+                        withContext(Dispatchers.Main) {
+                            if (!isAdded) return@withContext
+                            if (response.isSuccessful) {
+                                Log.i(
+                                    TAG,
+                                    "Exercise (scheduleId: $savedScheduleId) marked as complete via header."
+                                )
+                                clearInProgressState() // 진행 중 상태 헤더 제거
+
+                                // ★★★ 요구사항 반영: completeButton 클릭 시 스톱워치 초기화 ★★★
+                                stopwatchViewModel.stopStopwatch()
+                                Log.i(
+                                    TAG,
+                                    "Stopwatch explicitly reset after completing exercise via header completeButton."
+                                )
+
+                                loadTodayPlanFromServer() // 목록 새로고침
+                                Toast.makeText(requireContext(), "운동을 완료했습니다!", Toast.LENGTH_SHORT)
+                                    .show()
+                            } else {
+                                Log.e(
+                                    TAG,
+                                    "Failed to mark exercise as complete via header: ${response.code()} ${response.message()}"
+                                )
+                                Toast.makeText(
+                                    requireContext(),
+                                    "운동 완료 처리에 실패했습니다: ${response.message()}",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            if (!isAdded) return@withContext
+                            Log.e(TAG, "Exception marking exercise as complete via header.", e)
+                            Toast.makeText(
+                                requireContext(),
+                                "운동 완료 처리 중 오류: ${e.message}",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }
+            } else {
+                Toast.makeText(requireContext(), "완료할 운동 정보가 없습니다.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun navigateToFirstIncompleteExercise() {
+        if (planId == -1L && currentScheduleList.isEmpty()) {
+            Toast.makeText(
+                requireContext(),
+                "오늘 진행할 운동 계획이 없습니다. 먼저 계획을 로드하거나 추가해주세요.",
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+        val firstIncompleteIndex = currentScheduleList.indexOfFirst { !it.is_completed }
+        if (firstIncompleteIndex != -1) {
+            Log.d(TAG, "Navigating to first incomplete exercise at index $firstIncompleteIndex")
+            // 첫 미완료 운동으로 가는 것은 '새로 시작'이므로 isContinuing = false
+            navigateToExerciseDoingFragment(
+                firstIncompleteIndex,
+                currentScheduleList[firstIncompleteIndex],
+                false
+            )
+        } else if (currentScheduleList.isNotEmpty()) { // 모든 운동 완료
+            Log.i(
+                TAG,
+                "All exercises in current list are completed. Checking for photo upload navigation."
+            )
+            checkAndNavigateToPhotoUploadIfNeeded(true)
+        } else {
+            if (planId != -1L) {
+                Toast.makeText(requireContext(), "운동 계획에 운동이 없습니다. 운동을 추가해주세요.", Toast.LENGTH_SHORT)
+                    .show()
+                findNavController().navigate(
+                    R.id.action_exercise_to_exerciseAdd,
+                    Bundle().apply { putLong("planId", planId) })
+            } else {
+                Toast.makeText(requireContext(), "오늘 진행할 운동 계획이 없습니다.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun checkAndNavigateToPhotoUploadIfNeeded(forceNavigationCheck: Boolean = false) {
+        if (!isAdded || _binding == null) return
+
+        // ★ 조건 추가: 오늘 이미 사진 인증을 완료했는지 확인
+        if (hasPhotoUploadBeenCompletedToday()) {
+            Log.i(TAG, "Photo upload has already been completed today. Skipping navigation.")
+            // 필요하다면 버튼 상태 등을 "오늘 운동 모두 완료" 등으로 업데이트
+            if (currentScheduleList.isNotEmpty() && currentScheduleList.all { it.is_completed }) {
+                updateStartButtonState() // 버튼 텍스트 등을 "오늘 운동 완료"로 업데이트
+            }
+            return
+        }
+
+        if (currentScheduleList.isNotEmpty() && currentScheduleList.all { it.is_completed }) {
+            Log.i(
+                TAG,
+                "All exercises are marked as complete AND photo upload not yet done today. Preparing to navigate to photo upload."
+            )
+
+            val completionTimeMillis = System.currentTimeMillis()
+            val totalDurationMillis =
+                prefs.getLong(KEY_ELAPSED_TIME, 0L) // ExerciseDoingFragment 또는 헤더 완료 버튼에서 저장한 값
+
+            Log.d(
+                TAG,
+                "Photo Upload Nav: CompletionTime=$completionTimeMillis, TotalDuration=$totalDurationMillis (from prefs)"
+            )
+
+            stopwatchViewModel.stopStopwatch() // ViewModel의 스톱워치는 리셋 (전체 세션 종료)
+            // clearInProgressState()는 헤더를 숨기고 관련 prefs를 정리. KEY_ELAPSED_TIME은 남겨둠.
+            // KEY_ELAPSED_TIME은 다음 날 새 운동 시작 시 0으로 리셋되거나,
+            // navigateToExerciseDoingFragment에서 !isContinuing일 때 0으로 리셋됨.
+            prefs.edit().putBoolean(KEY_IN_PROGRESS, false).apply() // 헤더만 숨김
+
+            val args = Bundle().apply {
+                putLong("completion_time_millis", completionTimeMillis)
+                putLong("total_duration_millis", totalDurationMillis)
+            }
+            try {
+                // TODO: 네비게이션 그래프에 action_exercise_to_challengeUpload ID 확인 및 정의
+                val actionId = R.id.action_exercise_to_challengeUpload // 실제 정의된 액션 ID로 변경!
+                findNavController().navigate(actionId, args)
+                Log.i(TAG, "Navigated to ChallengeUploadPhotoFragment.")
+            } catch (e: Exception) {
+                Log.e(
+                    TAG,
+                    "Navigation to ChallengeUploadPhotoFragment failed. Action ID might be missing or incorrect.",
+                    e
+                )
+                Toast.makeText(requireContext(), "사진 인증 화면 이동 실패: ${e.message}", Toast.LENGTH_SHORT)
+                    .show()
+            }
+        } else {
+            if (forceNavigationCheck) Log.d(
+                TAG,
+                "checkAndNavigateToPhotoUploadIfNeeded: Not all exercises completed, list empty, or photo already uploaded today."
+            )
+        }
+    }
+
+
+    private fun navigateToExerciseDoingFragment(
+        index: Int,
+        schedule: ScheduleDto,
+        isContinuing: Boolean
+    ) {
+        if (planId == -1L) {
+            Log.e(TAG, "navigateToExerciseDoingFragment: planId is -1."); Toast.makeText(
+                requireContext(),
+                "유효한 운동 계획 정보가 없습니다.",
+                Toast.LENGTH_SHORT
+            ).show(); return
+        }
+        if (index < 0 || index >= currentScheduleList.size) {
+            Log.e(TAG, "navigateToExerciseDoingFragment: Invalid index $index"); Toast.makeText(
+                requireContext(),
+                "운동 정보를 불러올 수 없습니다 (인덱스 오류).",
+                Toast.LENGTH_SHORT
+            ).show(); return
+        }
+
+        val targetSchedule = currentScheduleList[index] // 이 부분은 schedule 파라미터를 직접 사용해도 됨
+        val args = Bundle().apply {
+            putLong("planId", planId)
+            putInt("initialExerciseIndex", index)
+            putLong("scheduleId", schedule.schedule_id.toLong()) // 파라미터 schedule 사용
+            putLong("exerciseId", schedule.exercise_id.toLong()) // 파라미터 schedule 사용
+            putString("exerciseName", schedule.exercise_name)     // 파라미터 schedule 사용
+            putString("imagePath", schedule.image_path)         // 파라미터 schedule 사용
+            putString("equip", schedule.equip)                 // 파라미터 schedule 사용
+        }
+
+        val editor = prefs.edit()
+        editor.putBoolean(KEY_IN_PROGRESS, true)
+        editor.putLong(KEY_SAVED_PLAN_ID, planId)
+        editor.putInt(KEY_SAVED_EXERCISE_INDEX, index)
+        editor.putLong(KEY_SAVED_SCHEDULE_ID, schedule.schedule_id.toLong())
+        editor.putLong(KEY_SAVED_EXERCISE_ID, schedule.exercise_id.toLong())
+        editor.putString(KEY_SAVED_EXERCISE_NAME, schedule.exercise_name)
+        editor.putString(KEY_SAVED_IMAGE_PATH, schedule.image_path)
+        editor.putString(KEY_SAVED_EQUIP, schedule.equip)
+
+        if (!isContinuing) {
+            editor.putLong(KEY_ELAPSED_TIME, 0L) // 새 운동 시작 시 SharedPreferences의 누적 시간 0으로.
+            stopwatchViewModel.stopStopwatch() // ★ ViewModel 스톱워치 리셋 (시간도 0으로)
+            Log.d(
+                TAG,
+                "Navigating to new exercise: ${schedule.exercise_name}. Resetting stopwatch and elapsed time in ViewModel. KEY_ELAPSED_TIME set to 0."
+            )
+        } else {
+            // 이어하기 시에는 prefs에 저장된 KEY_ELAPSED_TIME (총 누적 시간)을 사용.
+            // ExerciseDoingFragment가 이 값을 읽어 ViewModel의 시간을 설정할 것임.
+            val elapsedTimeForContinuing = prefs.getLong(KEY_ELAPSED_TIME, 0L)
+            // editor.putLong(KEY_ELAPSED_TIME, elapsedTimeForContinuing) // 이미 prefs에 있으므로 다시 쓸 필요는 없음.
+            // 만약 ExerciseDoingFragment가 시작 시 ViewModel을 prefs 값으로 항상 덮어쓴다면 이 줄은 불필요.
+            // 여기서는 KEY_ELAPSED_TIME은 ExerciseDoingFragment에서 관리하는 총 시간을 나타낸다고 가정.
+            Log.d(
+                TAG,
+                "Navigating to continue exercise: ${schedule.exercise_name}. Current KEY_ELAPSED_TIME in prefs for DoingFragment: $elapsedTimeForContinuing."
+            )
+        }
+        editor.apply()
+        findNavController().navigate(R.id.action_exercise_to_exerciseDoing, args)
+    }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        Log.d(TAG, "onDestroyView called")
+        if (::serverAdapter.isInitialized) {
+            binding.exerciseListRecyclerView.adapter = null
+        }
         _binding = null
     }
 }
-
-
-//class ExerciseFragment : Fragment() {
-//
-//    private var _binding: FragmentExerciseBinding? = null
-//    private val binding get() = _binding!!
-//
-//    private lateinit var serverAdapter: ServerExerciseAdapter
-//    private lateinit var db: AppDatabase
-//    private var planId: Long = -1L
-//
-//    override fun onCreateView(
-//        inflater: LayoutInflater,
-//        container: ViewGroup?,
-//        savedInstanceState: Bundle?
-//    ): View {
-//        _binding = FragmentExerciseBinding.inflate(inflater, container, false)
-//        return binding.root
-//    }
-//
-//    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-//        super.onViewCreated(view, savedInstanceState)
-//
-//        db = AppDatabase.getDatabase(requireContext(), viewLifecycleOwner.lifecycleScope)
-//
-//        serverAdapter = ServerExerciseAdapter(emptyList(), db.exerciseDao()) { schedule ->
-//            if (schedule.schedule_id == -1) {
-//                val args = Bundle().apply { putLong("planId", planId) }
-//                findNavController().navigate(R.id.action_exercise_to_exerciseAdd, args)
-//            } else {
-//                val editFragment = ExerciseEditFragment(
-//                    planId = planId,
-//                    exerciseId = schedule.exercise_id.toLong(),
-//                    exerciseName = schedule.exercise_name
-//                ) {
-//                    loadTodayPlanFromServer()
-//                }
-//                editFragment.show(parentFragmentManager, "ExerciseEdit")
-//            }
-//        }
-//
-//        binding.exerciseListRecyclerView.apply {
-//            layoutManager = LinearLayoutManager(requireContext())
-//            adapter = serverAdapter
-//
-//            val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
-//                ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0
-//            ) {
-//                override fun onMove(
-//                    recyclerView: RecyclerView,
-//                    viewHolder: RecyclerView.ViewHolder,
-//                    target: RecyclerView.ViewHolder
-//                ): Boolean {
-//                    val from = viewHolder.adapterPosition
-//                    val to = target.adapterPosition
-//                    if (from >= serverAdapter.getItems().size || to >= serverAdapter.getItems().size) return false
-//                    serverAdapter.moveItem(from, to)
-//                    return true
-//                }
-//
-//                override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {}
-//            })
-//            itemTouchHelper.attachToRecyclerView(this)
-//        }
-//
-//        binding.startExerciseButton.setOnClickListener {
-//            //Toast.makeText(requireContext(), "운동 시작 기능은 아직 구현되지 않았습니다.", Toast.LENGTH_SHORT).show()
-//            val args = Bundle().apply {
-//                putLong("planId", planId)
-//                putInt("initialExerciseIndex", 0) // 0번 운동부터 시작
-//            }
-//            findNavController().navigate(R.id.action_exercise_to_exerciseDoing, args)
-//        }
-//
-//        binding.menuBtn.setOnClickListener {
-//            findNavController().navigate(R.id.action_exercise_to_exerciseList)
-//        }
-//
-//        parentFragmentManager.setFragmentResultListener("sets_updated", viewLifecycleOwner) { _, _ ->
-//            loadTodayPlanFromServer()
-//        }
-//
-//        loadTodayPlanFromServer()
-//    }
-//
-//    override fun onResume() {
-//        super.onResume()
-//        loadTodayPlanFromServer()
-//    }
-//
-//    private fun loadTodayPlanFromServer() {
-//        lifecycleScope.launch(Dispatchers.IO) {
-//            try {
-//                val response = RetrofitClient.scheduleApi.getTodayPlan(userId = 21)
-//                if (response.isSuccessful) {
-//                    val data = response.body()
-//                    planId = data?.plan?.id?.toLong() ?: -1L
-//
-//                    val validSchedules = data?.schedules?.filter { it.exercise_id != 0 } ?: emptyList()
-//                    val enriched = validSchedules.map { schedule ->
-//                        val ex = db.exerciseDao().getExerciseById(schedule.exercise_id.toLong())
-//                        schedule.copy(
-//                            exercise_name = schedule.exercise_name.ifBlank { ex?.name ?: "운동 이름 없음" },
-//                            image_path = ex?.imagePath
-//                        )
-//                    }
-//
-//                    withContext(Dispatchers.Main) {
-//                        serverAdapter.submitList(enriched)
-//                    }
-//                } else {
-//                    Log.e("ExerciseFragment", "❌ 서버 오류: ${response.code()}")
-//                }
-//            } catch (e: Exception) {
-//                Log.e("ExerciseFragment", "❗ 네트워크 오류: ${e.message}")
-//            }
-//        }
-//    }
-//
-//    override fun onDestroyView() {
-//        super.onDestroyView()
-//        _binding = null
-//    }
-//}
-
-
-// 운동탭 메인화면
-//class ExerciseFragment : Fragment() {
-//
-//    private var _binding: FragmentExerciseBinding? = null
-//    private val binding get() = _binding!!
-//
-//    private lateinit var adapter: ExerciseAdapter
-//    private lateinit var planDao: ExercisePlanDao
-//    private lateinit var planDetailDao: PlanDetailDao
-//    private lateinit var db: AppDatabase
-//    private var planId: Long = -1L
-//
-//    override fun onCreateView(
-//        inflater: LayoutInflater,
-//        container: ViewGroup?,
-//        savedInstanceState: Bundle?
-//    ): View {
-//        _binding = FragmentExerciseBinding.inflate(inflater, container, false)
-//        return binding.root
-//    }
-//
-//    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-//        super.onViewCreated(view, savedInstanceState)
-//
-//        db = AppDatabase.getDatabase(requireContext(), lifecycleScope)
-//        planDao = db.exercisePlanDao()
-//        planDetailDao = db.planDetailDao()
-//
-//        parentFragmentManager.setFragmentResultListener(
-//            "sets_updated",
-//            viewLifecycleOwner
-//        ) { _, _ ->
-//            loadTodayPlan()
-//        }
-//
-//        adapter = ExerciseAdapter(requireContext(), this, db) {
-//            lifecycleScope.launch(Dispatchers.IO) {
-//                try {
-//                    val response = RetrofitClient.scheduleApi.getTodayPlan(userId = 21) // 유저 ID 실제 값으로!
-//                    if (response.isSuccessful) {
-//                        val schedules = response.body()?.schedules.orEmpty()
-//
-//                        val newScheduleId = (schedules.maxOfOrNull { it.schedule_id } ?: 0) + 1 // 예측된 다음 스케줄 ID
-//
-//                        Log.d("ExerciseFragment", "🔥 예측된 다음 scheduleId: $newScheduleId")
-//
-//                        withContext(Dispatchers.Main) {
-//                            val args = Bundle().apply {
-//                                putLong("planId", planId) // ✅ 정확한 키
-//                            }
-//                            Log.d("ExerciseFragment", "💡 Add로 넘기는 planId = $planId") // ✅ Log는 밖에서 찍어야 정확히 찍힘
-//
-//                            findNavController().navigate(
-//                                R.id.action_exercise_to_exerciseAdd,
-//                                args
-//                            )
-//                        }
-//                    } else {
-//                        Log.e("ExerciseFragment", "❌ 오늘 스케줄 불러오기 실패: ${response.code()}")
-//                    }
-//                } catch (e: Exception) {
-//                    Log.e("ExerciseFragment", "❗ 네트워크 오류: ${e.localizedMessage}")
-//                }
-//            }
-//        }
-//        binding.exerciseListRecyclerView.apply {
-//            layoutManager = LinearLayoutManager(requireContext())
-//            adapter = this@ExerciseFragment.adapter
-//        }
-//        setupDragAndDrop()
-//        loadTodayPlan()
-//
-//        binding.startExerciseButton.setOnClickListener {
-//            if (planId != -1L) {
-//                val firstIncompleteExerciseIndex =
-//                    adapter.currentList.indexOfFirst { !it.planDetail.isCompleted }
-//
-//                if (firstIncompleteExerciseIndex != -1) {
-//                    val exerciseToStart = adapter.currentList[firstIncompleteExerciseIndex]
-//                    Log.d("ExerciseFragment", "Starting exercise: ${exerciseToStart.exercise.name} at index: $firstIncompleteExerciseIndex")
-//
-//                    findNavController().navigate(
-//                        R.id.action_exercise_to_exerciseDoing,
-//                        Bundle().apply {
-//                            putLong("planId", planId)
-//                            putInt("initialExerciseIndex", firstIncompleteExerciseIndex)
-//                        }
-//                    )
-//                } else {
-//                    // 모든 운동이 완료되었거나 운동이 없는 경우
-//                    Toast.makeText(
-//                        requireContext(),
-//                        "오늘 계획된 운동을 모두 완료했거나, 시작할 운동이 없습니다.",
-//                        Toast.LENGTH_SHORT
-//                    ).show()
-//                }
-//            } else {
-//                Toast.makeText(requireContext(), "오늘 계획된 운동이 없습니다. 운동을 추가해주세요.", Toast.LENGTH_SHORT)
-//                    .show()
-//            }
-//        }
-//        binding.menuBtn.setOnClickListener {
-//            findNavController().navigate(R.id.action_exercise_to_exerciseList)
-//        }
-//    }
-//
-//    override fun onResume() {
-//        super.onResume()
-//        loadTodayPlan()
-//    }
-//
-//    private fun loadTodayPlan() {
-//        lifecycleScope.launch(Dispatchers.IO) {
-//            try {
-//                val response = RetrofitClient.scheduleApi.getTodayPlan(userId = 21)
-//                if (response.isSuccessful) {
-//                    val body = response.body()
-//                    val todayPlanId = body?.plan?.id?.toLong() ?: -1L
-//                    planId = todayPlanId
-//
-//                    val planDetails = planDetailDao.getPlanDetailsForPlanId(todayPlanId)
-//
-//                    val planDetailWithExerciseList = planDetails.mapNotNull { planDetail ->
-//                        val exercise = db.exerciseDao().getExerciseById(planDetail.exerciseId)
-//                        val sets = db.exerciseSetDao().getSetsByPlanAndExerciseId(
-//                            planDetail.exercisePlanId,
-//                            planDetail.exerciseId
-//                        )
-//
-//                        if (exercise != null) {
-//                            PlanDetailWithExercise(planDetail, exercise, sets)
-//                        } else null
-//                    }.sortedBy { it.planDetail.exOrder }
-//
-//                    withContext(Dispatchers.Main) {
-//                        adapter.submitList(planDetailWithExerciseList)
-//                        Log.d("ExerciseFragment", "✅ 오늘의 운동 불러오기 완료: ${planDetailWithExerciseList.size}개")
-//                    }
-//                } else {
-//                    Log.e("ExerciseFragment", "❌ getTodayPlan 실패: ${response.code()}")
-//                }
-//            } catch (e: Exception) {
-//                Log.e("ExerciseFragment", "❗ 오류 발생: ${e.localizedMessage}")
-//            }
-//        }
-//    }
-//
-//    private fun setupDragAndDrop() {
-//        val helper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
-//            ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0
-//        ) {
-//            override fun onMove(
-//                recyclerView: RecyclerView,
-//                viewHolder: RecyclerView.ViewHolder,
-//                target: RecyclerView.ViewHolder
-//            ): Boolean {
-//                val from = viewHolder.bindingAdapterPosition
-//                val to = target.bindingAdapterPosition
-//                // 'Add Exercise' 버튼과 'Cool Down' 섹션은 이동할 수 없도록 방지
-//                if (to >= adapter.currentList.size) return false // 'Add' 버튼 또는 'Cool Down' 영역으로 이동 방지
-//
-//                val newList = adapter.currentList.toMutableList().apply {
-//                    Collections.swap(this, from, to)
-//                }
-//                adapter.submitList(newList)
-//
-//                lifecycleScope.launch(Dispatchers.IO) {
-//                    try {
-//                        val planDetails = planDetailDao.getPlanDetailsForPlanId(planId)
-//                        newList.forEachIndexed { index, item ->
-//                            val planDetail =
-//                                planDetails.find { it.exerciseId == item.planDetail.exerciseId }
-//                            planDetail?.let {
-//                                val updatedPlanDetail = it.copy(exOrder = index)
-//                                planDetailDao.update(updatedPlanDetail)
-//                            }
-//                        }
-//                        withContext(Dispatchers.Main) {
-//                            Toast.makeText(
-//                                requireContext(),
-//                                "운동 순서가 변경되었습니다.",
-//                                Toast.LENGTH_SHORT
-//                            ).show()
-//                        }
-//                    } catch (e: Exception) {
-//                        Log.e("ExerciseFragment", "Error updating exOrder: ${e.message}")
-//                        withContext(Dispatchers.Main) {
-//                            Toast.makeText(
-//                                requireContext(),
-//                                "운동 순서 변경에 실패했습니다: ${e.message}",
-//                                Toast.LENGTH_SHORT
-//                            ).show()
-//                        }
-//                    }
-//                }
-//                return true
-//            }
-//
-//            override fun onSwiped(holder: RecyclerView.ViewHolder, dir: Int) = Unit
-//        })
-//        helper.attachToRecyclerView(binding.exerciseListRecyclerView)
-//    }
-//
-//    override fun onDestroyView() {
-//        super.onDestroyView()
-//        _binding = null
-//    }
-//
-//
-//
-//
-//    private class ExerciseAdapter(
-//        private val context: Context,
-//        private val fragment: Fragment,
-//        private val db: AppDatabase,
-//        private val onAddClick: () -> Unit
-//    ) : ListAdapter<PlanDetailWithExercise, RecyclerView.ViewHolder>(
-//        object : DiffUtil.ItemCallback<PlanDetailWithExercise>() {
-//            override fun areItemsTheSame(
-//                oldItem: PlanDetailWithExercise,
-//                newItem: PlanDetailWithExercise
-//            ): Boolean {
-//                return oldItem.planDetail.exercisePlanId == newItem.planDetail.exercisePlanId &&
-//                        oldItem.planDetail.exerciseId == newItem.planDetail.exerciseId
-//            }
-//
-//            override fun areContentsTheSame(
-//                oldItem: PlanDetailWithExercise,
-//                newItem: PlanDetailWithExercise
-//            ): Boolean {
-//                // isCompleted 값도 비교하여 UI 업데이트가 필요할 때 DiffUtil이 감지하도록 합니다.
-//                return oldItem == newItem &&
-//                        oldItem.planDetail.isCompleted == newItem.planDetail.isCompleted
-//            }
-//        }
-//    ) {
-//        private val TYPE_EXERCISE = 0
-//        private val TYPE_COOLDOWN = 1
-//        private val TYPE_ADD = 2
-//
-//        // currentList.size는 운동 아이템만 포함하므로, 쿨다운(1)과 추가 버튼(1)을 더해야 합니다.
-//        override fun getItemCount() = currentList.size + 2
-//        override fun getItemViewType(position: Int) = when {
-//            position < currentList.size -> TYPE_EXERCISE
-//            position == currentList.size -> TYPE_COOLDOWN
-//            else -> TYPE_ADD
-//        }
-//
-//        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder =
-//            when (viewType) {
-//                TYPE_EXERCISE -> {
-//                    val binding = ItemExerciseBinding.inflate(
-//                        LayoutInflater.from(parent.context),
-//                        parent,
-//                        false
-//                    )
-//                    ExerciseVH(binding)
-//                }
-//
-//                TYPE_COOLDOWN -> {
-//                    val view = LayoutInflater.from(parent.context)
-//                        .inflate(R.layout.item_cool_down, parent, false)
-//                    object : RecyclerView.ViewHolder(view) {}
-//                }
-//
-//                else -> { // TYPE_ADD
-//                    val binding = ItemAddExerciseButtonBinding.inflate(
-//                        LayoutInflater.from(parent.context),
-//                        parent,
-//                        false
-//                    )
-//                    object : RecyclerView.ViewHolder(binding.root) {
-//                        init {
-//                            binding.addExerciseButton.setOnClickListener { onAddClick() }
-//                        }
-//                    }
-//                }
-//            }
-//
-//        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-//            if (holder is ExerciseVH && position < currentList.size) {
-//                val item = currentList[position]
-//                holder.binding.apply {
-//                    fragment.lifecycleScope.launch(Dispatchers.IO) {
-//                        val exerciseSets = db.exerciseSetDao().getSetsByPlanAndExerciseId(
-//                            item.planDetail.exercisePlanId,
-//                            item.exercise.id
-//                        )
-//                        withContext(Dispatchers.Main) {
-//                            val reps = exerciseSets.firstOrNull()?.reps ?: 0
-//                            val setCount = exerciseSets.size
-//                            holder.binding.apply {
-//                                exerciseNameTextView.text = item.exercise.name
-//                                exerciseDetailTextView.text = "${reps}회 X ${setCount}세트"
-//                            }
-//                        }
-//                    }
-//
-//                    val resId = context.resources.getIdentifier(
-//                        item.exercise.imagePath ?: "",
-//                        "drawable",
-//                        context.packageName
-//                    )
-//                    if (item.exercise.imagePath != null) {
-//                        Glide.with(context)
-//                            .asBitmap()
-//                            .load(resId)
-//                            .placeholder(R.drawable.ic_launcher_background)
-//                            .error(R.drawable.ic_launcher_background)
-//                            .into(exerciseImageView)
-//                    } else {
-//                        exerciseImageView.setImageResource(R.drawable.ic_launcher_background)
-//                    }
-//
-//                    // 투명도 (visibility) 설정 부분 추가
-//                    if (item.planDetail.isCompleted) {
-//                        contentLayout.alpha = 0.5f // 변경: contentLayout에 alpha 적용
-//                    } else {
-//                        contentLayout.alpha = 1.0f // 변경: contentLayout에 alpha 적용
-//                    }
-//
-//                    exerciseItem.setOnClickListener {
-//                        fragment.findNavController().navigate(
-//                            R.id.action_exercise_to_exerciseDoing,
-//                            Bundle().apply {
-//                                putLong("planId", item.planDetail.exercisePlanId)
-//                                putInt("initialExerciseIndex", position)
-//                            }
-//                        )
-//                    }
-//                    btnMore.setOnClickListener {
-//                        val dialog = ExerciseEditFragment(
-//                            item.planDetail,
-//                            item.exercise
-//                        ) {
-//                            (fragment as? ExerciseFragment)?.loadTodayPlan()
-//                        }
-//                        dialog.show(fragment.childFragmentManager, ExerciseEditFragment.TAG)
-//                    }
-//                }
-//            } else if (position == currentList.size) { // Cool Down Section
-//                val coolDownListView =
-//                    holder.itemView.findViewById<LinearLayout>(R.id.coolDownListLayoutContainer)
-//                val btnExpand = holder.itemView.findViewById<ImageButton>(R.id.btnExpand)
-//
-//                btnExpand.setOnClickListener {
-//                    coolDownListView.visibility =
-//                        if (coolDownListView.visibility == View.GONE) {
-//                            View.VISIBLE
-//                        } else {
-//                            View.GONE
-//                        }
-//                }
-//            }
-//            // TYPE_ADD (마지막 포지션)은 onBindViewHolder에서 특별히 할 일이 없으므로 비워둡니다.
-//            // 이미 onCreateViewHolder에서 클릭 리스너가 설정되어 있습니다.
-//        }
-//
-//        private class ExerciseVH(val binding: ItemExerciseBinding) :
-//            RecyclerView.ViewHolder(binding.root)
-//    }
-//}

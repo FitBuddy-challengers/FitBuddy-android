@@ -7,6 +7,7 @@ import com.cookandroid.challengers.network.dto.ExerciseDto
 import com.cookandroid.challengers.network.dto.ExerciseSetDto
 
 import com.cookandroid.challengers.network.dto.TodayPlanResponse
+import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.Response
 import retrofit2.http.Body
@@ -25,8 +26,21 @@ interface ExerciseApi {
     // ✅ 전체 운동 목록 가져오기
     @GET("/api/exercises")
     suspend fun getAllExercises(): Response<List<ExerciseDto>>
-}
 
+    // ✅ 특정 운동의 즐겨찾기 상태 변경
+    @PATCH("/api/exercises/{exerciseId}/favorite")
+    suspend fun toggleExerciseFavorite(
+        @Path("exerciseId") exerciseId: Long,
+        @Body request: RetrofitClient.ToggleFavoriteRequest
+    ): Response<RetrofitClient.ExerciseStateUpdateResponse>
+
+    // 숨김 상태 변경
+    @PATCH("/api/exercises/{exerciseId}/hidden")
+    suspend fun toggleExerciseHidden(
+        @Path("exerciseId") exerciseId: Long,
+        @Body request: RetrofitClient.ToggleHiddenRequest
+    ): Response<RetrofitClient.ExerciseStateUpdateResponse>
+}
 
 
 interface ScheduleApi {
@@ -57,7 +71,6 @@ interface ScheduleApi {
     ): Response<RetrofitClient.ScheduleIdResponse>
 
 
-
     @DELETE("/api/schedule/{scheduleId}")
     suspend fun deleteExercise(
         @Path("scheduleId") scheduleId: Long
@@ -71,6 +84,17 @@ interface ScheduleApi {
 
     @POST("/api/schedule/set")
     fun insertSet(@Body set: ExerciseSetEntity): Call<Void>
+
+    @GET("api/plans/{planId}/schedules")
+    suspend fun getSchedulesForPlan(
+        @Path("planId") planId: Long
+    ): Response<List<RetrofitClient.SimpleScheduleItemDto>>
+
+    // 특정 스케줄(운동)을 완료로 표시하는 API
+    @PATCH("/api/schedule/{scheduleId}/complete")
+    suspend fun markScheduleAsComplete(
+        @Path("scheduleId") scheduleId: Long
+    ): Response<Void> // 또는 성공 메시지를 담은 DTO
 
     @POST("/api/schedule/{scheduleId}/change-exercise")
     suspend fun changeExerciseServer(
@@ -111,9 +135,6 @@ interface ScheduleApi {
         @Body sets: List<RetrofitClient.RepsSetDto>
     ): Call<Void>
 
-
-
-
     @GET("/api/schedule/{scheduleId}/exercise-info")
     suspend fun getExerciseInfo(@Path("scheduleId") scheduleId: Long): Response<ExerciseDto>
 
@@ -136,4 +157,15 @@ interface ScheduleApi {
         @Body body: RetrofitClient.SetCompletionRequest
     ): Call<Void>
 
+}
+
+interface ChallengeApi {
+    @GET("/api/challenge-levels")
+    suspend fun getAllLevels(): List<RetrofitClient.ChallengeLevelDto>
+
+    @GET("/api/user-challenge-progress/{userId}")
+    suspend fun getUserChallengeProgress(@Path("userId") userId: Int): RetrofitClient.ChallengeProgressResponse
+
+    @POST("/api/challenge/attendance/{userId}")
+    suspend fun markAttendance(@Path("userId") userId: Int): Response<ResponseBody>
 }

@@ -61,7 +61,9 @@ data class ExerciseDto(
     val mets: Double,
     @SerializedName("is_time_type")
     val isTimeType: Boolean,
-    val is_noise: Boolean
+    val is_noise: Boolean,
+    @SerializedName("is_favorite") val isFavorite: Boolean,
+    @SerializedName("is_hidden") val isHidden: Boolean
 )
 
 data class ExerciseSetDto(

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="70dp"
+    android:layout_height="wrap_content"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:paddingBottom="24dp">
+
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/sivAvatar"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginBottom="4dp"
+        android:padding="1dp"
+        android:src="@drawable/default_profile"
+        app:shapeAppearanceOverlay="@style/CircleShapeAppearance"
+        app:strokeColor="#D6D6D6"
+        app:strokeWidth="1dp" />
+
+    <TextView
+        android:id="@+id/userNameTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:text="슈니"
+        android:textColor="#4F4F4F"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/exerciseProgressTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/pretendard_semi_bold"
+        android:text="7/7"
+        android:textColor="@color/black"
+        android:textSize="14sp" />
+
+</LinearLayout>

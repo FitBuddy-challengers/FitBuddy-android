@@ -16,7 +16,8 @@ class TimeSetAdapter(private val sets: MutableList<TimeSetUiModel>) :
     RecyclerView.Adapter<TimeSetAdapter.ViewHolder>() {
 
     fun addSet() {
-        sets.add(TimeSetUiModel(sets.size + 1, 10, 0f)) // 기본 10분 0kg
+        // 기본값: 0시 10분 0초
+        sets.add(TimeSetUiModel(sets.size + 1, 0, 10, 0, 0f))
         notifyItemInserted(sets.size - 1)
     }
 
@@ -24,29 +25,36 @@ class TimeSetAdapter(private val sets: MutableList<TimeSetUiModel>) :
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         private val setNumberText: TextView = view.findViewById(R.id.setNumberTextView)
-        private val minEdit: EditText = view.findViewById(R.id.weightEditText)    // 분 입력
-        private val weightEdit: EditText = view.findViewById(R.id.repsEditText)   // 무게 입력
+        private val hourEdit: EditText = view.findViewById(R.id.hourEditText)
+        private val minEdit: EditText = view.findViewById(R.id.minEditText)
+        private val secEdit: EditText = view.findViewById(R.id.secEditText)
+        // private val weightEdit: EditText = view.findViewById(R.id.someWeightEditTextId)
         private val deleteButton: ImageButton = view.findViewById(R.id.deleteButton)
 
-        fun bind(set: TimeSetUiModel) {
-            setNumberText.text = "${adapterPosition + 1}세트"
 
-            // 입력 필드에 값 설정
+        fun bind(set: TimeSetUiModel) {
+            setNumberText.text = "${bindingAdapterPosition + 1}세트" // RecyclerView의 최신 위치 사용
+
+            // 3. 시간, 분, 초 값을 EditText에 설정
+            if (hourEdit.text.toString() != set.hours.toString()) {
+                hourEdit.setText(set.hours.toString())
+            }
             if (minEdit.text.toString() != set.minutes.toString()) {
                 minEdit.setText(set.minutes.toString())
             }
-
-            if (weightEdit.text.toString() != set.weight.toString()) {
-                weightEdit.setText(set.weight.toString())
+            if (secEdit.text.toString() != set.seconds.toString()) {
+                secEdit.setText(set.seconds.toString())
             }
 
-            // 값 변경 시 데이터 반영
-            minEdit.doAfterTextChanged {
-                set.minutes = it.toString().toIntOrNull() ?: 0
+            // 값 변경 시 데이터 모델에 반영
+            hourEdit.doAfterTextChanged { text ->
+                sets.getOrNull(bindingAdapterPosition)?.hours = text.toString().toIntOrNull() ?: 0
             }
-
-            weightEdit.doAfterTextChanged {
-                set.weight = it.toString().toFloatOrNull() ?: 0f
+            minEdit.doAfterTextChanged { text ->
+                sets.getOrNull(bindingAdapterPosition)?.minutes = text.toString().toIntOrNull() ?: 0
+            }
+            secEdit.doAfterTextChanged { text ->
+                sets.getOrNull(bindingAdapterPosition)?.seconds = text.toString().toIntOrNull() ?: 0
             }
 
             deleteButton.setOnClickListener {
@@ -54,7 +62,7 @@ class TimeSetAdapter(private val sets: MutableList<TimeSetUiModel>) :
                 if (position != RecyclerView.NO_POSITION) {
                     sets.removeAt(position)
                     notifyItemRemoved(position)
-                    notifyItemRangeChanged(position, sets.size)
+                    notifyItemRangeChanged(position, sets.size - position)
                 }
             }
         }

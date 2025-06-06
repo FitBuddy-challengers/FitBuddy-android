@@ -16,8 +16,7 @@ import com.cookandroid.challengers.data.ExerciseSet
 import com.cookandroid.challengers.data.ExerciseSetDao
 import com.cookandroid.challengers.data.PlanDetail
 import com.cookandroid.challengers.data.PlanDetailDao
-import com.cookandroid.challengers.data.ChallengePersonal
-import com.cookandroid.challengers.data.ChallengePersonalDao
+
 import com.cookandroid.challengers.data.CoolDownStretch
 import com.cookandroid.challengers.data.CoolDownStretchDao
 import com.cookandroid.challengers.data.ExerciseSetEntity
@@ -41,10 +40,10 @@ import java.time.format.DateTimeFormatter
 @Database(
     entities = [
         ExercisePlan::class, Exercise::class, ExerciseSet::class, WeightRecord::class,
-        PlanDetail::class, ChallengePersonal::class, CoolDownStretch::class,
+        PlanDetail::class,  CoolDownStretch::class,
 
     ],
-    version = 1,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(ListConverter::class, LocalDateConverter::class)
@@ -56,7 +55,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun exerciseDao(): ExerciseDao // 운동의 이름, 부위, 장비 등 정보를 담음(설명 등 정보는 프론트에서만)
     abstract fun exerciseSetDao(): ExerciseSetDao // 각 운동 계획별 세트 정보 (PlanDetail 외래키)
     abstract fun planDetailDao(): PlanDetailDao // 한 exercisePlan(날짜)에 담긴 운동 계획(exerciseplan, exercise 외래키)
-    abstract fun challengePersonalDao(): ChallengePersonalDao // 확정x, 개인 챌린지 정보를 담음
+    //abstract fun challengePersonalDao(): ChallengePersonalDao // 확정x, 개인 챌린지 정보를 담음
     abstract fun weightRecordDao(): WeightRecordDao // 확정x, 체중 기록 정보를 담음
 
     companion object {
@@ -94,7 +93,7 @@ abstract class AppDatabase : RoomDatabase() {
                         populateInitialData(
                             database.exerciseDao(),
                             database.coolDownStretchDao(),
-                            database.challengePersonalDao(),
+
                             database.exercisePlanDao(),
                             database.planDetailDao(),
                             database.exerciseSetDao(),
@@ -108,35 +107,35 @@ abstract class AppDatabase : RoomDatabase() {
         private suspend fun populateInitialData(
             exerciseDao: ExerciseDao,
             coolDownStretchDao: CoolDownStretchDao,
-            challengePersonalDao: ChallengePersonalDao,
+
             exercisePlanDao: ExercisePlanDao,
             planDetailDao: PlanDetailDao,
             exerciseSetDao: ExerciseSetDao,
             weightRecordDao: WeightRecordDao
         ) {
-            // 개인챌린지 초기데이터
-            val challenge1 = ChallengePersonal(
-                name = "스쿼트 10번 하기",
-                coinReward = 500,
-                targetCount = 10,
-                currentCount = 4
-            )
-            val challenge2 = ChallengePersonal(
-                name = "런지 5회 하기",
-                coinReward = 300,
-                targetCount = 5,
-            )
-            // 스쿼트 10번 완료 후 활성화
-            val challenge3 = ChallengePersonal(
-                name = "스쿼트 30번 하기",
-                prerequisiteChallengeId = 1,
-                coinReward = 700,
-                targetCount = 30
-            )
+//            // 개인챌린지 초기데이터
+//            val challenge1 =
+//                name = "스쿼트 10번 하기",
+//                coinReward = 500,
+//                targetCount = 10,
+//                currentCount = 4
+//            )
+//            val challenge2 =
+//                name = "런지 5회 하기",
+//                coinReward = 300,
+//                targetCount = 5,
+//            )
+//            // 스쿼트 10번 완료 후 활성화
+//            val challenge3 =
+//                name = "스쿼트 30번 하기",
+//                prerequisiteChallengeId = 1,
+//                coinReward = 700,
+//                targetCount = 30
+//            )
 
-            challengePersonalDao.insert(challenge1)
-            challengePersonalDao.insert(challenge2)
-            challengePersonalDao.insert(challenge3)
+            //challengePersonalDao.insert(challenge1)
+            //challengePersonalDao.insert(challenge2)
+            //challengePersonalDao.insert(challenge3)
 
             val stretch1 =
                 CoolDownStretch(name = "상체 스트레칭", imagePath = "upper_body_stretch", stOrder = 1)

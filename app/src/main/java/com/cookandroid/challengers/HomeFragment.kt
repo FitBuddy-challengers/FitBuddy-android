@@ -1,30 +1,26 @@
 package com.cookandroid.challengers
 
 
+import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.fragment.findNavController
-import androidx.recyclerview.widget.ItemTouchHelper
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.cookandroid.challengers.data.ExercisePlanDao
-import com.cookandroid.challengers.data.PlanDetailDao
-import com.cookandroid.challengers.data.db.AppDatabase
 import com.cookandroid.challengers.databinding.FragmentHomeBinding
+import com.cookandroid.challengers.util.UserPreference
+import com.cookandroid.challengers.api.RetrofitClient
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
-import java.util.TimeZone
+import retrofit2.Response
+import okhttp3.ResponseBody
+import java.time.LocalDate
 
 class HomeFragment : Fragment() {
 
     private var _binding: FragmentHomeBinding? = null
-    private val binding get() = _binding!!  // 안전하게 접근
+    private val binding get() = _binding!!
 
     private lateinit var dateAdapter: DateAdapter
     private lateinit var workoutAdapter: WorkoutAdapter
@@ -44,152 +40,63 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val db = AppDatabase.getDatabase(requireContext(), lifecycleScope)
-        planDao = db.exercisePlanDao()
-        planDetailDao = db.planDetailDao()
+        val userId = UserPreference(requireContext()).getUserId()
+        Log.d("출석", "👉 현재 userId = $userId") // ✅ 디버깅용 로그
 
-        setupButtons()
-        setupDateRecyclerView()
-        setupWorkoutRecyclerView()
-        loadWeekDates()
-        selectedPosition = weekDates.indexOfFirst { it.isToday }.takeIf { it >= 0 } ?: 0
-        selectDate(selectedPosition)
-    }
-
-    override fun onResume() {
-        super.onResume()
-        val calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Seoul")).apply {
-            set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
-            add(Calendar.DAY_OF_MONTH, selectedPosition)
-        }
-        loadWorkoutForDate(calendar)
-    }
-
-    private fun setupButtons() {
-        binding.btnNoti.setOnClickListener {
-            findNavController().navigate(R.id.action_home_to_homeNotiFragment)
-        }
-        binding.btnMypage.setOnClickListener {
-            findNavController().navigate(R.id.action_home_to_homeMypageFragment)
-        }
-        binding.btnAiChat.setOnClickListener {
-            findNavController().navigate(R.id.action_home_to_homeAichatFragment)
-        }
-        binding.btnAddWorkout.setOnClickListener {
-            findNavController().navigate(R.id.action_home_to_exerciseAddFragment)
-        }
-        // 운동 시작 버튼: 수정 필요 - 홈으로 돌아가지 못하는 오류
-        binding.btnStartWorkout.setOnClickListener {
-            findNavController().navigate(
-                R.id.action_home_to_exerciseFragment,
-                null,
-                androidx.navigation.navOptions {
-                    launchSingleTop = true
-                    popUpTo(R.id.homeFragment) {
-                        inclusive = false
-                    }
-                }
-            )
+        // 출석 인증은 하루에 1번!!
+        if (userId != -1 && !AttendanceUtil.hasCheckedAttendanceToday(requireContext())) {
+            Log.d("출석", "🟡 출석 미기록 상태, markAttendance 실행")
+            markAttendance(userId)
+        } else {
+            //Log.d("출석", "🔵 이미 출석 기록됨 또는 userId 무효")
         }
     }
 
-    private fun setupDateRecyclerView() {
-        dateAdapter = DateAdapter(weekDates) { position -> selectDate(position) }
-        binding.rvDate.apply {
-            layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
-            adapter = dateAdapter
-        }
-    }
-
-    private fun setupWorkoutRecyclerView() {
-        workoutAdapter = WorkoutAdapter(
-            requireContext(),
-            this,
-            planDetailDao,
-            onAddClick = { findNavController().navigate(R.id.action_home_to_exerciseAddFragment) }
-        )
-
-        val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
-            ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0
-        ) {
-            override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
-                workoutAdapter.moveItem(viewHolder.bindingAdapterPosition, target.bindingAdapterPosition)
-                return true
-            }
-
-            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {}
-            override fun isLongPressDragEnabled(): Boolean = false
-        })
-
-        binding.rvWorkout.apply {
-            layoutManager = LinearLayoutManager(context)
-            adapter = workoutAdapter
-            itemTouchHelper.attachToRecyclerView(this)
-        }
-
-        workoutAdapter.setDragListener { vh -> itemTouchHelper.startDrag(vh) }
-    }
-
-    private fun loadWeekDates() {
-        weekDates.clear()
-        val today = Calendar.getInstance(TimeZone.getTimeZone("Asia/Seoul"))
-        val base = Calendar.getInstance(TimeZone.getTimeZone("Asia/Seoul")).apply {
-            set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
-        }
-        val sdf = SimpleDateFormat("d", Locale.KOREA)
-        repeat(7) {
-            val isToday = base.get(Calendar.YEAR) == today.get(Calendar.YEAR)
-                    && base.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR)
-            weekDates.add(WeekDate(sdf.format(base.time), isToday, false))
-            base.add(Calendar.DAY_OF_MONTH, 1)
-        }
-        dateAdapter.notifyDataSetChanged()
-    }
-
-    private fun selectDate(position: Int) {
-        selectedPosition = position
-        dateAdapter.setSelectedPosition(position)
-        val calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Seoul")).apply {
-            set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
-            add(Calendar.DAY_OF_MONTH, position)
-        }
-        binding.tvDay.text = SimpleDateFormat("yyyy년 M월 d일", Locale.KOREA).format(calendar.time)
-        loadWorkoutForDate(calendar)
-    }
-
-    private fun loadWorkoutForDate(calendar: Calendar) {
+    private fun markAttendance(userId: Int) {
         lifecycleScope.launch {
-            val todayStart = calendar.apply {
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }.timeInMillis
-            val todayEnd = todayStart + 24 * 60 * 60 * 1000 - 1
-
-            val plans = planDao.getExercisePlansByDateRange(todayStart, todayEnd)
-            if (plans.isNotEmpty()) {
-                planId = plans.first().id
-                val list = planDetailDao.getPlanDetailsWithExerciseOnce(planId).sortedBy { it.planDetail.exOrder }
-
-                workoutAdapter.submitList(list)
-
-                // 게이지
-                val completed = list.count { it.planDetail.isCompleted }
-                val total = list.size
-                val percent = if (total > 0) (completed * 100 / total) else 0
-                binding.uiGauge.progress = percent
-
-            } else {
-                workoutAdapter.submitList(emptyList())
-                binding.uiGauge.progress = 0
+            try {
+                val response: Response<ResponseBody> = RetrofitClient.challengeApi.markAttendance(userId)
+                if (response.isSuccessful) {
+                    Log.d("출석 처리", "✅ 오늘 출석 성공!")
+                    AttendanceUtil.markAttendanceToday(requireContext()) // ✅ 출석 기록
+                    parentFragmentManager.setFragmentResult("attendance_done", Bundle())
+                } else {
+                    Log.w("출석 실패", "⚠️ 서버 응답 실패: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                Log.e("출석 실패", "❌ 네트워크 오류: ${e.message}")
             }
         }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        _binding = null // 메모리 누수 방지!
+        _binding = null
+    }
+}
+
+// ✅ 하루에 한 번 출석 여부를 저장하고 확인하는 유틸
+object AttendanceUtil {
+
+    private const val PREF_NAME = "AttendancePrefs"
+    private const val KEY_LAST_ATTENDANCE_DATE = "last_attendance_date"
+
+    fun hasCheckedAttendanceToday(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        val lastDate = prefs.getString(KEY_LAST_ATTENDANCE_DATE, null)
+        val today = getTodayDate()
+        Log.d("출석", "📌 hasCheckedAttendanceToday: lastDate=$lastDate, today=$today")
+        return lastDate == today
     }
 
+    fun markAttendanceToday(context: Context) {
+        val today = getTodayDate()
+        Log.d("출석", "✅ markAttendanceToday: 저장됨 → $today")
+        val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_LAST_ATTENDANCE_DATE, today).apply()
+    }
+
+    private fun getTodayDate(): String {
+        return LocalDate.now().toString() // 예: "2025-06-03"
+    }
 }

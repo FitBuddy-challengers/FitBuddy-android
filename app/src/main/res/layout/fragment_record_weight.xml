@@ -2,14 +2,14 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:paddingBottom="80dp">
 
     <ScrollView
         android:id="@+id/scrollView"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:fillViewport="true"
-        android:layout_marginBottom="180dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -20,13 +20,12 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="16dp"
-            android:layout_marginBottom="180dp">
+            android:paddingTop="32dp">
 
             <TextView
                 android:id="@+id/tvWeightDateRange"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
                 android:text="25년 7월 21일 ~ 7월 27일"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -34,7 +33,7 @@
             <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="250dp"
-                android:layout_marginBottom="8dp">
+                android:layout_marginTop="16dp">
 
                 <com.github.mikephil.charting.charts.LineChart
                     android:id="@+id/weightChart"
@@ -52,49 +51,59 @@
                     android:textSize="12sp" />
             </FrameLayout>
 
-            <com.google.android.material.button.MaterialButtonToggleGroup
-                android:id="@+id/periodToggleWeight"
-                android:layout_width="wrap_content"
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginBottom="24dp"
-                app:selectionRequired="true"
-                app:singleSelection="true">
+                android:layout_marginHorizontal="60dp"
+                android:layout_marginTop="24dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@android:color/transparent"
+                app:strokeWidth="0dp">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnWeekWeight"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="1주" />
+                <com.google.android.material.tabs.TabLayout
+                    android:id="@+id/periodWeightTabLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="37dp"
+                    android:background="@drawable/bg_gray_line_round30"
+                    app:tabBackground="@drawable/tabs_selector"
+                    app:tabGravity="fill"
+                    app:tabIndicatorColor="@android:color/transparent"
+                    app:tabIndicatorHeight="0dp"
+                    app:tabMode="fixed"
+                    app:tabRippleColor="@android:color/transparent"
+                    app:tabSelectedTextAppearance="@style/TabTextAppearance.Selected"
+                    app:tabSelectedTextColor="@color/blue"
+                    app:tabTextAppearance="@style/TabTextAppearance.Default"
+                    app:tabTextColor="@color/black">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnMonthWeight"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="1달" />
+                    <com.google.android.material.tabs.TabItem
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="1주" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnYearWeight"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="1년" />
+                    <com.google.android.material.tabs.TabItem
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="1달" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnAllWeight"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="전체" />
-            </com.google.android.material.button.MaterialButtonToggleGroup>
+                    <com.google.android.material.tabs.TabItem
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="1년" />
+
+                    <com.google.android.material.tabs.TabItem
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="전체" />
+
+                </com.google.android.material.tabs.TabLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <TextView
                 android:id="@+id/tvFatDateRange"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
+                android:layout_marginTop="56dp"
                 android:text="25년 7월 21일 ~ 7월 27일"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -102,7 +111,7 @@
             <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="250dp"
-                android:layout_marginBottom="8dp">
+                android:layout_marginTop="16dp">
 
                 <com.github.mikephil.charting.charts.LineChart
                     android:id="@+id/fatChart"
@@ -120,48 +129,59 @@
                     android:textSize="12sp" />
             </FrameLayout>
 
-            <com.google.android.material.button.MaterialButtonToggleGroup
-                android:id="@+id/periodToggleFat"
-                android:layout_width="wrap_content"
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginBottom="16dp"
-                app:selectionRequired="true"
-                app:singleSelection="true">
+                android:layout_marginHorizontal="60dp"
+                android:layout_marginTop="24dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@android:color/transparent"
+                app:strokeWidth="0dp">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnWeekFat"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="1주" />
+                <com.google.android.material.tabs.TabLayout
+                    android:id="@+id/periodFatTabLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="37dp"
+                    android:background="@drawable/bg_gray_line_round30"
+                    app:tabBackground="@drawable/tabs_selector"
+                    app:tabGravity="fill"
+                    app:tabIndicatorColor="@android:color/transparent"
+                    app:tabIndicatorHeight="0dp"
+                    app:tabMode="fixed"
+                    app:tabRippleColor="@android:color/transparent"
+                    app:tabSelectedTextAppearance="@style/TabTextAppearance.Selected"
+                    app:tabSelectedTextColor="@color/blue"
+                    app:tabTextAppearance="@style/TabTextAppearance.Default"
+                    app:tabTextColor="@color/black">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnMonthFat"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="1달" />
+                    <com.google.android.material.tabs.TabItem
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="1주" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnYearFat"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="1년" />
+                    <com.google.android.material.tabs.TabItem
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="1달" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnAllFat"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="전체" />
-            </com.google.android.material.button.MaterialButtonToggleGroup>
+                    <com.google.android.material.tabs.TabItem
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="1년" />
+
+                    <com.google.android.material.tabs.TabItem
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="전체" />
+
+                </com.google.android.material.tabs.TabLayout>
+            </com.google.android.material.card.MaterialCardView>
+
             <TextView
                 android:id="@+id/tvMuscleDateRange"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
+                android:layout_marginTop="56dp"
                 android:text="25년 7월 21일 ~ 7월 27일"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -169,7 +189,7 @@
             <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="250dp"
-                android:layout_marginBottom="8dp">
+                android:layout_marginTop="16dp">
 
                 <com.github.mikephil.charting.charts.LineChart
                     android:id="@+id/muscleChart"
@@ -187,44 +207,53 @@
                     android:textSize="12sp" />
             </FrameLayout>
 
-            <com.google.android.material.button.MaterialButtonToggleGroup
-                android:id="@+id/periodToggleMuscle"
-                android:layout_width="wrap_content"
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginBottom="16dp"
-                app:selectionRequired="true"
-                app:singleSelection="true">
+                android:layout_marginHorizontal="60dp"
+                android:layout_marginTop="24dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@android:color/transparent"
+                app:strokeWidth="0dp">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnWeekMuscle"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="1주" />
+                <com.google.android.material.tabs.TabLayout
+                    android:id="@+id/periodMuscleTabLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="37dp"
+                    android:background="@drawable/bg_gray_line_round30"
+                    app:tabBackground="@drawable/tabs_selector"
+                    app:tabGravity="fill"
+                    app:tabIndicatorColor="@android:color/transparent"
+                    app:tabIndicatorHeight="0dp"
+                    app:tabMode="fixed"
+                    app:tabRippleColor="@android:color/transparent"
+                    app:tabSelectedTextAppearance="@style/TabTextAppearance.Selected"
+                    app:tabSelectedTextColor="@color/blue"
+                    app:tabTextAppearance="@style/TabTextAppearance.Default"
+                    app:tabTextColor="@color/black">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnMonthMuscle"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="1달" />
+                    <com.google.android.material.tabs.TabItem
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="1주" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnYearMuscle"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="1년" />
+                    <com.google.android.material.tabs.TabItem
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="1달" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnAllMuscle"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="전체" />
-            </com.google.android.material.button.MaterialButtonToggleGroup>
+                    <com.google.android.material.tabs.TabItem
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="1년" />
 
+                    <com.google.android.material.tabs.TabItem
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="전체" />
+
+                </com.google.android.material.tabs.TabLayout>
+            </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
     </ScrollView>
 
@@ -233,13 +262,13 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="end|bottom"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="32dp"
         android:backgroundTint="@color/blue"
         android:src="@drawable/btn_floating"
-        android:tint="@color/white"
         app:elevation="0dp"
-        android:layout_marginBottom="128dp"
-        android:layout_marginEnd="16dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toEndOf="parent"
+        app:tint="@color/white" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
