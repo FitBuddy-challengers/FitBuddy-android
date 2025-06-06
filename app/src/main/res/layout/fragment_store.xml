@@ -16,8 +16,55 @@
         android:textColor="@color/black"
         android:textSize="24sp"
         android:textStyle="bold"
+        android:layout_marginTop="50dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:layout_marginTop="11dp"
+        android:padding="5dp"
+        android:background="@drawable/btn_rectangle_round30"
+        android:backgroundTint="@color/light_gray2"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="@id/tvStoreTitle"
+        app:layout_constraintTop_toTopOf="@id/tvStoreTitle">
+
+
+        <TextView
+            android:id="@+id/userLevelTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="11dp"
+            android:textSize="14sp"
+            android:textColor="@color/black"
+            tools:text="Lv.8" />
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="11dp"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            android:background="@android:color/darker_gray" />
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_coin" />
+
+        <TextView
+            android:id="@+id/userCoinTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="11dp"
+            android:textSize="13sp"
+            android:textColor="@color/black"
+            tools:text="2500" />
+
+    </LinearLayout>
 
     <FrameLayout
         android:id="@+id/characterContainer"
@@ -37,6 +84,30 @@
             android:adjustViewBounds="true"
             android:scaleType="fitCenter"
             android:src="@drawable/char_graycat" />
+
+        <ImageView
+            android:id="@+id/costumeItemImageView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"
+            android:visibility="gone"
+            tools:src="@drawable/char_graycat" />
+
+        <ImageView
+            android:id="@+id/hairAccItemImageView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"
+            android:visibility="gone"
+            tools:src="@drawable/char_graycat" />
+
+        <ImageView
+            android:id="@+id/glassesItemImageView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"
+            android:visibility="gone"
+            tools:src="@drawable/char_graycat" />
 
         <ImageView
             android:id="@+id/topItemImageView"
@@ -69,27 +140,7 @@
             android:scaleType="fitCenter"
             android:visibility="gone"
             tools:src="@drawable/char_graycat" />
-        <ImageView
-            android:id="@+id/hairAccItemImageView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:scaleType="fitCenter"
-            android:visibility="gone"
-            tools:src="@drawable/char_graycat" />
-        <ImageView
-            android:id="@+id/glassesItemImageView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:scaleType="fitCenter"
-            android:visibility="gone"
-            tools:src="@drawable/char_graycat" />
-        <ImageView
-            android:id="@+id/costumeItemImageView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:scaleType="fitCenter"
-            android:visibility="gone"
-            tools:src="@drawable/char_graycat" />
+
     </FrameLayout>
 
     <View
@@ -101,12 +152,13 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
-    <Button
+    <ImageButton
         android:id="@+id/btnOpenStore"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="96dp"
-        android:text="상점 열기"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/btn_open_store"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>
