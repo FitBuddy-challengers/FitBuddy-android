@@ -25,28 +25,28 @@ class AiWorkoutRepository(
 
             val existingExercise = exerciseDao.getExerciseByName(name)
 
-            val exercise = if (existingExercise != null) {
-                existingExercise
-            } else {
-                // 임시 처리, 삭제 필
-                val newExercise = Exercise(
-                    name = name,
-                    part = "기타",
-                    equip = "맨몸",
-                    mets = 3.0
-                )
-                val newId = exerciseDao.insert(newExercise)
-                newExercise.copy(id = newId)
-            }
-
-            val planDetail = PlanDetail(
-                exercisePlanId = planId,
-                exerciseId = exercise.id,
-                exOrder = index,
-                reps = reps ?: 10,
-                sets = sets ?: 3
-            )
-            planDetailDao.insert(planDetail)
+//            val exercise = if (existingExercise != null) {
+//                existingExercise
+//            } else {
+//                // 임시 처리, 삭제 필
+//                val newExercise = Exercise(
+//                    name = name,
+//                    part = "기타",
+//                    equip = "맨몸",
+//                    mets = 3.0
+//                )
+//                val newId = exerciseDao.insert(newExercise)
+//                newExercise.copy(id = newId)
+//            }
+//
+//            val planDetail = PlanDetail(
+//                exercisePlanId = planId,
+//                exerciseId = exercise.id,
+//                exOrder = index,
+//                reps = reps ?: 10,
+//                sets = sets ?: 3
+//            )
+//            planDetailDao.insert(planDetail)
         }
         return@withContext planId
     }

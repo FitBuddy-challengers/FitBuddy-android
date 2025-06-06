@@ -1,17 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="40dp"
-    android:layout_height="40dp"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
     android:orientation="vertical"
     android:gravity="center"
-    android:layout_marginStart="4dp"
-    android:layout_marginEnd="4dp">
+    android:padding="4dp">
 
     <TextView
         android:id="@+id/tvDate"
-        style="@style/tvWeekLayout"
+        android:layout_width="43.8dp"
+        android:layout_height="43.8dp"
+        android:gravity="center"
         android:text="1"
-        android:textSize="22dp"
-        android:layout_weight="1"
-        android:background="@drawable/bg_date_default" />
+        android:textSize="22sp"
+        android:background="@drawable/bg_date_default"
+        android:textColor="@color/black"
+        android:layout_gravity="center"
+        android:fontFamily="@font/pretendard_bold"/>
 </LinearLayout>

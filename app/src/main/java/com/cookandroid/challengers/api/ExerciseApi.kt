@@ -166,6 +166,9 @@ interface ChallengeApi {
     @GET("/api/user-challenge-progress/{userId}")
     suspend fun getUserChallengeProgress(@Path("userId") userId: Int): RetrofitClient.ChallengeProgressResponse
 
+//    @POST("/api/challenge/attendance/{userId}")
+//    suspend fun markAttendance(@Path("userId") userId: Int): Response<ResponseBody>
+
     @POST("/api/challenge/attendance/{userId}")
-    suspend fun markAttendance(@Path("userId") userId: Int): Response<ResponseBody>
+    fun markAttendance(@Path("userId") userId: Int): Call<ResponseBody>
 }

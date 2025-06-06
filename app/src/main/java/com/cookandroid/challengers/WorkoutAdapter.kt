@@ -26,8 +26,8 @@ class WorkoutAdapter(
 ) : ListAdapter<PlanDetailWithExercise, RecyclerView.ViewHolder>(DiffCallback()) {
 
     private val TYPE_EXERCISE = 0
-    private val TYPE_COOLDOWN = 1
-    private val TYPE_ADD = 2
+//    private val TYPE_COOLDOWN = 1
+//    private val TYPE_ADD = 2
 
     private var dragListener: ((RecyclerView.ViewHolder) -> Unit)? = null
     fun setDragListener(listener: (RecyclerView.ViewHolder) -> Unit) {
@@ -47,20 +47,20 @@ class WorkoutAdapter(
         if (holder is ExerciseViewHolder && position < currentList.size) {
             val item = currentList[position]
             holder.binding.apply {
-                tvWorkoutName.text = item.exercise.name
-                tvWorkoutDetail1.text = "${item.planDetail.reps}회"
-                tvWorkoutDetail2.text = "${item.planDetail.sets}세트"
-
-                btnMore.setOnClickListener {
-                    val dialog = ExerciseEditFragment(item.planDetail, item.exercise) {
-                        if (fragment is HomeFragment) {
-                            fragment.onResume()
-                        } else if (fragment is ExerciseFragment) {
-                            fragment.loadTodayPlan()
-                        }
-                    }
-                    dialog.show(fragment.childFragmentManager, ExerciseEditFragment.TAG)
-                }
+////                tvWorkoutName.text = item.exercise.name
+////                tvWorkoutDetail1.text = "${item.planDetail.reps}회"
+////                tvWorkoutDetail2.text = "${item.planDetail.sets}세트"
+//
+//                btnMore.setOnClickListener {
+//                    val dialog = ExerciseEditFragment(item.planDetail, item.exercise) {
+//                        if (fragment is HomeFragment) {
+//                            fragment.onResume()
+//                        } else if (fragment is ExerciseFragment) {
+//                            fragment.loadTodayPlan()
+//                        }
+//                    }
+//                    dialog.show(fragment.childFragmentManager, ExerciseEditFragment.TAG)
+//                }
 
                 workout.setOnClickListener {
                     fragment.findNavController().navigate(

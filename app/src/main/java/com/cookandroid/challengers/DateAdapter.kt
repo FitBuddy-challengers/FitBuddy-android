@@ -1,5 +1,6 @@
 package com.cookandroid.challengers
 
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -16,6 +17,7 @@ class DateAdapter(
 
     inner class DateViewHolder(val binding: ItemDateBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(weekDate: WeekDate, position: Int) {
+            Log.d("DateAdapter", "📅 날짜 바인딩됨: ${weekDate.date}")
 
             binding.tvDate.text = weekDate.date
             binding.tvDate.visibility = View.VISIBLE
