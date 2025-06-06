@@ -94,6 +94,11 @@ object RetrofitClient {
         val schedules: List<ScheduleDto>
     )
 
+    data class TodayPlanRequest(
+        @SerializedName("user_id") val userId: Int,
+        val date: String
+    )
+
 //    data class PlanDto(
 //        val id: Int,
 //        @SerializedName("date") val date: String

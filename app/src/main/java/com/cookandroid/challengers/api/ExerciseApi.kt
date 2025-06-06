@@ -40,6 +40,12 @@ interface ExerciseApi {
         @Path("exerciseId") exerciseId: Long,
         @Body request: RetrofitClient.ToggleHiddenRequest
     ): Response<RetrofitClient.ExerciseStateUpdateResponse>
+
+    @POST("/api/today-plan")
+    fun getTodayPlan(
+        @Body request: RetrofitClient.TodayPlanRequest
+    ): Call<TodayPlanResponse>
+
 }
 
 
