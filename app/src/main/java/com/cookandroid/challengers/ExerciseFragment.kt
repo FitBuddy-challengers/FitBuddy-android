@@ -101,6 +101,7 @@ class ExerciseFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         Log.d(TAG, "onViewCreated called")
+        (activity as? MainActivity)?.setBottomNavSelected(R.id.homeFragment)
 
         serverAdapter = ServerExerciseAdapter(
             exerciseDao = db.exerciseDao(),
@@ -211,6 +212,7 @@ class ExerciseFragment : Fragment() {
             Log.d(TAG, "Menu button clicked, navigating to exercise list")
             findNavController().navigate(R.id.action_exercise_to_exerciseList)
         }
+
 
         parentFragmentManager.setFragmentResultListener(
             ExerciseEditFragment.REQUEST_KEY_EXERCISE_EDIT,

@@ -100,6 +100,13 @@
         <action
             android:id="@+id/action_exercise_to_challengeUpload"
             app:destination="@id/challengeUploadPhotoFragment" />
+
+<!--        &lt;!&ndash; 🚨 운동 → 홈 화면으로 이동 (운동 완료 후 홈으로 복귀용) &ndash;&gt;-->
+<!--        <action-->
+<!--            android:id="@+id/action_exercise_to_home"-->
+<!--            app:destination="@id/homeFragment"-->
+<!--            app:popUpTo="@id/nav_graph_main"-->
+<!--            app:popUpToInclusive="true" />-->
     </fragment>
 
     <fragment

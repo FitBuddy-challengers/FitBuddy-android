@@ -7,8 +7,10 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import com.cookandroid.challengers.databinding.FragmentHomeBinding
 import com.cookandroid.challengers.util.UserPreference
 import com.cookandroid.challengers.api.RetrofitClient
@@ -19,6 +21,8 @@ import java.time.LocalDate
 import java.time.DayOfWeek
 import java.time.format.DateTimeFormatter
 import androidx.recyclerview.widget.LinearLayoutManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 class HomeFragment : Fragment() {
@@ -60,6 +64,9 @@ class HomeFragment : Fragment() {
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
         val displayFormatter = DateTimeFormatter.ofPattern("d")
 
+        val formattedDate = today.format(DateTimeFormatter.ofPattern("yyyy년 M월 d일"))
+        binding.tvDay.text = formattedDate
+
         //  정확하게 이번 주 '일요일'부터 시작 (한국식)
         val dayOfWeek = today.dayOfWeek.value // 월=1, ... 일=7
         val daysFromSunday = if (dayOfWeek == 7) 0 else dayOfWeek
@@ -92,6 +99,12 @@ class HomeFragment : Fragment() {
             binding.tvDay.text = displayText
         }
         binding.rvDate.adapter = dateAdapter
+
+        loadTodayWorkoutPlan()
+
+        binding.btnStartWorkout.setOnClickListener {
+            findNavController().navigate(R.id.action_home_to_exerciseFragment)
+        }
     }
 
     private fun markAttendance(userId: Int) {
@@ -116,6 +129,79 @@ class HomeFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    private fun loadTodayWorkoutPlan() {
+        val userId = UserPreference(requireContext()).getUserId()
+        if (userId == -1) {
+            Toast.makeText(requireContext(), "로그인이 필요합니다", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val response = RetrofitClient.scheduleApi.getTodayPlan(userId)
+                if (response.isSuccessful) {
+                    val data = response.body()
+                    planId = data?.plan?.id?.toLong() ?: -1L
+                    val scheduleList = data?.schedules ?: emptyList()
+
+                    Log.d("HomeFragment", "📦 planId: $planId, 스케줄 수: ${scheduleList.size}")
+
+                    val workoutItems = mutableListOf<WorkoutUiModel>()
+
+                    for (schedule in scheduleList) {
+                        try {
+                            val call = RetrofitClient.scheduleApi.getRepsSets(schedule.schedule_id.toLong())
+                            val repsResponse = call.execute() // execute()는 IO 스레드 안에서 호출 중이므로 OK
+
+                            if (repsResponse.isSuccessful) {
+                                val repsSets = repsResponse.body() ?: emptyList()
+                                if (repsSets.isNotEmpty()) {
+                                    val reps = repsSets.first().reps
+                                    val sets = repsSets.size
+                                    val name = schedule.exercise_name
+
+                                    workoutItems.add(
+                                        WorkoutUiModel(
+                                            scheduleId = schedule.schedule_id.toLong(),
+                                            name = name,
+                                            reps = reps,
+                                            sets = sets
+                                        )
+                                    )
+                                }
+                            } else {
+                                Log.w("HomeFragment", "❗ reps 불러오기 실패: scheduleId=${schedule.schedule_id}")
+                            }
+                        } catch (e: Exception) {
+                            Log.e("HomeFragment", "🔥 reps 요청 중 예외 발생: scheduleId=${schedule.schedule_id}", e)
+                        }
+                    }
+
+                    // UI 업데이트는 Main Thread에서!
+                    withContext(Dispatchers.Main) {
+                        Log.d("HomeFragment", "🎯 최종 workout 개수: ${workoutItems.size}")
+                        // 👉 다음 단계에서 RecyclerView 어댑터에 연결할 예정
+                        // 👉 어댑터 생성 및 연결 (단 한 번만 실행)
+                        workoutAdapter = WorkoutAdapter { workoutItem ->
+                            Log.d("HomeFragment", "🟡 More 클릭된 운동: ${workoutItem.name}")
+                            // TODO: 여기에 운동 수정 Fragment 연결 가능
+                        }
+                        binding.rvWorkout.adapter = workoutAdapter
+
+                        // 👉 리스트 제출
+                        workoutAdapter.submitList(workoutItems)
+
+                    }
+
+                } else {
+                    Log.e("HomeFragment", "❌ 계획 불러오기 실패: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                Log.e("HomeFragment", "🚨 네트워크 오류", e)
+            }
+        }
     }
 }
 
