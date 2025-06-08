@@ -1,5 +1,6 @@
 package com.cookandroid.challengers.api
 
+import com.cookandroid.challengers.ProductItem
 import com.cookandroid.challengers.data.ExerciseSetEntity
 import com.cookandroid.challengers.network.dto.DummyPlanRequest
 import com.cookandroid.challengers.network.dto.DummyPlanResponse
@@ -18,6 +19,7 @@ import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
+
 
 interface ExerciseApi {
     @POST("/api/create-dummy-plan")
@@ -177,4 +179,16 @@ interface ChallengeApi {
 
     @POST("/api/challenge/attendance/{userId}")
     fun markAttendance(@Path("userId") userId: Int): Call<ResponseBody>
+}
+interface StoreApi {
+    @POST("/api/store/purchase")
+    suspend fun purchaseItem(
+        @Body request: RetrofitClient.PurchaseRequest
+    ): Response<RetrofitClient.PurchaseResponse>
+
+    //  특정 사용자가 소유한 아이템 ID 목록을 가져오는 API
+    @GET("/api/store/owned-items")
+    suspend fun getOwnedItemIds(
+        @Query("userId") userId: Int
+    ): Response<List<Int>> // 예시: [1, 101, 102, 401] 형태의 응답을 기대
 }

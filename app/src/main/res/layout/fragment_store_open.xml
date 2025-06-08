@@ -24,7 +24,7 @@
         app:tabGravity="fill"
         app:tabIconTint="@color/selector_tab_icon_tint"
         app:tabIndicatorColor="@android:color/transparent"
-       />
+        />
 
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/view_pager_store"

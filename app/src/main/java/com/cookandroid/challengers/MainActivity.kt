@@ -3,7 +3,6 @@ package com.cookandroid.challengers
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
@@ -16,7 +15,6 @@ import com.cookandroid.challengers.data.db.AppDatabase
 import com.cookandroid.challengers.databinding.ActivityMainBinding
 import com.cookandroid.challengers.network.dto.DummyPlanRequest
 import com.cookandroid.challengers.network.dto.DummyPlanResponse
-import com.cookandroid.challengers.network.dto.TodayPlanResponse
 import com.cookandroid.challengers.util.UserPreference // UserPreference 임포트
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -63,13 +61,6 @@ class MainActivity : AppCompatActivity() {
                 }
                 R.id.exerciseFragment -> {
                     if (currentDest != R.id.exerciseFragment) {
-                        val userId = userPreference.getUserId()
-                        if (userId == -1) {
-                            Toast.makeText(this, "운동 정보를 불러올 수 없습니다.", Toast.LENGTH_SHORT).show()
-                            return@setOnItemSelectedListener true
-                        }
-
-                        // ✅ 운동 탭은 계획 여부와 관계없이 진입할 수 있어야 함
                         navController.navigate(
                             R.id.exerciseFragment,
                             null,
@@ -223,28 +214,6 @@ class MainActivity : AppCompatActivity() {
                 }
             })
     }
-
-    // 💥 RetrofitClient.exerciseApi.getTodayPlan()은 Call<TodayPlanResponse> 타입이어야 합니다!
-    private fun checkHasValidExercisePlan(userId: Int, callback: (Boolean) -> Unit) {
-        val today = LocalDate.now().toString()
-        val request = RetrofitClient.TodayPlanRequest(userId = userId, date = today) // ✅ 이 줄 추가
-
-        RetrofitClient.exerciseApi.getTodayPlan(request)
-            .enqueue(object : Callback<TodayPlanResponse> {
-                override fun onResponse(
-                    call: Call<TodayPlanResponse>,
-                    response: Response<TodayPlanResponse>
-                ) {
-                    val plan = response.body()
-                    callback(plan?.schedules?.isNotEmpty() == true) // schedules 또는 scheduleList
-                }
-
-                override fun onFailure(call: Call<TodayPlanResponse>, t: Throwable) {
-                    callback(false)
-                }
-            })
-    }
-
 
     fun showBottomNav() {
         binding.mainBnv.visibility = View.VISIBLE

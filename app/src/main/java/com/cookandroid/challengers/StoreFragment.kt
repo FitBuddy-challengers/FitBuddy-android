@@ -7,20 +7,13 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageButton // Button -> ImageButton으로 수정
-import android.widget.ImageView
-import android.widget.TextView // TextView 임포트 추가
-import android.widget.Toast
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.lifecycleScope
-import com.cookandroid.challengers.api.RetrofitClient
-import com.cookandroid.challengers.util.UserPreference // UserPreference 임포트
-import kotlinx.coroutines.launch
+import com.cookandroid.challengers.databinding.FragmentStoreBinding // ★ View Binding 임포트
+import com.cookandroid.challengers.util.UserPreference
 
-// 캐릭터&아이템 레이어 상수
+// ★ 캐릭터&아이템 레이어 상수 (변경 없음)
 private const val ELEVATION_BEHIND_CHARACTER = 1f
 private const val ELEVATION_CHARACTER = 2f
 private const val ELEVATION_CLOTHING_BOTTOM = 3f
@@ -34,121 +27,77 @@ private const val ELEVATION_ACCESSORY_FRONT = 6.2f
 
 class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListener {
 
-    private lateinit var btnOpenStore: ImageButton // ★ 타입 ImageButton으로 변경
-    private lateinit var placeholderView: View
-    private lateinit var rootLayout: ConstraintLayout
+    // ★ View Binding으로 수정
+    private var _binding: FragmentStoreBinding? = null
+    private val binding get() = _binding!!
+
     private lateinit var storeViewModel: StoreViewModel
-    private lateinit var characterImageView: ImageView
-    private lateinit var topItemImageView: ImageView
-    private lateinit var pantsItemImageView: ImageView
-    private lateinit var onepieceItemImageView: ImageView
-    private lateinit var accItemImageView: ImageView
-    private lateinit var costumeItemImageView: ImageView
-    private lateinit var hairAccItemImageView: ImageView
-    private lateinit var glassesItemImageView: ImageView
-    // ★ 레벨과 코인을 표시할 TextView 추가
-    private lateinit var userLevelTextView: TextView
-    private lateinit var userCoinTextView: TextView
-    private lateinit var userPreference: UserPreference // ★ UserPreference 추가
+    private lateinit var userPreference: UserPreference
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        val view = inflater.inflate(R.layout.fragment_store, container, false)
-        // 뷰 초기화
-        btnOpenStore = view.findViewById(R.id.btnOpenStore)
-        placeholderView = view.findViewById(R.id.view)
-        rootLayout = view.findViewById(R.id.store_fragment_root)
-        characterImageView = view.findViewById(R.id.baseCharacterImageView)
-        topItemImageView = view.findViewById(R.id.topItemImageView)
-        pantsItemImageView = view.findViewById(R.id.pantsItemImageView)
-        onepieceItemImageView = view.findViewById(R.id.onepieceItemImageView)
-        accItemImageView = view.findViewById(R.id.accItemImageView)
-        costumeItemImageView = view.findViewById(R.id.costumeItemImageView)
-        hairAccItemImageView = view.findViewById(R.id.hairAccItemImageView)
-        glassesItemImageView = view.findViewById(R.id.glassesItemImageView)
-        // ★ 레벨/코인 TextView 초기화
-        userLevelTextView = view.findViewById(R.id.userLevelTextView)
-        userCoinTextView = view.findViewById(R.id.userCoinTextView)
-
-        // ViewModel 및 UserPreference 인스턴스 가져오기
+    ): View {
+        _binding = FragmentStoreBinding.inflate(inflater, container, false)
         storeViewModel = ViewModelProvider(requireActivity()).get(StoreViewModel::class.java)
         userPreference = UserPreference(requireContext())
-        return view
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        placeholderView.visibility = View.GONE
+        binding.view.visibility = View.GONE // placeholderView
 
-        // Elevation 설정은 updateCharacterDisplay에서 동적으로 처리
-        btnOpenStore.setOnClickListener {
+        binding.btnOpenStore.setOnClickListener {
             openStoreBottomSheet()
         }
-        observeEquippedItems()
-        loadUserInfo() // ★ 사용자 정보 로드 함수 호출
+        observeViewModel() // ★ ViewModel 관찰 시작
     }
 
     override fun onResume() {
         super.onResume()
-        // 이 화면으로 돌아올 때마다 사용자 정보(특히 코인)를 새로고침
-        loadUserInfo()
-    }
-
-    // ★★★ 사용자 레벨 및 코인 정보 로드 함수 추가 ★★★
-    private fun loadUserInfo() {
+        // 이 화면으로 돌아올 때마다 사용자 정보(레벨, 코인 등)를 새로고침
         val userId = userPreference.getUserId()
-        if (userId == -1) {
+        if (userId != -1) {
+            storeViewModel.loadUserData(userId)
+        } else {
             Log.w("StoreFragment", "유효한 userId가 없어 사용자 정보를 로드할 수 없습니다.")
-            // 필요하다면 로그인 화면으로 보내는 로직 추가
-            return
-        }
-
-        lifecycleScope.launch {
-            try {
-                // RetrofitClient.challengeApi에 getUserChallengeProgress가 suspend 함수로 정의되어 있다고 가정
-                val response = RetrofitClient.challengeApi.getUserChallengeProgress(userId)
-
-                // isAdded 또는 _binding != null 체크는 코루틴 내 UI 업데이트 시 안전성을 위해 필요하지만
-                // 이 프래그먼트는 ViewBinding을 사용하지 않으므로, isAdded로 확인합니다.
-                if (isAdded) {
-                    userLevelTextView.text = "Lv.${response.level}"
-                    userCoinTextView.text = response.coin.toString()
-                    Log.d("StoreFragment", "사용자 정보 로드 성공: Level=${response.level}, Coin=${response.coin}")
-                }
-
-            } catch (e: Exception) {
-                Log.e("StoreFragment", "사용자 정보 로드 실패", e)
-                if (isAdded) {
-                    Toast.makeText(context, "사용자 정보를 불러오는데 실패했습니다.", Toast.LENGTH_SHORT).show()
-                }
-            }
         }
     }
 
-    private fun observeEquippedItems() {
+    private fun observeViewModel() {
+        // 착용된 아이템 관찰
         storeViewModel.equippedItems.observe(viewLifecycleOwner, Observer { equippedMap ->
-            if (isAdded) { // View가 유효할 때만 업데이트
-                updateCharacterDisplay(equippedMap)
-            }
+            updateCharacterDisplay(equippedMap)
+        })
+
+        // 사용자 레벨 관찰
+        storeViewModel.userLevel.observe(viewLifecycleOwner, Observer { level ->
+            binding.userLevelTextView.text = "Lv.$level"
+        })
+
+        // 사용자 코인 관찰
+        storeViewModel.userCoin.observe(viewLifecycleOwner, Observer { coin ->
+            binding.userCoinTextView.text = coin.toString()
         })
     }
 
     private fun updateCharacterDisplay(equippedItems: Map<String, ProductItem?>) {
+        if (!isAdded || _binding == null) return
 
-        // 1. 기본 캐릭터 이미지 및 Elevation 설정
+        // 기본 캐릭터 이미지 및 Elevation 설정
         val baseCharacterItem = equippedItems["character"]
-        characterImageView.setImageResource(
+        binding.baseCharacterImageView.setImageResource(
             baseCharacterItem?.imageResId ?: R.drawable.char_graycat
         )
-        characterImageView.elevation = ELEVATION_CHARACTER
+        binding.baseCharacterImageView.elevation = ELEVATION_CHARACTER
 
-        if (baseCharacterItem?.id == "char_2") {
+        // 토끼 캐릭터 y오프셋 조정
+        if (baseCharacterItem?.id == 2) {
             val rabbitOffsetY = -44f
-            characterImageView.translationY = rabbitOffsetY
+            binding.baseCharacterImageView.translationY = rabbitOffsetY
         } else {
-            characterImageView.translationY = 0f
+            binding.baseCharacterImageView.translationY = 0f
         }
 
         // 아이템 가져오기
@@ -160,82 +109,68 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
         val hairAccItem = equippedItems["hairAcc"]
         val glassesItem = equippedItems["glasses"]
 
-        // 2. 코스튬 처리 (가장 우선순위 높음)
+        // 코스튬 (코스튬, 원피스, 상 하의)
         if (costumeItem != null) {
-            costumeItemImageView.setImageResource(costumeItem.imageResId)
-            costumeItemImageView.visibility = View.VISIBLE
-            costumeItemImageView.elevation = ELEVATION_COSTUME
-
-            // 코스튬 착용 시 상의, 하의, 원피스 숨김
-            topItemImageView.visibility = View.GONE
-            pantsItemImageView.visibility = View.GONE
-            onepieceItemImageView.visibility = View.GONE
+            binding.costumeItemImageView.setImageResource(costumeItem.imageResId)
+            binding.costumeItemImageView.visibility = View.VISIBLE
+            binding.costumeItemImageView.elevation = ELEVATION_COSTUME
+            binding.topItemImageView.visibility = View.GONE
+            binding.pantsItemImageView.visibility = View.GONE
+            binding.onepieceItemImageView.visibility = View.GONE
         } else {
-            costumeItemImageView.visibility = View.GONE
+            binding.costumeItemImageView.visibility = View.GONE
 
             // 코스튬 미착용 시에만 원피스 vs 상/하의 로직 실행
             if (onepieceItem != null) {
-                onepieceItemImageView.setImageResource(onepieceItem.imageResId)
-                onepieceItemImageView.visibility = View.VISIBLE
-                onepieceItemImageView.elevation = ELEVATION_ONEPIECE
-                topItemImageView.visibility = View.GONE
-                pantsItemImageView.visibility = View.GONE
+                binding.onepieceItemImageView.setImageResource(onepieceItem.imageResId)
+                binding.onepieceItemImageView.visibility = View.VISIBLE
+                binding.onepieceItemImageView.elevation = ELEVATION_ONEPIECE
+                binding.topItemImageView.visibility = View.GONE
+                binding.pantsItemImageView.visibility = View.GONE
             } else {
-                onepieceItemImageView.visibility = View.GONE
-                if (topItem != null) {
-                    topItemImageView.setImageResource(topItem.imageResId)
-                    topItemImageView.visibility = View.VISIBLE
-                    topItemImageView.elevation = ELEVATION_CLOTHING_TOP
-                } else {
-                    topItemImageView.visibility = View.GONE
-                }
-                if (pantsItem != null) {
-                    pantsItemImageView.setImageResource(pantsItem.imageResId)
-                    pantsItemImageView.visibility = View.VISIBLE
-                    pantsItemImageView.elevation = ELEVATION_CLOTHING_BOTTOM
-                } else {
-                    pantsItemImageView.visibility = View.GONE
-                }
+                binding.onepieceItemImageView.visibility = View.GONE
+                binding.topItemImageView.visibility = if (topItem != null) {
+                    binding.topItemImageView.setImageResource(topItem.imageResId)
+                    binding.topItemImageView.elevation = ELEVATION_CLOTHING_TOP
+                    View.VISIBLE
+                } else View.GONE
+                binding.pantsItemImageView.visibility = if (pantsItem != null) {
+                    binding.pantsItemImageView.setImageResource(pantsItem.imageResId)
+                    binding.pantsItemImageView.elevation = ELEVATION_CLOTHING_BOTTOM
+                    View.VISIBLE
+                } else View.GONE
             }
         }
 
-        // 3. 일반 액세서리 처리 (acc)
+        // 일반 액세서리
         if (accItem != null) {
-            accItemImageView.setImageResource(accItem.imageResId)
-            accItemImageView.visibility = View.VISIBLE
-            if (accItem.id == "acc_1") {
-                accItemImageView.elevation = ELEVATION_BEHIND_CHARACTER
-            } else {
-                accItemImageView.elevation = ELEVATION_ACCESSORY_FRONT
-            }
+            binding.accItemImageView.setImageResource(accItem.imageResId)
+            binding.accItemImageView.visibility = View.VISIBLE
+            binding.accItemImageView.elevation = if (accItem.id == 1) ELEVATION_BEHIND_CHARACTER else ELEVATION_ACCESSORY_FRONT
         } else {
-            accItemImageView.visibility = View.GONE
+            binding.accItemImageView.visibility = View.GONE
         }
 
-        // 4. 헤어 액세서리
-        if(hairAccItem != null){
-            hairAccItemImageView.setImageResource(hairAccItem.imageResId)
-            hairAccItemImageView.visibility = View.VISIBLE
-            hairAccItemImageView.elevation = ELEVATION_HAIR_ACC
-        } else {
-            hairAccItemImageView.visibility = View.GONE
-        }
+        // 헤어 액세서리
+        binding.hairAccItemImageView.visibility = if (hairAccItem != null) {
+            binding.hairAccItemImageView.setImageResource(hairAccItem.imageResId)
+            binding.hairAccItemImageView.elevation = ELEVATION_HAIR_ACC
+            View.VISIBLE
+        } else View.GONE
 
-        // 5. 안경
-        if(glassesItem != null){
-            glassesItemImageView.setImageResource(glassesItem.imageResId)
-            glassesItemImageView.visibility = View.VISIBLE
-            glassesItemImageView.elevation = ELEVATION_GLASSES
-        } else {
-            glassesItemImageView.visibility = View.GONE
-        }
+        // 안경
+        binding.glassesItemImageView.visibility = if (glassesItem != null) {
+            binding.glassesItemImageView.setImageResource(glassesItem.imageResId)
+            binding.glassesItemImageView.elevation = ELEVATION_GLASSES
+            View.VISIBLE
+        } else View.GONE
     }
 
     private fun openStoreBottomSheet() {
         val placeholderTransition = AutoTransition()
         placeholderTransition.duration = 300
-        TransitionManager.beginDelayedTransition(rootLayout, placeholderTransition)
-        placeholderView.visibility = View.VISIBLE
+        TransitionManager.beginDelayedTransition(binding.storeFragmentRoot, placeholderTransition)
+        binding.view.visibility = View.VISIBLE
 
         val storeOpenFragment = StoreOpenFragment.newInstance()
         storeOpenFragment.setStoreBottomSheetDismissListener(this@StoreFragment)
@@ -243,11 +178,16 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
     }
 
     override fun onBottomSheetDismissed() {
-        if (!isAdded) return // 뷰가 이미 파괴된 경우
+        if (!isAdded || _binding == null) return
         val transition = AutoTransition()
         transition.duration = 300
-        TransitionManager.beginDelayedTransition(rootLayout, transition)
-        placeholderView.visibility = View.GONE
+        TransitionManager.beginDelayedTransition(binding.storeFragmentRoot, transition)
+        binding.view.visibility = View.GONE
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null // 메모리 누수 방지
     }
 
     companion object {

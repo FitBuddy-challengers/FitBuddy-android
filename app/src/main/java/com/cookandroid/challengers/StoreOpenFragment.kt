@@ -18,7 +18,6 @@ import com.google.android.material.tabs.TabLayoutMediator
 
 class StoreOpenFragment : BottomSheetDialogFragment() {
 
-    // 리스너 인터페이스 정의
     interface StoreBottomSheetDismissListener {
         fun onBottomSheetDismissed()
     }
@@ -30,16 +29,12 @@ class StoreOpenFragment : BottomSheetDialogFragment() {
         super.onCreate(savedInstanceState)
         setStyle(DialogFragment.STYLE_NORMAL, R.style.AppTheme_NoDimBottomSheetDialog)
 
-        // ViewModel 인스턴스 가져오기 (Activity 범위로 하여 StoreFragment와 공유 가능)
-        // requireActivity()를 사용하면 StoreFragment와 같은 Activity에 속할 때 ViewModel 공유
         storeViewModel = ViewModelProvider(requireActivity()).get(StoreViewModel::class.java)
     }
 
     fun setStoreBottomSheetDismissListener(listener: StoreBottomSheetDismissListener) {
         this.dismissListener = listener
     }
-
-    // (이하 기존 StoreOpenFragment 코드 - tabLayout, viewPager, tabIcons 등)
     private lateinit var tabLayout: TabLayout
     private lateinit var viewPager: ViewPager2
     private lateinit var categoryPagerAdapter: CategoryPagerAdapter
@@ -79,7 +74,7 @@ class StoreOpenFragment : BottomSheetDialogFragment() {
                 it.background = ContextCompat.getDrawable(dialog.context, R.drawable.bottom_sheet_background)
                 val behavior = BottomSheetBehavior.from(it)
                 behavior.peekHeight = resources.getDimensionPixelSize(R.dimen.store_peek_height)
-                behavior.maxHeight = resources.getDimensionPixelSize(R.dimen.store_peek_height) // 이 부분을 주석 처리하거나 peekHeight보다 큰 값으로 설정 고려
+                behavior.maxHeight = resources.getDimensionPixelSize(R.dimen.store_peek_height)
                 behavior.state = BottomSheetBehavior.STATE_EXPANDED
             }
         }
@@ -90,12 +85,24 @@ class StoreOpenFragment : BottomSheetDialogFragment() {
         super.onViewCreated(view, savedInstanceState)
         setupViewPager()
         setupTabLayout()
+        view.post {
+            val parent = view as ViewGroup
+            val verticalPadding = parent.paddingTop + parent.paddingBottom
+
+            // 전체 높이에서 TabLayout 높이와 패딩을 제외한 값을 ViewPager2의 높이로 설정
+            val viewPagerHeight = view.height - tabLayout.height - verticalPadding
+
+            if (viewPagerHeight > 0) {
+                val layoutParams = viewPager.layoutParams
+                layoutParams.height = viewPagerHeight
+                viewPager.layoutParams = layoutParams
+            }
+        }
     }
 
     private fun setupViewPager() {
-        // StoreCategoryFragment 생성 시 categoryId를 명확히 전달
         val fragments = tabIcons.indices.map { index ->
-            StoreCategoryFragment.newInstance(categoryIds[index]) // 정의된 categoryId 사용
+            StoreCategoryFragment.newInstance(categoryIds[index])
         }
         categoryPagerAdapter = CategoryPagerAdapter(this, fragments)
         viewPager.adapter = categoryPagerAdapter

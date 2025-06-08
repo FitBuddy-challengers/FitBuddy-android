@@ -11,7 +11,6 @@ import com.google.gson.FieldNamingPolicy
 import com.google.gson.GsonBuilder
 import com.google.gson.annotations.SerializedName
 
-
 // 서버와 애뮬레이터 연동을 위한 코드 절대 수정 XXX
 object RetrofitClient {
     // private val BASE_URL: String = BuildConfig.BASE_URL // ★ 타입 명시!
@@ -39,10 +38,14 @@ object RetrofitClient {
         retrofit.create(LoginService::class.java)
     }
 
-
     //더미 스케줄을 담음(채윤지 05.22 추가)
     val exerciseApi: ExerciseApi by lazy {
         retrofit.create(ExerciseApi::class.java)
+    }
+
+    // 상점 API 인터페이스
+    val storeApi: StoreApi by lazy {
+        retrofit.create(StoreApi::class.java)
     }
 
 //    data class AddExerciseRequest(
@@ -285,5 +288,16 @@ object RetrofitClient {
         val photo: Int,
         val exercise: Int
     )
-}
 
+    // 서버로 보낼 요청 DTO
+    data class PurchaseRequest(
+        val userId: Int,
+        val itemId: Int
+    )
+
+    data class PurchaseResponse(
+        val success: Boolean,
+        val message: String,
+        val updatedCoin: Int
+    )
+}
