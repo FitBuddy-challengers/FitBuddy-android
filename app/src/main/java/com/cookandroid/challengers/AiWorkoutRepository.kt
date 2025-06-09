@@ -13,6 +13,8 @@ class AiWorkoutRepository(
     private val scheduleApi: ScheduleApi,
     private val aiRoutineApi: AiRoutineApi
 ) {
+    /* AI 서버로부터 운동 루틴 텍스트 받아오기
+     사용자 정보(UserInfo) + 스케줄 정보(ScheduleInfo) -> AI가 생성한 운동 루틴 텍스트 (String) */
     suspend fun getRoutineFromServer(
         userInfo: UserInfo,
         scheduleInfo: ScheduleInfo
@@ -31,11 +33,12 @@ class AiWorkoutRepository(
         }
     }
 
+    /* 운동 계획 생성, schedule id를 받아 반환 */
     suspend fun createPlan(date: String): Long? = withContext(Dispatchers.IO) {
         try {
             val response = scheduleApi.createSchedule(
                 RetrofitClient.CreateScheduleRequest(
-                    planId = 0,
+                    planId = 0, // 임시 id
                     date = date,
                     exerciseOrder = 0,
                     exerciseId = 0
@@ -50,13 +53,15 @@ class AiWorkoutRepository(
         }
     }
 
+    // !! 스케줄 저장 후 세트 정보 저장, 성공 시 true, 실패 시 false
     suspend fun addExercisesToSchedule(
         planId: Long,
-        exerciseList: List<Triple<Int, Int?, Int?>>,
+        exerciseList: List<Triple<Int, Int?, Int?>>, // 운동 ID, reps, sets
         date: String
     ): Boolean = withContext(Dispatchers.IO) {
         try {
             exerciseList.forEachIndexed { index, (exerciseId, reps, _) ->
+                // 운동별 스케줄 생성
                 val scheduleResponse = scheduleApi.createSchedule(
                     RetrofitClient.CreateScheduleRequest(
                         planId = planId.toInt(),
@@ -69,6 +74,7 @@ class AiWorkoutRepository(
 
                 val scheduleId = scheduleResponse.body()?.scheduleId ?: return@withContext false
 
+                // 스케줄에 세트 저장
                 val addResponse = scheduleApi.addExerciseToSchedule(
                     scheduleId,
                     RetrofitClient.AddExerciseRequest(
@@ -76,7 +82,7 @@ class AiWorkoutRepository(
                         setList = listOf(
                             RetrofitClient.SetData(
                                 setNumber = 1,
-                                reps = reps ?: 10,
+                                reps = reps ?: 10, // 기본값
                                 weight = 0,
                                 isCompleted = false
                             )

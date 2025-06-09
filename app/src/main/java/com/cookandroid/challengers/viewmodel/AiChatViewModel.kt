@@ -14,6 +14,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 sealed class AichatState {
+    // 단계별 대화 상태: 입력 요청 등
     object Welcome : AichatState()
     object AskDate : AichatState()
     object AskDays : AichatState()
@@ -44,6 +45,7 @@ class AiChatViewModel(
     fun getUserName(): String = if (::userInfo.isInitialized) userInfo.name else ""
     fun getFocusArea(): String = scheduleInfo.focus_area
 
+    // 사용자 정보 로드 후 첫인사로 설정
     fun loadUserInfo() {
         userId = userPreference.getUserId()
         if (userId == -1) {
@@ -93,6 +95,7 @@ class AiChatViewModel(
         generateWorkoutPlan()
     }
 
+    // 루틴 생성 요청, 결과 반영
     private fun generateWorkoutPlan() {
         viewModelScope.launch {
             recommendationCount++
@@ -108,16 +111,19 @@ class AiChatViewModel(
         }
     }
 
+    // !! plan text 파싱 후 저장 시도, 리스트 변환
     fun onAcceptPlan() {
         viewModelScope.launch {
             val parsedList = parseRoutineToTriples(lastGeneratedPlan)
 
+            // 전체 운동 정보
             val allExercises = exerciseApi.getAllExercises()
             if (!allExercises.isSuccessful) {
                 _state.value = AichatState.Rejected
                 return@launch
             }
 
+            // 운동 이름 -> id 변환
             val exerciseMap = allExercises.body()?.associateBy { it.name } ?: emptyMap()
             val convertedList = parsedList.mapNotNull { (name, reps, sets) ->
                 val id = exerciseMap[name]?.id?.toInt() ?: return@mapNotNull null
@@ -132,6 +138,7 @@ class AiChatViewModel(
                 }
             }
 
+            // 날짜 계산 후 루틴 저장
             val routineDates = generateDates(scheduleInfo.start_date, scheduleInfo.end_date, scheduleInfo.days_of_week)
 
             for (date in routineDates) {
@@ -150,6 +157,7 @@ class AiChatViewModel(
         }
     }
 
+    // 사용자 거절 시
     fun onRejectPlan() {
         if (recommendationCount < 2) {
             _state.value = AichatState.Generating
@@ -159,6 +167,7 @@ class AiChatViewModel(
         }
     }
 
+    // 스케줄 텍스트 파싱 후 분해
     private fun parseRoutineToTriples(planText: String): List<Triple<String, Int?, Int?>> {
         val result = mutableListOf<Triple<String, Int?, Int?>>()
         val regex = Regex("\"(.*?)\"\\s*\"?(\\d+)?\"?회?\\s*\"?(\\d+)?\"?세트?")
@@ -174,6 +183,7 @@ class AiChatViewModel(
         return result
     }
 
+    // 날짜 리스트 생성(사용자 선택 바탕)
     private fun generateDates(start: String, end: String, daysOfWeek: List<String>): List<String> {
         val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.KOREA)
         val startDate = sdf.parse(start)!!
