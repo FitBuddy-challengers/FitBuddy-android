@@ -1,7 +1,7 @@
 package com.cookandroid.challengers.api
 
-import com.cookandroid.challengers.ProductItem
 import com.cookandroid.challengers.data.ExerciseSetEntity
+import com.cookandroid.challengers.model.UserInfo
 import com.cookandroid.challengers.network.dto.DummyPlanRequest
 import com.cookandroid.challengers.network.dto.DummyPlanResponse
 import com.cookandroid.challengers.network.dto.ExerciseDto
@@ -16,7 +16,6 @@ import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
-import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -48,6 +47,10 @@ interface ExerciseApi {
         @Body request: RetrofitClient.TodayPlanRequest
     ): Call<TodayPlanResponse>
 
+    // 유저 id
+    @GET("/api/user-info/{userId}")
+    suspend fun getUserInfo(@Path("userId") userId: Int): Response<UserInfo>
+
 }
 
 
@@ -55,7 +58,7 @@ interface ScheduleApi {
 
     @POST("api/schedule/{scheduleId}/exercise")
     suspend fun addExerciseToSchedule(
-        @Path("scheduleId") scheduleId: Long,
+        @Path("scheduleId") scheduleId: Int,
         @Body request: RetrofitClient.AddExerciseRequest
     ): Response<RetrofitClient.AddExerciseResponse>
     @GET("/api/plan/today")

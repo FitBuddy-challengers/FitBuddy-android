@@ -105,6 +105,10 @@ class HomeFragment : Fragment() {
         binding.btnStartWorkout.setOnClickListener {
             findNavController().navigate(R.id.action_home_to_exerciseFragment)
         }
+
+        binding.btnAiChat.setOnClickListener {
+            findNavController().navigate(R.id.action_home_to_homeAichatFragment)
+        }
     }
 
     private fun markAttendance(userId: Int) {

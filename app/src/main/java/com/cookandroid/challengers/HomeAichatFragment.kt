@@ -6,19 +6,21 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.cookandroid.challengers.api.RetrofitClient
 import com.cookandroid.challengers.databinding.FragmentHomeAichatBinding
+import com.cookandroid.challengers.repository.AiWorkoutRepository
+import com.cookandroid.challengers.util.UserPreference
+import com.cookandroid.challengers.viewmodel.AiChatViewModel
+import com.cookandroid.challengers.viewmodel.AiChatViewModelFactory
 import com.cookandroid.challengers.viewmodel.AichatState
-import com.cookandroid.challengers.viewmodel.AichatViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
-
-// https://colab.research.google.com/drive/1Mv4WCf4Jto-wlpLK_m3xSF9npbMiu-yv?usp=sharing
 
 class HomeAichatFragment : Fragment() {
 
@@ -28,7 +30,17 @@ class HomeAichatFragment : Fragment() {
     private val messages = mutableListOf<ChatMessage>()
     private lateinit var adapter: ChatAdapter
 
-    private val viewModel: AichatViewModel by activityViewModels()
+    private val viewModel: AiChatViewModel by viewModels {
+        val userPref = UserPreference(requireContext())
+        AiChatViewModelFactory(
+            workoutRepository = AiWorkoutRepository(
+                scheduleApi = RetrofitClient.scheduleApi,
+                aiRoutineApi = RetrofitClient.aiRoutineApi
+            ),
+            exerciseApi = RetrofitClient.exerciseApi,
+            userPreference = userPref
+        )
+    }
 
     private var startDate: String = ""
     private var endDate: String = ""
@@ -45,6 +57,9 @@ class HomeAichatFragment : Fragment() {
         setupDateHeader()
         setupClickListeners()
         observeViewModel()
+
+        // 사용자 정보 불러오기
+        viewModel.loadUserInfo()
     }
 
     private fun setupRecyclerView() {
@@ -64,6 +79,8 @@ class HomeAichatFragment : Fragment() {
         }
 
         binding.chatInputLayout.setEndIconOnClickListener {
+            if (viewModel.state.value is AichatState.Generating) return@setEndIconOnClickListener
+
             val message = binding.etMessage.text.toString().trim()
             if (message.isNotEmpty()) {
                 binding.etMessage.text = null
@@ -78,6 +95,8 @@ class HomeAichatFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.state.collectLatest { state ->
                 val time = getCurrentTime()
+                binding.chatInputLayout.isEnabled = state !is AichatState.Generating
+
                 when (state) {
                     is AichatState.Welcome -> {
                         addMessage(ChatMessage.FromBot("안녕하세요. ${viewModel.getUserName()}님!\nAI Buddy와 함께 운동 루틴을 계획하시겠어요?", time))
@@ -90,14 +109,15 @@ class HomeAichatFragment : Fragment() {
                         addMessage(ChatMessage.FromBot("어떤 요일에 운동하실 건가요?\n예: 월 수 금", time))
                     }
                     is AichatState.AskFocusArea -> {
-                        addMessage(ChatMessage.FromBot("특별히 강화하고 싶은 부위가 있나요?", time))
+                        addMessage(ChatMessage.FromBot("특별히 강화하고 싶은 부위가 있나요?\n예: 하체 / 복근 / 가슴", time))
                     }
                     is AichatState.Generating -> {
                         addMessage(ChatMessage.FromBot("${viewModel.getUserName()}님의 루틴을 생성하고 있어요. 잠시만 기다려 주세요...", time))
                     }
                     is AichatState.ShowResult -> {
                         addMessage(ChatMessage.FromBot("${viewModel.getUserName()}님을 위한 운동 스케줄이 준비되었어요!", time))
-                        addMessage(ChatMessage.FromBot(state.planText, time))
+                        val formatted = state.planText.lines().joinToString("\n") { "• $it" }
+                        addMessage(ChatMessage.FromBot(formatted, time))
                         addMessage(ChatMessage.FromBot("이대로 할게요 / 다시 추천해 주세요", time))
                     }
                     is AichatState.Done -> {
@@ -119,23 +139,22 @@ class HomeAichatFragment : Fragment() {
     }
 
     private fun handleUserInput(input: String) {
-        when (val state = viewModel.state.value) {
+        if (viewModel.state.value is AichatState.Generating) return
+
+        when (viewModel.state.value) {
             is AichatState.Welcome -> {
                 if (input.contains("네", ignoreCase = true)) viewModel.onUserConfirmedStart()
                 else viewModel.onRejectPlan()
             }
-
             is AichatState.AskDays -> {
                 val days = input.split(" ", ",").mapNotNull {
                     it.trim().takeIf { it.isNotEmpty() }
                 }
                 viewModel.onDaysSelected(days)
             }
-
             is AichatState.AskFocusArea -> {
                 viewModel.onFocusAreaEntered(input)
             }
-
             is AichatState.ShowResult -> {
                 when {
                     input.contains("이대로", ignoreCase = true) -> viewModel.onAcceptPlan()
@@ -150,7 +169,9 @@ class HomeAichatFragment : Fragment() {
     private fun addMessage(message: ChatMessage) {
         messages.add(message)
         adapter.notifyItemInserted(messages.size - 1)
-        binding.rvChat.scrollToPosition(messages.size - 1)
+        binding.rvChat.post {
+            binding.rvChat.scrollToPosition(messages.size - 1)
+        }
     }
 
     private fun showDatePicker(isStart: Boolean) {

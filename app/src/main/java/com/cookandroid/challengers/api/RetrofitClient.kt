@@ -43,6 +43,11 @@ object RetrofitClient {
         retrofit.create(ExerciseApi::class.java)
     }
 
+    // AI 루틴 api
+    val aiRoutineApi: AiRoutineApi by lazy {
+        retrofit.create(AiRoutineApi::class.java)
+    }
+
     // 상점 API 인터페이스
     val storeApi: StoreApi by lazy {
         retrofit.create(StoreApi::class.java)

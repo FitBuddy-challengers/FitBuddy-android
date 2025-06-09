@@ -1,12 +1,10 @@
 package com.cookandroid.challengers
 
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import java.text.SimpleDateFormat
-import java.util.*
+import com.cookandroid.challengers.databinding.ItemChatbotBinding
+import com.cookandroid.challengers.databinding.ItemUserBinding
 
 sealed class ChatMessage {
     abstract val timestamp: String
@@ -30,14 +28,17 @@ class ChatAdapter(private val messages: List<ChatMessage>) : RecyclerView.Adapte
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-        return if (viewType == TYPE_BOT) {
-            val view = LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_chatbot, parent, false)
-            BotViewHolder(view)
-        } else {
-            val view = LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_user, parent, false)
-            UserViewHolder(view)
+        val inflater = LayoutInflater.from(parent.context)
+        return when (viewType) {
+            TYPE_BOT -> {
+                val binding = ItemChatbotBinding.inflate(inflater, parent, false)
+                BotViewHolder(binding)
+            }
+            TYPE_USER -> {
+                val binding = ItemUserBinding.inflate(inflater, parent, false)
+                UserViewHolder(binding)
+            }
+            else -> throw IllegalArgumentException("Invalid view type")
         }
     }
 
@@ -50,17 +51,17 @@ class ChatAdapter(private val messages: List<ChatMessage>) : RecyclerView.Adapte
         }
     }
 
-    inner class BotViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+    inner class BotViewHolder(private val binding: ItemChatbotBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(msg: ChatMessage.FromBot) {
-            itemView.findViewById<TextView>(R.id.tvMessage).text = msg.message
-            itemView.findViewById<TextView>(R.id.tvTime).text = msg.timestamp
+            binding.tvMessage.text = msg.message
+            binding.tvTime.text = msg.timestamp
         }
     }
 
-    inner class UserViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+    inner class UserViewHolder(private val binding: ItemUserBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(msg: ChatMessage.FromUser) {
-            itemView.findViewById<TextView>(R.id.tvUserMessage).text = msg.message
-            itemView.findViewById<TextView>(R.id.tvUserTime).text = msg.timestamp
+            binding.tvUserMessage.text = msg.message
+            binding.tvUserTime.text = msg.timestamp
         }
     }
 }
