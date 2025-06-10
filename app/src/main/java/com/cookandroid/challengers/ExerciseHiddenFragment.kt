@@ -259,7 +259,7 @@ class ExerciseHiddenFragment : Fragment() {
 
     private fun initChips() {
         setupChips(binding.myChipGroup, listOf("즐겨찾기", "최근 한 운동"))
-        setupChips(binding.partChipGroup, listOf("가슴", "등", "하체", "어깨", "복근", "유산소"))
+        setupChips(binding.partChipGroup, listOf("가슴", "등", "하체", "어깨", "팔", "복근", "유산소"))
         setupChips(binding.equipmentChipGroup, listOf("맨몸", "덤벨", "케틀벨", "세라밴드", "스텝박스"))
     }
 

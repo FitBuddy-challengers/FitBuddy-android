@@ -10,10 +10,11 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
-import com.cookandroid.challengers.data.WeightRecord
-import com.cookandroid.challengers.data.db.AppDatabase
+import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.findNavController
 import com.cookandroid.challengers.databinding.FragmentRecordWeightBinding
+import com.cookandroid.challengers.api.RetrofitClient.WeightRecordDto
+import com.cookandroid.challengers.viewmodel.RecordWeightViewModel
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.MarkerView
 import com.github.mikephil.charting.components.XAxis
@@ -25,27 +26,26 @@ import com.github.mikephil.charting.highlight.Highlight
 import com.github.mikephil.charting.listener.OnChartValueSelectedListener
 import com.github.mikephil.charting.utils.MPPointF
 import com.google.android.material.tabs.TabLayout
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.collections.filter
+import kotlin.collections.sortedBy
 
 class RecordWeightFragment : Fragment() {
 
     private var _binding: FragmentRecordWeightBinding? = null
     private val binding get() = _binding!!
-    private lateinit var db: AppDatabase
+
+    private lateinit var viewModel: RecordWeightViewModel
+
     private lateinit var weightChart: LineChart
     private lateinit var fatChart: LineChart
     private lateinit var skeletalMuscleChart: LineChart
-    private var weightRecords: MutableList<WeightRecord> = mutableListOf()
+
     private val dateFormatter = DateTimeFormatter.ofPattern("MM/dd")
     private val fullDateFormatter = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일", Locale.getDefault())
 
-    // 하이라이트용 DataSet
     private lateinit var highlightWeightDataSet: LineDataSet
     private lateinit var highlightFatDataSet: LineDataSet
     private lateinit var highlightMuscleDataSet: LineDataSet
@@ -56,33 +56,32 @@ class RecordWeightFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentRecordWeightBinding.inflate(inflater, container, false)
+        viewModel = ViewModelProvider(this).get(RecordWeightViewModel::class.java)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        db = AppDatabase.getDatabase(requireContext(), viewLifecycleOwner.lifecycleScope)
+        viewModel = ViewModelProvider(requireActivity()).get(RecordWeightViewModel::class.java)
+
         weightChart = binding.weightChart
         fatChart = binding.fatChart
         skeletalMuscleChart = binding.muscleChart
 
-        // 차트 기본 설정
         setupChart(weightChart)
         setupChart(fatChart)
         setupChart(skeletalMuscleChart)
 
-        // 하이라이트 DataSet 초기화
         highlightWeightDataSet = createHighlightDataSet()
         highlightFatDataSet = createHighlightDataSet()
         highlightMuscleDataSet = createHighlightDataSet()
 
-        // 상호작용 설정
         setupInteractiveChart(weightChart, WeightMarkerView(requireContext()), highlightWeightDataSet)
         setupInteractiveChart(fatChart, FatMarkerView(requireContext()), highlightFatDataSet)
         setupInteractiveChart(skeletalMuscleChart, MuscleMarkerView(requireContext()), highlightMuscleDataSet)
 
-        observeWeightRecords()
+        observeViewModel() // ★★★ DAO 대신 ViewModel 관찰 ★★★
         setupTabLayoutListeners()
 
         binding.fabAddWeight.setOnClickListener {
@@ -90,11 +89,142 @@ class RecordWeightFragment : Fragment() {
         }
     }
 
+    private fun observeViewModel() {
+        viewModel.allRecords.observe(viewLifecycleOwner) { allRecords ->
+            // 데이터가 변경될 때마다 현재 선택된 탭 기준으로 모든 차트를 다시 그림
+            binding.periodWeightTabLayout.selectedTabPosition.let { pos ->
+                updateChart(weightChart, filterRecords(allRecords, pos), "kg", binding.tvWeightDateRange, binding.tvWeightAverage, highlightWeightDataSet)
+            }
+            binding.periodFatTabLayout.selectedTabPosition.let { pos ->
+                updateChart(fatChart, filterRecords(allRecords, pos), "%", binding.tvFatDateRange, binding.tvFatAverage, highlightFatDataSet)
+            }
+            binding.periodMuscleTabLayout.selectedTabPosition.let { pos ->
+                updateChart(skeletalMuscleChart, filterRecords(allRecords, pos), "kg", binding.tvMuscleDateRange, binding.tvMuscleAverage, highlightMuscleDataSet)
+            }
+        }
+    }
+
+    private fun setupTabLayoutListeners() {
+        val onTabSelectedListener = object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                // 탭이 선택될 때마다 ViewModel에 저장된 최신 데이터로 차트를 다시 그림
+                viewModel.allRecords.value?.let { allRecords ->
+                    val position = tab?.position ?: return@let
+                    when (tab.parent) {
+                        binding.periodWeightTabLayout -> updateChart(weightChart, filterRecords(allRecords, position), "kg", binding.tvWeightDateRange, binding.tvWeightAverage, highlightWeightDataSet)
+                        binding.periodFatTabLayout -> updateChart(fatChart, filterRecords(allRecords, position), "%", binding.tvFatDateRange, binding.tvFatAverage, highlightFatDataSet)
+                        binding.periodMuscleTabLayout -> updateChart(skeletalMuscleChart, filterRecords(allRecords, position), "kg", binding.tvMuscleDateRange, binding.tvMuscleAverage, highlightMuscleDataSet)
+                    }
+                }
+            }
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) { onTabSelected(tab) }
+        }
+
+        binding.periodWeightTabLayout.addOnTabSelectedListener(onTabSelectedListener)
+        binding.periodFatTabLayout.addOnTabSelectedListener(onTabSelectedListener)
+        binding.periodMuscleTabLayout.addOnTabSelectedListener(onTabSelectedListener)
+
+        // 초기 탭을 '1개월'로 선택 (observeViewModel이 호출되면서 초기 차트가 그려짐)
+        binding.periodWeightTabLayout.getTabAt(1)?.select()
+        binding.periodFatTabLayout.getTabAt(1)?.select()
+        binding.periodMuscleTabLayout.getTabAt(1)?.select()
+    }
+
+    private fun filterRecords(allRecords: List<WeightRecordDto>, tabPosition: Int): List<WeightRecordDto> {
+        if (tabPosition == -1) return emptyList() // 선택된 탭이 없는 경우
+
+        val now = LocalDate.now()
+        val start = when (tabPosition) {
+            0 -> now.minusDays(7)    // 1주
+            1 -> now.minusMonths(1)  // 1개월
+            2 -> now.minusYears(1)   // 1년
+            else -> return allRecords // 전체
+        }
+        return allRecords.filter {
+            val recordDate = LocalDate.parse(it.date) // String -> LocalDate로 변환
+            !recordDate.isBefore(start) && !recordDate.isAfter(now)
+        }
+    }
+
+    private fun updateChart(
+        chart: LineChart,
+        records: List<WeightRecordDto>,
+        unit: String,
+        dateRangeView: TextView,
+        avgView: TextView,
+        highlightSet: LineDataSet
+    ) {
+        if (records.isEmpty()) {
+            chart.clear()
+            chart.invalidate()
+            dateRangeView.text = "기록 없음"
+            avgView.text = "평균 -"
+            return
+        }
+
+        val sorted = records.sortedBy { LocalDate.parse(it.date) }
+        val entries = sorted.mapIndexed { i, r ->
+            val y = when (chart) {
+                weightChart -> r.weight.toFloat()
+                fatChart -> r.bodyFatPercentage?.toFloat() ?: Float.NaN
+                else -> r.skeletalMuscleMass?.toFloat() ?: Float.NaN
+            }
+            Entry(i.toFloat(), y)
+        }.filter { !it.y.isNaN() }
+
+        if (entries.isEmpty()) {
+            chart.clear(); chart.invalidate()
+            dateRangeView.text = "해당 기간 기록 없음"; avgView.text = "평균 -"
+            return
+        }
+
+        val mainSet = LineDataSet(entries, unit).apply {
+            color = ContextCompat.getColor(requireContext(), R.color.blue)
+            setDrawCircles(true)
+            circleRadius = 5f
+            setCircleColor(ContextCompat.getColor(requireContext(), R.color.blue))
+            setDrawCircleHole(true)
+            circleHoleRadius = 3f
+            circleHoleColor = Color.WHITE
+            setDrawValues(false)
+            lineWidth = 2f
+            setDrawHighlightIndicators(false)
+        }
+
+        chart.data = LineData(mainSet, highlightSet)
+
+        chart.xAxis.valueFormatter = object : ValueFormatter() {
+            override fun getFormattedValue(value: Float): String =
+                sorted.getOrNull(value.toInt())?.let { LocalDate.parse(it.date).format(dateFormatter) } ?: ""
+        }
+        chart.xAxis.setLabelCount(entries.size.coerceAtMost(5), false) // 라벨 개수 최대 5개로 제한
+
+        val ys = entries.map { it.y }
+        chart.axisLeft.axisMinimum = (ys.minOrNull() ?: 0f) * 0.9f
+        chart.axisLeft.axisMaximum = (ys.maxOrNull() ?: 100f) * 1.1f
+        chart.axisLeft.valueFormatter = object : ValueFormatter() {
+            override fun getFormattedValue(v: Float): String = String.format(Locale.getDefault(), "%.0f", v)
+        }
+
+        dateRangeView.text = "${LocalDate.parse(sorted.first().date).format(fullDateFormatter)} ~ ${LocalDate.parse(sorted.last().date).format(fullDateFormatter)}"
+        if (ys.isNotEmpty()) {
+            val avg = ys.average()
+            avgView.text = String.format(Locale.getDefault(), "평균 %.1f %s", avg, unit)
+        }
+
+        chart.invalidate()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+
     private fun setupChart(chart: LineChart) {
         chart.apply {
-            description.isEnabled = true
-            description.textSize = 10f
-            description.typeface = Typeface.DEFAULT_BOLD
+            description.isEnabled = false
+
             setTouchEnabled(true)
             isDragEnabled = true
             setScaleEnabled(false)
@@ -117,6 +247,16 @@ class RecordWeightFragment : Fragment() {
         }
     }
 
+    private fun createHighlightDataSet(): LineDataSet =
+        LineDataSet(ArrayList(), "").apply {
+            setDrawCircles(true)
+            circleRadius = 6f
+            setCircleColor(ContextCompat.getColor(requireContext(), R.color.blue))
+            setDrawCircleHole(false)
+            setDrawValues(false)
+            lineWidth = 0f
+        }
+
     private fun setupInteractiveChart(
         chart: LineChart,
         marker: MarkerView,
@@ -132,6 +272,7 @@ class RecordWeightFragment : Fragment() {
                 chart.notifyDataSetChanged()
                 chart.highlightValue(h)
             }
+
             override fun onNothingSelected() {
                 highlightSet.clear()
                 chart.data.notifyDataChanged()
@@ -139,173 +280,6 @@ class RecordWeightFragment : Fragment() {
                 chart.invalidate()
             }
         })
-    }
-
-    private fun createHighlightDataSet(): LineDataSet =
-        LineDataSet(ArrayList(), "").apply {
-            setDrawCircles(true)
-            circleRadius = 6f
-            setCircleColor(ContextCompat.getColor(requireContext(), R.color.blue))
-            setDrawCircleHole(false)
-            setDrawValues(false)
-            lineWidth = 0f
-        }
-
-    private fun updateChart(
-        chart: LineChart,
-        records: List<WeightRecord>,
-        unit: String,
-        dateRangeView: TextView,
-        avgView: TextView,
-        highlightSet: LineDataSet
-    ) {
-        if (records.isEmpty()) {
-            chart.clear()
-            chart.invalidate()
-            dateRangeView.text = ""
-            avgView.text = ""
-            return
-        }
-
-        val sorted = records.sortedBy { it.date }
-        val entries = sorted.mapIndexed { i, r ->
-            val y = when (chart) {
-                weightChart -> r.weight.toFloat()
-                fatChart -> r.bodyFatPercentage?.toFloat() ?: Float.NaN
-                else -> r.skeletalMuscleMass?.toFloat() ?: Float.NaN
-            }
-            Entry(i.toFloat(), y)
-        }.filter { !it.y.isNaN() }
-
-        // 메인 DataSet (hollow)
-        val mainSet = LineDataSet(entries, unit).apply {
-            color = ContextCompat.getColor(requireContext(), R.color.blue)
-            setDrawCircles(true)
-            circleRadius = 5f
-            setCircleColor(ContextCompat.getColor(requireContext(), R.color.blue))
-            setDrawCircleHole(true)
-            circleHoleRadius = 3f
-            circleHoleColor = Color.WHITE
-            setDrawValues(false)
-            lineWidth = 2f
-            setDrawHighlightIndicators(false)
-        }
-
-        // 데이터 적용
-        chart.data = LineData(mainSet, highlightSet)
-
-        // X축 라벨 설정
-        chart.xAxis.valueFormatter = object : ValueFormatter() {
-            override fun getFormattedValue(value: Float): String =
-                sorted.getOrNull(value.toInt())?.date?.format(dateFormatter) ?: ""
-        }
-        chart.xAxis.setLabelCount(entries.size, true)
-
-        // Y축 범위 및 포맷
-        val ys = entries.map { it.y }
-        chart.axisLeft.axisMinimum = (ys.minOrNull() ?: 0f) * 0.9f
-        chart.axisLeft.axisMaximum = (ys.maxOrNull() ?: 100f) * 1.1f
-        chart.axisLeft.valueFormatter = object : ValueFormatter() {
-            override fun getFormattedValue(v: Float): String = String.format(Locale.getDefault(), "%.0f", v)
-        }
-
-        // 날짜 범위 및 평균
-        dateRangeView.text =
-            "${sorted.first().date.format(fullDateFormatter)} ~ ${sorted.last().date.format(fullDateFormatter)}"
-        if (ys.isNotEmpty()) {
-            val avg = ys.average()
-            avgView.text = String.format(Locale.getDefault(), "평균 %.1f %s", avg, unit)
-        }
-
-        chart.invalidate()
-    }
-
-    private fun setupTabLayoutListeners() {
-        binding.periodWeightTabLayout.getTabAt(1)?.select()
-        binding.periodFatTabLayout.getTabAt(1)?.select()
-        binding.periodMuscleTabLayout.getTabAt(1)?.select()
-
-        binding.periodWeightTabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab?) {
-                tab?.position?.let {
-                    updateChart(
-                        weightChart,
-                        filterRecords(it),
-                        "kg",
-                        binding.tvWeightDateRange,
-                        binding.tvWeightAverage,
-                        highlightWeightDataSet
-                    )
-                }
-            }
-            override fun onTabUnselected(tab: TabLayout.Tab?) {}
-            override fun onTabReselected(tab: TabLayout.Tab?) { onTabSelected(tab) }
-        })
-
-        binding.periodFatTabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab?) {
-                tab?.position?.let {
-                    updateChart(
-                        fatChart,
-                        filterRecords(it),
-                        "%",
-                        binding.tvFatDateRange,
-                        binding.tvFatAverage,
-                        highlightFatDataSet
-                    )
-                }
-            }
-            override fun onTabUnselected(tab: TabLayout.Tab?) {}
-            override fun onTabReselected(tab: TabLayout.Tab?) { onTabSelected(tab) }
-        })
-
-        binding.periodMuscleTabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab?) {
-                tab?.position?.let {
-                    updateChart(
-                        skeletalMuscleChart,
-                        filterRecords(it),
-                        "kg",
-                        binding.tvMuscleDateRange,
-                        binding.tvMuscleAverage,
-                        highlightMuscleDataSet
-                    )
-                }
-            }
-            override fun onTabUnselected(tab: TabLayout.Tab?) {}
-            override fun onTabReselected(tab: TabLayout.Tab?) { onTabSelected(tab) }
-        })
-    }
-
-    private fun filterRecords(tabPosition: Int): List<WeightRecord> {
-        val now = LocalDate.now()
-        val start = when (tabPosition) {
-            0 -> now.minusDays(7)
-            1 -> now.minusMonths(1)
-            2 -> now.minusYears(1)
-            else -> return weightRecords
-        }
-        return weightRecords.filter { !it.date.isBefore(start) && !it.date.isAfter(now) }
-    }
-
-    private fun observeWeightRecords() {
-        lifecycleScope.launch(Dispatchers.IO) {
-            db.weightRecordDao().getAllRecords().collectLatest { recs ->
-                withContext(Dispatchers.Main) {
-                    weightRecords.clear()
-                    weightRecords.addAll(recs)
-                    // 초기 탭 적용
-                    binding.periodWeightTabLayout.getTabAt(1)?.select()
-                    binding.periodFatTabLayout.getTabAt(1)?.select()
-                    binding.periodMuscleTabLayout.getTabAt(1)?.select()
-                }
-            }
-        }
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
     }
 }
 

@@ -9,10 +9,12 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.DialogFragment
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.cookandroid.challengers.data.WeightRecord
 import com.cookandroid.challengers.data.db.AppDatabase
 import com.cookandroid.challengers.databinding.FragmentRecordAddWeightBinding
+import com.cookandroid.challengers.viewmodel.RecordWeightViewModel
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -27,7 +29,9 @@ class RecordAddWeightFragment : BottomSheetDialogFragment() {
     private var _binding: FragmentRecordAddWeightBinding? = null
     private val binding get() = _binding!!
 
-    private lateinit var db: AppDatabase
+    // Activity 범위의 공유 ViewModel 사용
+    private lateinit var viewModel: RecordWeightViewModel
+
     private var selectedDate: LocalDate = LocalDate.now()
     private val dateFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd")
 
@@ -42,14 +46,14 @@ class RecordAddWeightFragment : BottomSheetDialogFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setStyle(STYLE_NORMAL, R.style.BottomSheetDialogTheme) // Apply style here.  Important!
+        setStyle(STYLE_NORMAL, R.style.BottomSheetDialogTheme)
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val dialog = super.onCreateDialog(savedInstanceState) // Use super's onCreateDialog
+        val dialog = super.onCreateDialog(savedInstanceState)
         if (dialog is BottomSheetDialog) {
             dialog.behavior.apply {
-                isDraggable = true // Make it draggable
+                isDraggable = true
                 state = BottomSheetBehavior.STATE_EXPANDED
                 skipCollapsed = true
             }
@@ -59,12 +63,12 @@ class RecordAddWeightFragment : BottomSheetDialogFragment() {
                 val bottomSheet = dialogInterface.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
                 bottomSheet?.let {
                     it.background =
-                        ContextCompat.getDrawable(dialogInterface.context, R.drawable.bottom_sheet_background) //Use dialogInterface.context
+                        ContextCompat.getDrawable(dialogInterface.context, R.drawable.bottom_sheet_background)
                     val behavior = BottomSheetBehavior.from(it)
                     behavior.peekHeight =
-                        resources.getDimensionPixelSize(R.dimen.exercise_set_peek_height) // Corrected resource name.
+                        resources.getDimensionPixelSize(R.dimen.exercise_set_peek_height)
                     behavior.maxHeight =
-                        resources.getDimensionPixelSize(R.dimen.exercise_set_peek_height) //Corrected resource name
+                        resources.getDimensionPixelSize(R.dimen.exercise_set_peek_height)
                     behavior.state = BottomSheetBehavior.STATE_EXPANDED
                 }
             }
@@ -74,12 +78,11 @@ class RecordAddWeightFragment : BottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        db = AppDatabase.getDatabase(requireContext(), viewLifecycleOwner.lifecycleScope)
 
-        // Initial date setup
+        // ViewModel 인스턴스 가져오기
+        viewModel = ViewModelProvider(requireActivity()).get(RecordWeightViewModel::class.java)
+
         binding.dateEditText.hint = selectedDate.format(dateFormatter)
-
-        // Date selection listener
         binding.dateEditText.setOnClickListener {
             DatePickerFragment { date ->
                 selectedDate = date
@@ -87,32 +90,28 @@ class RecordAddWeightFragment : BottomSheetDialogFragment() {
             }.show(childFragmentManager, "datePicker")
         }
 
-        // Save button listener
         binding.saveButton.setOnClickListener {
-            val weight = binding.weightEditText.text.toString().toFloatOrNull()
-            val bodyFat = binding.bodyFatEditText.text.toString().toFloatOrNull()
-            val muscle = binding.skeletalMuscleMassEditText.text.toString().toFloatOrNull()
+            val weight = binding.weightEditText.text.toString().toDoubleOrNull()
+            val bodyFat = binding.bodyFatEditText.text.toString().toDoubleOrNull()
+            val muscle = binding.skeletalMuscleMassEditText.text.toString().toDoubleOrNull()
 
             if (weight == null) {
                 binding.weightEditText.error = "체중을 입력해주세요"
                 return@setOnClickListener
             }
 
-            lifecycleScope.launch(Dispatchers.IO) {
-                val record = WeightRecord(
-                    date = selectedDate,
-                    weight = weight.toDouble(),
-                    bodyFatPercentage = bodyFat?.toDouble(),
-                    skeletalMuscleMass = muscle?.toDouble()
-                )
-                db.weightRecordDao().insert(record)
-                withContext(Dispatchers.Main) {
+            // ViewModel의 함수 호출
+            viewModel.addOrUpdateWeightRecord(selectedDate, weight, bodyFat, muscle) { isSuccess ->
+                if (isSuccess) {
                     Toast.makeText(requireContext(), "저장되었습니다.", Toast.LENGTH_SHORT).show()
-                    dismiss()
+                    dismiss() // 성공 시 BottomSheet 닫기
+                } else {
+                    Toast.makeText(requireContext(), "저장에 실패했습니다.", Toast.LENGTH_SHORT).show()
                 }
             }
         }
     }
+
     override fun onDismiss(dialog: DialogInterface) {
         super.onDismiss(dialog)
         (activity as? MainActivity)?.showBottomNav()
@@ -127,13 +126,11 @@ class RecordAddWeightFragment : BottomSheetDialogFragment() {
 class DatePickerFragment(val onDateSelected: (LocalDate) -> Unit) : DialogFragment() {
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        // Use current date as default
         val c = java.util.Calendar.getInstance()
         val year = c.get(java.util.Calendar.YEAR)
         val month = c.get(java.util.Calendar.MONTH)
         val day = c.get(java.util.Calendar.DAY_OF_MONTH)
 
-        // Create and return DatePickerDialog
         return android.app.DatePickerDialog(requireContext(), { _, year, month, dayOfMonth -> // Changed to dayOfMonth
             val selectedDate = LocalDate.of(year, month + 1, dayOfMonth)
             onDateSelected(selectedDate)

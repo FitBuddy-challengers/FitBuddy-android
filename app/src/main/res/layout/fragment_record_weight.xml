@@ -27,28 +27,44 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="25년 7월 21일 ~ 7월 27일"
+                android:textColor="@color/black"
                 android:textSize="16sp"
                 android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="16dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@android:color/black"
+                    android:textSize="12sp"
+                    android:text="체중(kg)"/>
+                <View
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"/>
+                <TextView
+                    android:id="@+id/tvWeightAverage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="평균 54.3"
+                    android:textColor="@android:color/black"
+                    android:textSize="12sp" />
+            </LinearLayout>
 
             <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="250dp"
-                android:layout_marginTop="16dp">
+                android:layout_marginTop="8dp">
 
                 <com.github.mikephil.charting.charts.LineChart
                     android:id="@+id/weightChart"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent" />
 
-                <TextView
-                    android:id="@+id/tvWeightAverage"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="top|end"
-                    android:padding="4dp"
-                    android:text="평균 54.3"
-                    android:textColor="@android:color/black"
-                    android:textSize="12sp" />
             </FrameLayout>
 
             <com.google.android.material.card.MaterialCardView
@@ -105,19 +121,25 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="56dp"
                 android:text="25년 7월 21일 ~ 7월 27일"
+                android:textColor="@color/black"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
-            <FrameLayout
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="250dp"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
                 android:layout_marginTop="16dp">
-
-                <com.github.mikephil.charting.charts.LineChart
-                    android:id="@+id/fatChart"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
-
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@android:color/black"
+                    android:textSize="12sp"
+                    android:text="체지방률(%)"/>
+                <View
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"/>
                 <TextView
                     android:id="@+id/tvFatAverage"
                     android:layout_width="wrap_content"
@@ -127,6 +149,18 @@
                     android:text="평균 26.2"
                     android:textColor="@android:color/black"
                     android:textSize="12sp" />
+            </LinearLayout>
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="250dp"
+                android:layout_marginTop="8dp">
+
+                <com.github.mikephil.charting.charts.LineChart
+                    android:id="@+id/fatChart"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
             </FrameLayout>
 
             <com.google.android.material.card.MaterialCardView
@@ -183,19 +217,24 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="56dp"
                 android:text="25년 7월 21일 ~ 7월 27일"
+                android:textColor="@color/black"
                 android:textSize="16sp"
                 android:textStyle="bold" />
-
-            <FrameLayout
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="250dp"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
                 android:layout_marginTop="16dp">
-
-                <com.github.mikephil.charting.charts.LineChart
-                    android:id="@+id/muscleChart"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
-
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@android:color/black"
+                    android:textSize="12sp"
+                    android:text="골격근량(kg)"/>
+                <View
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"/>
                 <TextView
                     android:id="@+id/tvMuscleAverage"
                     android:layout_width="wrap_content"
@@ -205,6 +244,18 @@
                     android:text="평균 26.2"
                     android:textColor="@android:color/black"
                     android:textSize="12sp" />
+            </LinearLayout>
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="250dp"
+                android:layout_marginTop="8dp">
+
+                <com.github.mikephil.charting.charts.LineChart
+                    android:id="@+id/muscleChart"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
             </FrameLayout>
 
             <com.google.android.material.card.MaterialCardView

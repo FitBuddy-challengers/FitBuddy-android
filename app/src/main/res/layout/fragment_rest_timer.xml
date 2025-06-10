@@ -112,8 +112,6 @@
             android:layout_height="300dp"
             android:layout_gravity="center"
             android:indeterminate="false"
-            android:max="180000"
-            android:progress="30000"
             android:rotation="-180"
             app:indicatorInset="0dp"
             app:indicatorSize="300dp"

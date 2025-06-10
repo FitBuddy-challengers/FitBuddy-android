@@ -70,8 +70,8 @@
                     android:id="@+id/topWorkoutTextView"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:paddingHorizontal="24dp"
                     android:gravity="center"
+                    android:paddingHorizontal="24dp"
                     android:text="김슈니님은 OO 왕! \n이번 달, OOO를 가장 많이 하셨어요"
                     android:textColor="@color/black"
                     android:textSize="20sp"
@@ -152,13 +152,41 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center_vertical">
+                    android:clipChildren="false"
 
-                    <ImageView
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        android:contentDescription="AI 로봇 아이콘"
-                        android:src="@drawable/ic_menu_black" />
+                    android:gravity="center">
+
+                    <androidx.cardview.widget.CardView
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        app:cardBackgroundColor="@android:color/transparent"
+                        app:cardCornerRadius="18dp"
+                        app:cardElevation="0dp">
+
+                        <FrameLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent">
+
+                            <com.google.android.material.imageview.ShapeableImageView
+                                android:id="@+id/sivAvatar"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:scaleX="2"
+                                android:scaleY="2"
+                                android:src="@drawable/avartar_sample"
+                                android:translationY="6dp"
+                                android:antialias="true"
+                                app:shapeAppearanceOverlay="@style/CircleShapeAppearance" />
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="@drawable/bg_circle_gray_line" />
+
+                        </FrameLayout>
+
+                    </androidx.cardview.widget.CardView>
 
                     <TextView
                         android:layout_width="0dp"
@@ -166,24 +194,34 @@
                         android:layout_marginStart="8dp"
                         android:layout_weight="1"
                         android:text="AI 운동비서"
-                        android:textSize="18sp"
+                        android:textColor="#4f4f4f"
+                        android:textSize="13sp"
                         android:textStyle="bold" />
 
                 </LinearLayout>
 
-                <TextView
-                    android:id="@+id/tvAiComment"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="AI를 통해 운동 기록을 분석합니다...\n(현재 기능 개발 중)" />
+                    android:layout_marginEnd="57dp"
+                    android:background="@drawable/bg_message_box"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:id="@+id/tvAiComment"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="AI를 통해 운동 기록을 분석합니다...\n(현재 기능 개발 중)" />
+                </LinearLayout>
+
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="자세히 보기 >"
-                    android:textColor="@color/black" />
+                    android:textColor="#a6a6a6" />
 
             </LinearLayout>
 

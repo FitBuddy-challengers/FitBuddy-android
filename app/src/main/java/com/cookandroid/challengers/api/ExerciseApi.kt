@@ -168,6 +168,10 @@ interface ScheduleApi {
         @Body body: RetrofitClient.SetCompletionRequest
     ): Call<Void>
 
+    @PATCH("/api/sets/time/complete")
+    fun updateTimeSetCompletion(
+        @Body body: RetrofitClient.TimeSetCompletionRequest
+    ): Call<Void>
 }
 
 interface ChallengeApi {
@@ -183,6 +187,43 @@ interface ChallengeApi {
     @POST("/api/challenge/attendance/{userId}")
     fun markAttendance(@Path("userId") userId: Int): Call<ResponseBody>
 }
+
+
+interface RecordApi {
+    @GET("/api/records/monthly-completion")
+    suspend fun getMonthlyCompletion(
+        @Query("userId") userId: Int,
+        @Query("year") year: Int,
+        @Query("month") month: Int
+    ): Response<List<RetrofitClient.DateCompletionRateDto>>
+
+    @GET("/api/records/daily")
+    suspend fun getDailyRecords(
+        @Query("userId") userId: Int,
+        @Query("date") date: String // "YYYY-MM-DD"
+    ): Response<List<RetrofitClient.ExerciseRecordItem>>
+
+    @GET("/api/records/monthly-summary")
+    suspend fun getMonthlySummary(@Query("userId") userId: Int
+    ): Response<RetrofitClient.MonthlySummaryResponse>
+
+    @GET("/api/records/radar-data")
+    suspend fun getRadarData(
+        @Query("userId") userId: Int,
+        @Query("period") period: String
+    ): Response<Map<String, Double>>
+
+    @GET("/api/records/weight")
+    suspend fun getWeightRecords(
+        @Query("userId") userId: Int
+    ): Response<List<RetrofitClient.WeightRecordDto>>
+
+    @POST("/api/records/weight")
+    suspend fun addOrUpdateWeightRecord(
+        @Body record: RetrofitClient.WeightRecordRequest
+    ): Response<Unit>
+}
+
 interface StoreApi {
     @POST("/api/store/purchase")
     suspend fun purchaseItem(
@@ -195,3 +236,4 @@ interface StoreApi {
         @Query("userId") userId: Int
     ): Response<List<Int>> // 예시: [1, 101, 102, 401] 형태의 응답을 기대
 }
+

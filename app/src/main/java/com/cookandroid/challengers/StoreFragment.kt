@@ -1,5 +1,7 @@
 package com.cookandroid.challengers
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.os.Bundle
 import android.transition.AutoTransition
 import android.transition.TransitionManager
@@ -7,13 +9,14 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.cookandroid.challengers.databinding.FragmentStoreBinding // ★ View Binding 임포트
 import com.cookandroid.challengers.util.UserPreference
 
-// ★ 캐릭터&아이템 레이어 상수 (변경 없음)
+// 캐릭터&아이템 레이어 상수
 private const val ELEVATION_BEHIND_CHARACTER = 1f
 private const val ELEVATION_CHARACTER = 2f
 private const val ELEVATION_CLOTHING_BOTTOM = 3f
@@ -26,13 +29,12 @@ private const val ELEVATION_ACCESSORY_FRONT = 6.2f
 
 
 class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListener {
-
-    // ★ View Binding으로 수정
     private var _binding: FragmentStoreBinding? = null
     private val binding get() = _binding!!
 
     private lateinit var storeViewModel: StoreViewModel
     private lateinit var userPreference: UserPreference
+    private lateinit var characterContainer: FrameLayout
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -46,12 +48,12 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding.view.visibility = View.GONE // placeholderView
-
+        characterContainer = binding.characterContainer
+        binding.view.visibility = View.GONE
         binding.btnOpenStore.setOnClickListener {
             openStoreBottomSheet()
         }
-        observeViewModel() // ★ ViewModel 관찰 시작
+        observeViewModel()
     }
 
     override fun onResume() {
@@ -140,6 +142,10 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
                     View.VISIBLE
                 } else View.GONE
             }
+            characterContainer.post {
+                val bitmap = createBitmapFromView(characterContainer)
+                storeViewModel.updateCharacterBitmap(bitmap)
+            }
         }
 
         // 일반 액세서리
@@ -164,6 +170,24 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
             binding.glassesItemImageView.elevation = ELEVATION_GLASSES
             View.VISIBLE
         } else View.GONE
+    }
+
+    // FrameLayout과 같은 View를 Bitmap 이미지로 변환하는 헬퍼 함수
+    private fun createBitmapFromView(view: View): Bitmap {
+        val desiredWidth = (view.width * 2).toInt()
+        val desiredHeight = (view.height * 2).toInt()
+
+        view.measure(
+            View.MeasureSpec.makeMeasureSpec(view.width, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(view.height, View.MeasureSpec.EXACTLY)
+        )
+        view.layout(0, 0, view.measuredWidth, view.measuredHeight)
+
+        val bitmap = Bitmap.createBitmap(desiredWidth, desiredHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        canvas.scale(desiredWidth.toFloat() / view.width, desiredHeight.toFloat() / view.height) // Canvas 스케일링
+        view.draw(canvas)
+        return bitmap
     }
 
     private fun openStoreBottomSheet() {

@@ -13,6 +13,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import com.cookandroid.challengers.api.RetrofitClient
+import com.cookandroid.challengers.data.StoreItemData
 import com.cookandroid.challengers.databinding.FragmentStoreCategoryBinding
 import com.cookandroid.challengers.util.UserPreference
 import kotlinx.coroutines.CancellationException
@@ -52,25 +53,27 @@ class StoreCategoryFragment : Fragment() {
         setupRecyclerView()
         observeViewModel()
 
+        // 구매 완료 후 아이템 목록을 새로고침하기 위한 리스너
         setFragmentResultListener(StoreItemPopUpFragment.REQUEST_KEY_PURCHASE) { _, bundle ->
             val purchaseSuccess = bundle.getBoolean(StoreItemPopUpFragment.RESULT_KEY_PURCHASE_SUCCESS)
             if (purchaseSuccess) {
-                Log.d(TAG, "Item purchase successful, reloading data.")
+                Log.d(TAG, "Item purchase successful, reloading data for category: $categoryId")
                 loadInitialData()
             }
         }
 
-        // ★ 뷰가 처음 생성될 때 한 번만 데이터 로드
+        // ★★★ 뷰가 처음 생성될 때 한 번만 데이터 로드 ★★★
         loadInitialData()
     }
 
-    // ★ onResume에서 매번 로드하는 로직 제거 (탭 전환 시 불필요한 API 호출 및 취소 오류 방지)
+    // ★★★ onResume에서 데이터 로드 로직 제거 ★★★
     override fun onResume() {
         super.onResume()
-        // 데이터 갱신은 구매 성공 시 또는 화면에 처음 진입 시에만 수행
+        // 데이터 로드는 onViewCreated에서 한 번만 하고, 이후 갱신은 필요 시에만 수행
     }
 
     private fun setupRecyclerView() {
+        // 어댑터 초기화 (사용자 레벨은 나중에 서버에서 받아와서 동적으로 업데이트)
         productAdapter = ProductAdapter(1) { clickedItem ->
             val userLevel = storeViewModel.userLevel.value ?: 1
             when {
@@ -100,9 +103,11 @@ class StoreCategoryFragment : Fragment() {
     }
 
     private fun observeViewModel() {
+        // 착용된 아이템이 변경되면 어댑터에 알려 UI(파란 테두리)를 업데이트
         storeViewModel.equippedItems.observe(viewLifecycleOwner) { equippedMap ->
             productAdapter.setSelectedItemId(equippedMap[categoryId]?.id)
         }
+        // 사용자 레벨이 변경되면 어댑터에 알려 UI(잠금 상태)를 업데이트
         storeViewModel.userLevel.observe(viewLifecycleOwner) { level ->
             productAdapter.updateUserLevel(level)
         }
@@ -112,7 +117,7 @@ class StoreCategoryFragment : Fragment() {
         val userId = userPreference.getUserId()
         val currentCategory = categoryId ?: return
         if (userId == -1) {
-            Toast.makeText(requireContext(), "사용자 정보를 불러올 수 없습니다.", Toast.LENGTH_SHORT).show()
+            // 로그인 정보가 없으면 로드 시도조차 하지 않음
             return
         }
 
@@ -129,7 +134,7 @@ class StoreCategoryFragment : Fragment() {
                 val ownedItemsResponse = ownedItemsDeferred.await()
 
                 if (!ownedItemsResponse.isSuccessful) {
-                    throw HttpException(ownedItemsResponse) // 오류 응답을 예외로 던짐
+                    throw HttpException(ownedItemsResponse)
                 }
                 val ownedItemIdsFromServer = ownedItemsResponse.body()?.toSet() ?: emptySet()
 
@@ -139,12 +144,13 @@ class StoreCategoryFragment : Fragment() {
                 storeViewModel.setUserLevelAndCoin(userData.level, userData.coin)
                 productAdapter.updateUserLevel(userData.level)
 
-                // 4. 로컬에서 해당 카테고리의 모든 아이템 정적 데이터 목록을 가져옴
-                val allLocalItems = getLocalItemsForCategory(currentCategory)
-                Log.d(TAG, "[$currentCategory] 3. Loaded ${allLocalItems.size} local items.")
+                // 4. 로컬에서 해당 카테고리의 모든 아이템 (정적 데이터) 목록을 가져옴
+                val allLocalItems = StoreItemData.getItemsForCategory(currentCategory)
+                Log.d(TAG, "[$currentCategory] 3. Loaded ${allLocalItems.size} local items from StoreItemData.")
 
                 // 5. 서버의 소유 정보와 로컬의 정적 데이터를 병합하여 최종 리스트 생성
                 val finalList = allLocalItems.map { localItem ->
+                    // isOwned: 기본 지급 아이템이거나, 서버에서 소유했다고 알려준 경우 true
                     localItem.copy(isOwned = localItem.isOwned || ownedItemIdsFromServer.contains(localItem.id))
                 }
                 Log.d(TAG, "[$currentCategory] 4. Merged list created. Total items: ${finalList.size}")
@@ -153,8 +159,10 @@ class StoreCategoryFragment : Fragment() {
                 productAdapter.submitList(finalList)
 
             } catch (e: CancellationException) {
+                // 사용자가 화면을 벗어나 코루틴이 취소된 경우, 정상적인 동작이므로 로그만 남기고 무시
                 Log.i(TAG, "[$currentCategory] Data loading was cancelled.")
             } catch (e: Exception) {
+                // 그 외 네트워크 오류나 서버 에러
                 val errorMessage = if (e is HttpException) "데이터 로드 실패 (코드: ${e.code()})" else "데이터를 불러오는 데 실패했습니다."
                 Log.e(TAG, "[$currentCategory] Failed to load store data", e)
                 if(isAdded) {
@@ -162,57 +170,6 @@ class StoreCategoryFragment : Fragment() {
                 }
             }
         }
-    }
-
-    private fun getLocalItemsForCategory(category: String): List<ProductItem> {
-        val items = mutableListOf<ProductItem>()
-        // isOwned: 기본 지급 아이템일 경우에만 true로 설정, 나머지는 서버 데이터와 병합
-        when (category) {
-            "character" -> {
-                items.add(ProductItem(1, "회색 고양이", R.drawable.char_graycat, category, 0, 1, true))
-                items.add(ProductItem(2, "토끼", R.drawable.char_rabbit, category, 500, 1))
-                items.add(ProductItem(3, "곰", R.drawable.char_bear, category, 500, 2))
-                items.add(ProductItem(4, "오리", R.drawable.char_duck, category, 500, 2))
-                items.add(ProductItem(5, "수달", R.drawable.char_otter, category, 500, 2))
-                items.add(ProductItem(6, "치즈 고양이", R.drawable.char_gingercat, category, 500, 3))
-            }
-            "top" -> {
-                items.add(ProductItem(101, "민트 티셔츠", R.drawable.t_mint, category, 100, 1,true))
-                items.add(ProductItem(102, "핑크 티셔츠", R.drawable.t_pink, category, 100, 1))
-                items.add(ProductItem(103, "퍼플 티셔츠", R.drawable.t_purple, category, 150, 2))
-                items.add(ProductItem(104, "화이트 티셔츠", R.drawable.t_white, category, 150, 2))
-                items.add(ProductItem(105, "옐로우 티셔츠", R.drawable.t_yellow, category, 100, 1))
-            }
-            "onepiece" -> {
-                items.add(ProductItem(201, "블루 원피스", R.drawable.opc_blue, category, 250, 1, true))
-                items.add(ProductItem(202, "그린 원피스", R.drawable.opc_green, category, 250, 2))
-                items.add(ProductItem(203, "핑크 원피스", R.drawable.opc_pink, category, 300, 3))
-                items.add(ProductItem(204, "퍼플 원피스", R.drawable.opc_purple, category, 300, 3))
-            }
-            "costume" -> {
-                items.add(ProductItem(301, "유령옷", R.drawable.cos_ghost, category, 200, 2))
-                items.add(ProductItem(302, "블루 파자마", R.drawable.cos_pajama_b, category, 200, 1))
-                items.add(ProductItem(303, "핑크 파자마", R.drawable.cos_pajama_p, category, 200, 1))
-                items.add(ProductItem(304, "푸딩옷", R.drawable.cos_puding, category, 250, 4))
-                items.add(ProductItem(305, "우비", R.drawable.cos_raincoat, category, 250, 4))
-                items.add(ProductItem(306, "새우 튀김", R.drawable.cos_shrimp, category, 300, 5))
-            }
-            "pants" -> {
-                items.add(ProductItem(401, "블루 팬츠", R.drawable.pants_blue, category, 100, 1, true))
-                items.add(ProductItem(402, "오렌지 팬츠", R.drawable.pants_orange, category, 100, 1))
-                items.add(ProductItem(403, "핑크 팬츠", R.drawable.pants_pink, category, 100, 1))
-            }
-            "hairAcc" -> {
-                items.add(ProductItem(501, "천사 날개", R.drawable.acc_angel, category, 500, 5))
-                items.add(ProductItem(502, "천사 날개", R.drawable.acc_angel, category, 500, 5))
-            }
-            "acc" -> {
-                items.add(ProductItem(601, "천사 날개", R.drawable.acc_angel, category, 500, 5))
-                items.add(ProductItem(602, "네잎클로버", R.drawable.acc_clover, category, 300, 1))
-                items.add(ProductItem(603, "마법봉", R.drawable.acc_magicstick, category, 400, 3))
-            }
-        }
-        return items
     }
 
     override fun onDestroyView() {

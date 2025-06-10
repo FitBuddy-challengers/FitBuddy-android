@@ -48,6 +48,7 @@ class ExerciseDoingFragment : Fragment() {
     private var planExerciseList: List<ScheduleDto> = emptyList()
 
     private var currentSetStartTime: Long = 0L // 현재 '진행중인 세트'의 시작 시간 (ms)
+    private var accumulatedSetDurationMillis: Long = 0L // ★★★ 현재 세트의 누적 운동 시간 (ms) ★★★
 
     // Arguments에서 넘어온 운동 정보 (planExerciseList 로드 전 또는 실패 시 사용)
     private var passedExerciseName: String? = null
@@ -58,6 +59,8 @@ class ExerciseDoingFragment : Fragment() {
 
     private val stopwatchViewModel: StopwatchViewModel by activityViewModels()
     private lateinit var dbForEnrich: AppDatabase // 운동 이름/이미지 등 로컬 정보 보강용
+
+
 
     companion object {
         private const val TAG = "ExerciseDoingFragment"
@@ -202,18 +205,26 @@ class ExerciseDoingFragment : Fragment() {
     override fun onPause() {
         super.onPause()
         Log.d(TAG, "onPause CALLED")
+
+        // ★★★ 앱이 비활성화될 때 스톱워치 자동 일시정지 로직 ★★★
+        // 1. 현재 운동 세션이 활성화 상태인지 확인합니다.
+        if (isWorkoutSessionActive) {
+            // 2. 만약 스톱워치가 실행 중이었다면, 자동으로 일시정지시킵니다.
+            if (stopwatchViewModel.isRunning.value == true) {
+                stopwatchViewModel.pauseStopwatch()
+                Log.i(TAG, "onPause: App is pausing. Automatically paused the stopwatch.")
+            }
+
+            // 3. 현재까지 누적된 전체 운동 시간을 SharedPreferences에 저장합니다.
+            //    (스톱워치를 방금 멈췄으므로, isRunning.observe가 호출되어 저장되지만, 여기서 한 번 더 확실하게 저장)
+            val currentTime = stopwatchViewModel.elapsedTime.value ?: 0L
+            sharedHeaderPrefs.edit().putLong(KEY_SHARED_ELAPSED_TIME, currentTime).apply()
+            Log.i(TAG, "onPause: Saved total elapsed time to sharedHeaderPrefs: $currentTime")
+        }
+
+        // 4. 나머지 내부 상태 및 헤더 상태 저장
         saveInternalStateToPrefs()
         saveGlobalProgressToHeaderPrefs()
-        // ★ 스톱워치가 실행 중이었다면, 현재 '전체' 경과 시간을 KEY_SHARED_ELAPSED_TIME에 저장
-        //    ViewModel의 스톱워치는 계속 실행될 수 있으므로, 화면 벗어날 때 현재 값 저장.
-        if (isWorkoutSessionActive && stopwatchViewModel.isRunning.value == true) { // 세션이 활성이고 스톱워치가 돌고 있을 때만
-            sharedHeaderPrefs.edit().putLong(KEY_SHARED_ELAPSED_TIME, stopwatchViewModel.elapsedTime.value ?: 0L).apply()
-            Log.i(TAG,"onPause: Session active & Stopwatch was running. Saved total elapsed time to sharedHeaderPrefs: ${stopwatchViewModel.elapsedTime.value}")
-        } else if (isWorkoutSessionActive && stopwatchViewModel.isRunning.value == false) {
-            // 세션은 활성인데 스톱워치가 멈춰있다면 (예: 사용자가 일시정지) 그 시간도 저장
-            sharedHeaderPrefs.edit().putLong(KEY_SHARED_ELAPSED_TIME, stopwatchViewModel.elapsedTime.value ?: 0L).apply()
-            Log.i(TAG,"onPause: Session active & Stopwatch was PAUSED. Saved total elapsed time to sharedHeaderPrefs: ${stopwatchViewModel.elapsedTime.value}")
-        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -307,24 +318,30 @@ class ExerciseDoingFragment : Fragment() {
         }
 
         binding.pauseButton.setOnClickListener {
-            if (planExerciseList.isEmpty() || (currentExerciseSets.isEmpty() && currentSetIndex == 0) || (currentSetIndex >= currentExerciseSets.size && currentExerciseSets.isNotEmpty()) ) {
+            if (planExerciseList.isEmpty() || currentSetIndex >= currentExerciseSets.size) {
                 Toast.makeText(requireContext(), "진행할 운동 또는 세트가 없습니다.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             if (stopwatchViewModel.isRunning.value == true) {
-                stopwatchViewModel.pauseStopwatch() // 전체 운동 시간 일시 정지
-                // 멈췄을 때의 '전체' 경과 시간을 KEY_SHARED_ELAPSED_TIME에 저장 (헤더 및 이어하기용)
-                sharedHeaderPrefs.edit().putLong(KEY_SHARED_ELAPSED_TIME, stopwatchViewModel.elapsedTime.value ?: 0L).apply()
-                Log.i(TAG,"Stopwatch paused by button. Total elapsed time saved: ${stopwatchViewModel.elapsedTime.value}")
-            } else { // 스톱워치가 멈춰있을 때 (수동으로 전체 운동 시간 이어하기)
-                // 현재 세트가 미완료 상태일 때만 전체 시간 이어하기 가능
+                stopwatchViewModel.pauseStopwatch()
+                // 현재 세트의 시간 측정도 함께 '일시정지'
+                if (currentSetStartTime > 0L) {
+                    val runningDuration = System.currentTimeMillis() - currentSetStartTime
+                    accumulatedSetDurationMillis += runningDuration // 지금까지의 실행 시간을 누적
+                    currentSetStartTime = 0L // 시작 시간을 0으로 만들어 '일시정지' 상태로 표시
+                    Log.d(TAG, "Set timer paused. Accumulated duration: $accumulatedSetDurationMillis ms")
+                }
+            } else {
+                // --- 재개 ---
                 if (currentExerciseSets.getOrNull(currentSetIndex)?.isCompleted == false) {
-                    // ViewModel에 이미 설정된 시간 (onCreate 또는 이전 pause에서 설정된) 부터 이어 시작
                     val resumeTime = stopwatchViewModel.elapsedTime.value ?: sharedHeaderPrefs.getLong(KEY_SHARED_ELAPSED_TIME, 0L)
                     stopwatchViewModel.startStopwatch(resumeTime)
-                    if (!isWorkoutSessionActive) isWorkoutSessionActive = true // 스톱워치 시작 = 세션 활성
-                    Log.i(TAG,"Stopwatch manually started/resumed by button. Resumed from total elapsed: $resumeTime.")
+                    if (!isWorkoutSessionActive) isWorkoutSessionActive = true
+
+                    // 현재 세트의 시간 측정도 '재개'
+                    currentSetStartTime = System.currentTimeMillis() // 새로운 시작 시간 기록
+                    Log.i(TAG,"Stopwatch manually resumed. Set timer also resumed. New start time: $currentSetStartTime")
                 } else {
                     Toast.makeText(requireContext(), "이미 완료된 세트이거나 진행할 세트가 없습니다.", Toast.LENGTH_SHORT).show()
                 }
@@ -332,25 +349,17 @@ class ExerciseDoingFragment : Fragment() {
         }
 
         binding.completeSetButton.setOnClickListener {
-            if (currentSetIndex < currentExerciseSets.size) { // 완료할 세트가 남아있다면
-                if (!isWorkoutSessionActive) isWorkoutSessionActive = true // 세트 완료 시도 = 세션 활성
+            if (currentSetIndex < currentExerciseSets.size) {
+                if (!isWorkoutSessionActive) isWorkoutSessionActive = true
 
-                if (stopwatchViewModel.isRunning.value == false) { // 전체 스톱워치가 멈춰있으면 현재 시간 기준으로 시작/재개
+                if (stopwatchViewModel.isRunning.value == false) {
                     val resumeTime = stopwatchViewModel.elapsedTime.value ?: sharedHeaderPrefs.getLong(KEY_SHARED_ELAPSED_TIME, 0L)
                     stopwatchViewModel.startStopwatch(resumeTime)
                 }
-                // 현재 '세트'의 시작 시간 기록 (이 세트가 처음 시작되는 경우)
-                if (currentSetStartTime == 0L) {
-                    currentSetStartTime = System.currentTimeMillis()
-                    internalPrefs.edit().putLong(KEY_INTERNAL_CURRENT_SET_START_TIME, currentSetStartTime).apply()
-                    Log.d(TAG,"CompleteSetButton: Set $currentSetIndex started. SetStartTime: $currentSetStartTime")
-                }
-                Log.d(TAG, "CompleteSetButton clicked for set $currentSetIndex. CurrentSetStartTime: $currentSetStartTime. TotalElapsed: ${stopwatchViewModel.elapsedTime.value}")
                 completeCurrentSet()
-            } else { // 모든 세트 완료 (currentSetIndex == currentExerciseSets.size)
-                Log.d(TAG, "CompleteSetButton clicked when all sets are done. Moving to rest/next exercise.")
+            } else {
                 Toast.makeText(requireContext(), "모든 세트를 완료했습니다.", Toast.LENGTH_SHORT).show()
-                showRestTimer(autoStart = true) // 다음 운동으로 진행 유도
+                showRestTimer(autoStart = true)
             }
         }
         binding.restTimerButton.setOnClickListener { showRestTimer() }
@@ -460,31 +469,26 @@ class ExerciseDoingFragment : Fragment() {
             try {
                 val fetchedExerciseSetsSource: List<ExerciseSet> = if (exerciseIsTimeType) {
                     val response = RetrofitClient.scheduleApi.getTimeSets(scheduleId).execute()
-                    Log.d(TAG, "getTimeSets API for $scheduleId: code=${response.code()}, success=${response.isSuccessful}")
                     if (response.isSuccessful) {
                         response.body()?.map { dto ->
                             ExerciseSet(exercisePlanId = exercisePlanId, exerciseId = exerciseIdForSetsApi, setNumber = dto.setNumber, weight = dto.weight.toInt(), reps = 0, times = dto.seconds.toLong(), isCompleted = dto.isCompleted, elapsedTimeMillis = dto.seconds * 1000L)
                         } ?: emptyList()
-                    } else { Log.e(TAG, "Failed to fetch time sets: ${response.code()} ${response.message()}"); emptyList() }
+                    } else { emptyList() }
                 } else {
                     val response = RetrofitClient.scheduleApi.getRepsSets(scheduleId).execute()
-                    Log.d(TAG, "getRepsSets API for $scheduleId: code=${response.code()}, success=${response.isSuccessful}, body: ${response.body()?.joinToString { "S${it.setNumber}(${it.reps}r ${it.weight}kg done:${it.isCompleted})" }}")
                     if (response.isSuccessful) {
                         response.body()?.map { dto ->
                             ExerciseSet(exercisePlanId = exercisePlanId, exerciseId = exerciseIdForSetsApi, setNumber = dto.setNumber, weight = dto.weight.toInt(), reps = dto.reps, times = 0L, isCompleted = dto.isCompleted)
                         } ?: emptyList()
-                    } else { Log.e(TAG, "Failed to fetch reps sets: ${response.code()} ${response.message()}"); emptyList() }
+                    } else { emptyList() }
                 }
 
                 currentExerciseSets = fetchedExerciseSetsSource.sortedBy { it.setNumber }.toMutableList()
-                Log.i(TAG, "Fetched ${currentExerciseSets.size} sets for '${currentScheduleInfo.exercise_name}'. Data: ${currentExerciseSets.joinToString { "Set${it.setNumber}(done:${it.isCompleted})" }}")
-
                 var determinedNextSetIndex = currentExerciseSets.indexOfFirst { !(it.isCompleted ?: false) }
                 if (determinedNextSetIndex == -1) {
                     determinedNextSetIndex = if (currentExerciseSets.isNotEmpty()) currentExerciseSets.size else 0
                 }
                 currentSetIndex = determinedNextSetIndex
-                Log.i(TAG, "Determined currentSetIndex = $currentSetIndex (0-based; .size if all done).")
 
                 val listForAdapter = currentExerciseSets.mapIndexed { index, set ->
                     set.copy(isHighlighted = (index == currentSetIndex && index < currentExerciseSets.size))
@@ -492,11 +496,9 @@ class ExerciseDoingFragment : Fragment() {
 
                 withContext(Dispatchers.Main) {
                     _binding?.let {
-                        if (::setAdapter.isInitialized) {
-                            setAdapter.submitList(listForAdapter) {
-                                if (listForAdapter.isNotEmpty() && currentSetIndex < currentExerciseSets.size) {
-                                    binding.setsRecyclerView.smoothScrollToPosition(currentSetIndex)
-                                }
+                        setAdapter.submitList(listForAdapter) {
+                            if (listForAdapter.isNotEmpty() && currentSetIndex < currentExerciseSets.size) {
+                                binding.setsRecyclerView.smoothScrollToPosition(currentSetIndex)
                             }
                         }
                         updateSetProgressUI()
@@ -505,37 +507,26 @@ class ExerciseDoingFragment : Fragment() {
                         val overallExerciseIsMarkedCompleted = planExerciseList.getOrNull(currentExerciseOrderIndex)?.is_completed ?: false
                         val currentSetToStartNow = currentExerciseSets.getOrNull(currentSetIndex)
 
-                        // ★★★ 스톱워치 자동 시작/상태 관리 로직 (사용자 요구사항 반영) ★★★
-                        if (isWorkoutSessionActive && // 현재 운동 세션이 활성화 상태이고 (예: 이어하기)
-                            !overallExerciseIsMarkedCompleted && // 전체 운동이 완료되지 않았고
-                            currentSetToStartNow?.isCompleted == false) { // 현재 시작할 세트도 미완료 상태라면
-
-                            // ViewModel에 이미 설정된 시간 (onCreate에서 sharedPrefs 값으로 설정됨) 부터 이어 시작
+                        if (isWorkoutSessionActive && !overallExerciseIsMarkedCompleted && currentSetToStartNow?.isCompleted == false) {
                             if (stopwatchViewModel.isRunning.value == false) {
                                 stopwatchViewModel.startStopwatch(stopwatchViewModel.elapsedTime.value ?: 0L)
-                                Log.i(TAG, "fetchSets: Session active & conditions met. Stopwatch WAS STOPPED, now STARTED from ViewModel time ${stopwatchViewModel.elapsedTime.value}.")
-                            } else {
-                                Log.i(TAG, "fetchSets: Session active & conditions met. Stopwatch ALREADY RUNNING. Total elapsed ${stopwatchViewModel.elapsedTime.value}.")
+                            }
+
+                            // ★★★ 첫 세트 또는 이어하는 세트의 시작 시간 기록 ★★★
+                            if (currentSetStartTime == 0L) {
+                                currentSetStartTime = System.currentTimeMillis()
+                                accumulatedSetDurationMillis = 0L
+                                Log.i(TAG, "fetchSets: Starting timer for set index $currentSetIndex. SetStartTime: $currentSetStartTime")
                             }
                         } else if (currentSetIndex >= currentExerciseSets.size && currentExerciseSets.isNotEmpty()) {
-                            // 현재 운동의 모든 세트가 완료된 상태로 로드됨
-                            binding.completeSetButton.text = "운동 완료"
                             if (isWorkoutSessionActive && stopwatchViewModel.isRunning.value == true) {
-                                stopwatchViewModel.pauseStopwatch() // 전체 세션은 계속될 수 있으므로 일시정지
-                                Log.i(TAG, "fetchSets: All sets for this exercise loaded as completed. Pausing session stopwatch. Total elapsed: ${stopwatchViewModel.elapsedTime.value}")
+                                stopwatchViewModel.pauseStopwatch()
                             }
                         } else if (!isWorkoutSessionActive) {
-                            // 새 운동 세션이거나, 이어하기 상태가 아니면 스톱워치는 사용자가 수동으로 시작해야 함.
-                            // 이 경우, 전체 운동 시간은 0부터 시작해야 하므로 stopStopwatch() 호출.
-                            // (ExerciseFragment에서 navigateToExerciseDoingFragment(isContinuing=false) 시 이미 처리됨, onCreate에서도 처리)
                             if (stopwatchViewModel.elapsedTime.value != 0L || stopwatchViewModel.isRunning.value == true) {
-                                Log.d(TAG, "fetchSets: Workout session NOT active but stopwatch not zero/stopped. Calling stopStopwatch() to ensure reset.")
-                                stopwatchViewModel.stopStopwatch() // 시간 0으로 리셋하고 멈춤
-                            } else {
-                                Log.d(TAG, "fetchSets: Workout session NOT active. Stopwatch already stopped/reset.")
+                                stopwatchViewModel.stopStopwatch()
                             }
                         }
-                        // ★★★ 스톱워치 로직 끝 ★★★
                         saveInternalStateToPrefs()
                         saveGlobalProgressToHeaderPrefs()
                     }
@@ -579,57 +570,77 @@ class ExerciseDoingFragment : Fragment() {
 
     private fun completeCurrentSet() {
         if (currentSetIndex >= currentExerciseSets.size) {
-            Log.w(TAG, "All sets already marked as completed. CurrentSetIndex: $currentSetIndex, SetSize: ${currentExerciseSets.size}")
+            Log.w(TAG, "All sets already marked as completed.")
             showRestTimer(autoStart = true)
             return
         }
 
-        val now = System.currentTimeMillis()
-        val elapsedForThisSpecificSet = if (currentSetStartTime > 0L) now - currentSetStartTime else 0L
-        if (currentSetStartTime == 0L) {
-            Log.w(TAG, "completeCurrentSet: currentSetStartTime was 0. Elapsed time for this set recorded as 0 or based on total if time-based.")
-        }
-        Log.i(TAG, "Completing set index $currentSetIndex. Elapsed for this specific set: $elapsedForThisSpecificSet ms.")
-
+        val isTimeType = planExerciseList.getOrNull(currentExerciseOrderIndex)?.is_time_type ?: false
         val setToComplete = currentExerciseSets[currentSetIndex]
-        val completedSetInLocal = setToComplete.copy(
-            isCompleted = true,
-            isHighlighted = false,
-            elapsedTimeMillis = if (planExerciseList.getOrNull(currentExerciseOrderIndex)?.is_time_type == true) elapsedForThisSpecificSet else 0L
-        )
-        currentExerciseSets[currentSetIndex] = completedSetInLocal
+
+        var finalSetDurationMillis = 0L
+        val now = System.currentTimeMillis()
+        if (currentSetStartTime > 0L) {
+            val lastRunningSegment = now - currentSetStartTime
+            finalSetDurationMillis = accumulatedSetDurationMillis + lastRunningSegment
+        } else {
+            finalSetDurationMillis = accumulatedSetDurationMillis
+        }
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val requestBody = RetrofitClient.SetCompletionRequest(scheduleId, completedSetInLocal.setNumber, true)
-                Log.d(TAG, "🚀 Sending set completion to server: scheduleId=${requestBody.scheduleId}, setNumber=${requestBody.setNumber}, isCompleted=true")
-                val updateResponse = RetrofitClient.scheduleApi.updateRepsSetCompletion(requestBody).execute()
+                if (isTimeType) {
+                    // --- A. 시간 기반 운동: 실제 측정 시간을 '밀리초' 단위로 전송 ---
+                    Log.i(TAG, "Completing TIME-based set. Final duration: $finalSetDurationMillis ms.")
+                    val requestBody = RetrofitClient.TimeSetCompletionRequest(
+                        scheduleId = scheduleId,
+                        setNumber = setToComplete.setNumber,
+                        isCompleted = true,
+                        elapsedTimeMillis = finalSetDurationMillis
+                    )
+                    val response = RetrofitClient.scheduleApi.updateTimeSetCompletion(requestBody).execute()
+                    if (!response.isSuccessful) {
+                        Log.e(TAG, "❌ Server FAILED to ACK TIME set completion: ${response.code()}")
+                        withContext(Dispatchers.Main) { if(isAdded) Toast.makeText(requireContext(), "시간 세트 완료 저장 실패", Toast.LENGTH_SHORT).show() }
+                    }
 
-                if (updateResponse.isSuccessful) {
-                    Log.i(TAG, "✅ Server ACK for set completion: scheduleId=${scheduleId}, setNumber=${setToComplete.setNumber}")
                 } else {
-                    Log.e(TAG, "❌ Server FAILED to ACK set completion: ${updateResponse.code()} - ${updateResponse.message()}. Body: ${updateResponse.errorBody()?.string()}")
-                    withContext(Dispatchers.Main) { Toast.makeText(requireContext(), "세트 완료 저장 실패(서버)", Toast.LENGTH_SHORT).show() }
+                    // --- B. 횟수 기반 운동: 실제 측정 시간을 '초' 단위로 전송 ---
+                    val elapsedSecondsForSet = Math.round(finalSetDurationMillis / 1000.0).toInt()
+                    Log.i(TAG, "Completing REP-based set. Final duration: $finalSetDurationMillis ms -> $elapsedSecondsForSet seconds.")
+
+                    val requestBody = RetrofitClient.SetCompletionRequest(
+                        scheduleId = scheduleId,
+                        setNumber = setToComplete.setNumber,
+                        isCompleted = true,
+                        timeSeconds = elapsedSecondsForSet
+                    )
+                    val response = RetrofitClient.scheduleApi.updateRepsSetCompletion(requestBody).execute()
+                    if (!response.isSuccessful) {
+                        Log.e(TAG, "❌ Server FAILED to ACK REPS set completion: ${response.code()}")
+                        withContext(Dispatchers.Main) { if(isAdded) Toast.makeText(requireContext(), "횟수 세트 완료 저장 실패", Toast.LENGTH_SHORT).show() }
+                    }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Exception during server set completion for scheduleId $scheduleId, set ${setToComplete.setNumber}", e)
-                withContext(Dispatchers.Main) { Toast.makeText(requireContext(), "세트 완료 저장 중 네트워크 오류", Toast.LENGTH_SHORT).show() }
+                Log.e(TAG, "❌ Exception during server set completion", e)
+                withContext(Dispatchers.Main) { if(isAdded) Toast.makeText(requireContext(), "세트 완료 저장 중 네트워크 오류", Toast.LENGTH_SHORT).show() }
             }
         }
 
+        val completedSetInLocal = setToComplete.copy(isCompleted = true, isHighlighted = false)
+        currentExerciseSets[currentSetIndex] = completedSetInLocal
         currentSetIndex++
+
+        accumulatedSetDurationMillis = 0L
+        currentSetStartTime = 0L
+        internalPrefs.edit().putLong(KEY_INTERNAL_CURRENT_SET_START_TIME, 0L).apply()
 
         val listForAdapter = currentExerciseSets.mapIndexed { idx, s ->
             s.copy(isHighlighted = (idx == currentSetIndex && currentSetIndex < currentExerciseSets.size))
         }
-        if (::setAdapter.isInitialized) { setAdapter.submitList(listForAdapter.toList()) {
+        setAdapter.submitList(listForAdapter.toList()) {
             if (currentSetIndex < currentExerciseSets.size) binding.setsRecyclerView.smoothScrollToPosition(currentSetIndex)
-        }}
-//        currentSetStartTime = 0L // ★ 다음 세트 시작 전이므로 현재 세트 시작 시간 초기화
-//        stopwatchViewModel.pauseStopwatch() // ★ 전체 스톱워치는 '일시 정지' (휴식 시작)
-        // 현재까지 누적된 '전체' 운동 시간을 SharedPreferences에 저장 (헤더 및 이어하기용)
-        sharedHeaderPrefs.edit().putLong(KEY_SHARED_ELAPSED_TIME, stopwatchViewModel.elapsedTime.value ?: 0L).apply()
-        Log.d(TAG, "Set completed. Stopwatch paused. Total elapsed time saved: ${stopwatchViewModel.elapsedTime.value}")
+        }
 
         saveInternalStateToPrefs()
         saveGlobalProgressToHeaderPrefs()
@@ -701,46 +712,37 @@ class ExerciseDoingFragment : Fragment() {
     }
 
     private fun showRestTimer(autoStart: Boolean = false) {
-        if (!isAdded || _binding == null) return
-
+        if (!isAdded) return
         val allSetsDoneForCurrentExercise = currentSetIndex >= currentExerciseSets.size && currentExerciseSets.isNotEmpty()
-        Log.i(TAG, "showRestTimer: currentSetIndex=$currentSetIndex, totalSets=${currentExerciseSets.size}, allSetsDoneForCurrentExercise=$allSetsDoneForCurrentExercise")
 
         val sheet = RestTimerFragment.newInstance(autoStart)
         sheet.setOnTimerFinishedListener {
-            if (!isAdded || _binding == null) return@setOnTimerFinishedListener
+            if (!isAdded) return@setOnTimerFinishedListener
 
-            if (!allSetsDoneForCurrentExercise) { // 현재 운동의 다음 세트가 남아있다면
-                Log.i(TAG, "Rest timer finished. Preparing for next set (index $currentSetIndex).")
-                // ★ 다음 세트 시작: 전체 스톱워치는 계속 이어가도록 시작 (멈춰있었다면)
+            if (!allSetsDoneForCurrentExercise) {
+                // ★★★ 다음 세트 시작 준비: 누적 시간 초기화 ★★★
+                accumulatedSetDurationMillis = 0L
+                currentSetStartTime = System.currentTimeMillis()
+                internalPrefs.edit().putLong(KEY_INTERNAL_CURRENT_SET_START_TIME, currentSetStartTime).apply()
+
                 if (stopwatchViewModel.isRunning.value == false) {
-                    // 이전 전체 누적 시간부터 이어가도록 시작
                     val timeToResumeFrom = stopwatchViewModel.elapsedTime.value ?: sharedHeaderPrefs.getLong(KEY_SHARED_ELAPSED_TIME, 0L)
                     stopwatchViewModel.startStopwatch(timeToResumeFrom)
-                    Log.d(TAG, "Next set ($currentSetIndex) starting. Stopwatch resumed from $timeToResumeFrom.")
                 }
-                currentSetStartTime = System.currentTimeMillis() // ★ 다음 세트의 시작 시간 새로 기록
-                internalPrefs.edit().putLong(KEY_INTERNAL_CURRENT_SET_START_TIME, currentSetStartTime).apply()
-                Log.d(TAG, "New SetStartTime: $currentSetStartTime. Stopwatch running: ${stopwatchViewModel.isRunning.value}")
 
                 val listForAdapter = currentExerciseSets.mapIndexed { idx, s ->
-                    s.copy(isHighlighted = (idx == currentSetIndex && currentSetIndex < currentExerciseSets.size))
+                    s.copy(isHighlighted = (idx == currentSetIndex))
                 }
-                if (::setAdapter.isInitialized) { setAdapter.submitList(listForAdapter.toList()) {
+                setAdapter.submitList(listForAdapter.toList()) {
                     if (currentSetIndex < currentExerciseSets.size) binding.setsRecyclerView.smoothScrollToPosition(currentSetIndex)
-                }}
+                }
                 updateSetProgressUI()
-                saveInternalStateToPrefs()
-                saveGlobalProgressToHeaderPrefs()
-            } else { // 현재 운동의 모든 세트를 완료한 경우 -> 다음 운동으로
-                Log.i(TAG, "Rest timer finished. All sets for current exercise are done. Moving to completeCurrentExercise.")
+            } else {
                 completeCurrentExercise()
             }
         }
-        try { sheet.show(childFragmentManager, RestTimerFragment.TAG) }
-        catch (e: IllegalStateException) { Log.e(TAG, "Error showing RestTimerFragment: ${e.message}") }
+        sheet.show(childFragmentManager, RestTimerFragment.TAG)
     }
-
 
     private fun completeCurrentExercise() {
         if (!isAdded) { Log.w(TAG, "completeCurrentExercise: Fragment not added, aborting."); return }
@@ -789,30 +791,37 @@ class ExerciseDoingFragment : Fragment() {
     }
 
     private fun moveToNextExerciseOrFinish() {
-        if (!isAdded || _binding == null) return
+        if (!isAdded) return // 프래그먼트가 UI에 연결되어 있는지 확인
         Log.d(TAG, "moveToNextExerciseOrFinish CALLED. Current orderIndex: $currentExerciseOrderIndex, Plan size: ${planExerciseList.size}")
 
+        // ExerciseFragment에 운동 상태가 변경되었음을 알려 UI를 새로고침하도록 함
         parentFragmentManager.setFragmentResult("sets_updated", Bundle.EMPTY)
 
-        val nextExerciseGlobalOrderIndex = currentExerciseOrderIndex + 1
+        val nextExerciseOrderIndex = currentExerciseOrderIndex + 1
 
-        if (nextExerciseGlobalOrderIndex < planExerciseList.size) { // 다음 운동이 있는 경우
-            val nextScheduleDto = planExerciseList[nextExerciseGlobalOrderIndex]
-            Log.i(TAG, "Moving to next exercise: ${nextScheduleDto.exercise_name} (orderIndex: $nextExerciseGlobalOrderIndex)")
+        // 1. 다음 운동이 있는 경우
+        if (nextExerciseOrderIndex < planExerciseList.size) {
+            val nextScheduleDto = planExerciseList[nextExerciseOrderIndex]
+            Log.i(TAG, "Moving to next exercise: ${nextScheduleDto.exercise_name} (orderIndex: $nextExerciseOrderIndex)")
 
-            currentExerciseOrderIndex = nextExerciseGlobalOrderIndex
+            // ★★★ 다음 운동을 위한 상태 변수 업데이트 ★★★
+            currentExerciseOrderIndex = nextExerciseOrderIndex
             scheduleId = nextScheduleDto.schedule_id.toLong()
             currentExerciseId = nextScheduleDto.exercise_id.toLong()
             passedExerciseName = nextScheduleDto.exercise_name
             passedImagePath = nextScheduleDto.image_path
             passedEquip = nextScheduleDto.equip
-            currentSetIndex = 0
-            currentSetStartTime = 0L // 새 운동의 첫 세트 시작 시간은 0으로 초기화
-            currentExerciseSets.clear()
-            // isWorkoutSessionActive는 true 유지 (전체 운동 세션은 계속)
 
-            // ★ 스톱워치는 리셋하지 않고 계속 진행 ★
-            // 스톱워치가 일시정지 상태였다면 (이전 운동의 마지막 세트 완료 후), 다음 운동 시작을 위해 다시 시작.
+            // ★★★ 다음 운동을 위해 세트 관련 변수 초기화 ★★★
+            currentSetIndex = 0
+            currentSetStartTime = 0L
+            accumulatedSetDurationMillis = 0L // 세트 시간 누적 변수도 초기화
+            currentExerciseSets.clear()
+
+            // isWorkoutSessionActive는 true를 유지 (전체 운동 세션은 계속됨)
+
+            // ★★★ 전체 스톱워치는 리셋하지 않고 계속 진행 ★★★
+            // 만약 스톱워치가 일시정지 상태였다면(이전 운동의 마지막 세트 완료 후), 다시 시작합니다.
             if (stopwatchViewModel.isRunning.value == false && isWorkoutSessionActive) {
                 val timeToResumeFrom = stopwatchViewModel.elapsedTime.value ?: sharedHeaderPrefs.getLong(KEY_SHARED_ELAPSED_TIME, 0L)
                 stopwatchViewModel.startStopwatch(timeToResumeFrom)
@@ -821,25 +830,27 @@ class ExerciseDoingFragment : Fragment() {
                 Log.i(TAG, "Stopwatch continues for next exercise. Current total elapsed: ${stopwatchViewModel.elapsedTime.value}")
             }
 
+            // ★★★ UI 업데이트 및 다음 운동의 세트 목록 로드 ★★★
             updateExerciseInfoUI()
-            fetchSetsForCurrentExercise() // 새 운동의 세트 목록 로드 (이 안에서 SharedPreferences 저장)
+            fetchSetsForCurrentExercise()
 
-        } else { // ★ 모든 운동을 완료한 경우 ★
-            Log.i(TAG, "All exercises in plan completed. Cleaning up and preparing for photo upload.")
-            isWorkoutSessionActive = false // 운동 세션 종료
+        } else {
+            // 2. ★★★ 모든 운동을 완료한 경우 ★★★
+            Log.i(TAG, "All exercises in plan completed. Cleaning up and navigating.")
+            isWorkoutSessionActive = false // 전체 운동 세션 종료
 
             val completionTimestamp = System.currentTimeMillis()
             val totalWorkoutDuration = stopwatchViewModel.elapsedTime.value ?: 0L // 최종 전체 운동 시간
 
-            // ★ 모든 운동 완료 시 스톱워치 정지 및 시간 0으로 리셋 ★
-            stopwatchViewModel.stopStopwatch() // 시간 기록 후 정지 및 시간 0으로 리셋
-            Log.i(TAG, "All exercises finished. Final total workout time: ${StopwatchViewModel().formatElapsedTime(totalWorkoutDuration)}. Stopwatch reset.") // ViewModel 인스턴스화 주의
+            // ★★★ 모든 운동 완료 시 스톱워치 정지 및 시간 0으로 리셋 ★★★
+            stopwatchViewModel.stopStopwatch()
+            Log.i(TAG, "All exercises finished. Final total workout time: ${stopwatchViewModel.formatElapsedTime(totalWorkoutDuration)}. Stopwatch reset.")
 
-            // SharedPreferences 정리 (헤더용)
-            // KEY_SHARED_ELAPSED_TIME 은 ChallengeUploadPhotoFragment로 전달하기 위해 유지.
+            // ★★★ SharedPreferences 정리 ★★★
+            // ChallengeUploadPhotoFragment로 전달할 최종 운동 시간(KEY_SHARED_ELAPSED_TIME)은 남겨둡니다.
             sharedHeaderPrefs.edit()
                 .putBoolean(KEY_SHARED_IS_IN_PROGRESS_HEADER, false) // 헤더 숨김
-                .putLong(KEY_SHARED_ELAPSED_TIME, totalWorkoutDuration) // 최종 운동 시간 저장 (전달용)
+                .putLong(KEY_SHARED_ELAPSED_TIME, totalWorkoutDuration) // 최종 운동 시간 저장
                 .remove(KEY_SHARED_EXERCISE_ORDER_INDEX)
                 .remove(KEY_SHARED_SCHEDULE_ID)
                 .remove(KEY_SHARED_EXERCISE_ID)
@@ -848,22 +859,25 @@ class ExerciseDoingFragment : Fragment() {
                 .remove(KEY_SHARED_IMAGE_PATH)
                 .remove(KEY_SHARED_EQUIP)
                 .apply()
-            internalPrefs.edit().clear().apply() // 이 프래그먼트 내부 상태도 초기화
+            // 이 프래그먼트 내부 상태도 모두 초기화
+            internalPrefs.edit().clear().apply()
 
-            // ChallengeUploadPhotoFragment로 이동
+            // ★★★ 사진 인증 화면(ChallengeUploadPhotoFragment)으로 이동 ★★★
             try {
+                // 현재 화면이 ExerciseDoingFragment일 때만 네비게이션 실행 (중복 실행 방지)
                 if (findNavController().currentDestination?.id == R.id.exerciseDoingFragment) {
                     val args = Bundle().apply {
                         putLong("completion_time_millis", completionTimestamp)
                         putLong("total_duration_millis", totalWorkoutDuration)
                     }
-                    val actionId = R.id.action_exerciseDoing_to_challengeUpload // 실제 네비게이션 그래프의 액션 ID로 변경!
+                    // 네비게이션 그래프에 정의된 실제 액션 ID로 변경해야 합니다.
+                    val actionId = R.id.action_exerciseDoing_to_challengeUpload
                     findNavController().navigate(actionId, args)
-                    Log.i(TAG, "Navigating to ChallengeUploadPhotoFragment with completionTime: $completionTimestamp, duration: $totalWorkoutDuration")
+                    Log.i(TAG, "Navigating to ChallengeUploadPhotoFragment with duration: $totalWorkoutDuration")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Navigation to ChallengeUploadPhotoFragment failed: ${e.message}", e)
-                Toast.makeText(requireContext(), "사진 인증 화면으로 이동 중 오류 발생", Toast.LENGTH_SHORT).show()
+                if(isAdded) Toast.makeText(requireContext(), "사진 인증 화면으로 이동 중 오류 발생", Toast.LENGTH_SHORT).show()
             }
         }
     }

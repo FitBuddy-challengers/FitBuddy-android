@@ -48,6 +48,11 @@ object RetrofitClient {
         retrofit.create(AiRoutineApi::class.java)
     }
 
+    // 기록 API 인터페이스
+    val recordApi: RecordApi by lazy {
+        retrofit.create(RecordApi::class.java)
+    }
+
     // 상점 API 인터페이스
     val storeApi: StoreApi by lazy {
         retrofit.create(StoreApi::class.java)
@@ -232,7 +237,22 @@ object RetrofitClient {
         val setNumber: Int,
 
         @SerializedName("isCompleted")
-        val isCompleted: Boolean
+        val isCompleted: Boolean,
+
+        @SerializedName("time_seconds")
+        val timeSeconds: Int? = null
+    )
+
+    // 시간 기반 세트 완료 요청용 DTO
+    data class TimeSetCompletionRequest(
+        @SerializedName("scheduleId")
+        val scheduleId: Long,
+        @SerializedName("setNumber")
+        val setNumber: Int,
+        @SerializedName("isCompleted")
+        val isCompleted: Boolean,
+        @SerializedName("elapsedTimeMillis")
+        val elapsedTimeMillis: Long? = null
     )
 
     // 북마크 설정
@@ -252,6 +272,7 @@ object RetrofitClient {
         @SerializedName("message") val message: String? = null
     )
 
+// 챌린지
     data class ChallengeLevelDto(
         val level: Int,
         val requiredAttendance: Int,
@@ -294,6 +315,68 @@ object RetrofitClient {
         val exercise: Int
     )
 
+    // 기록
+    // 서버로부터 받아올 특정 날짜의 운동 기록 데이터 구조
+    data class ExerciseRecordItem(
+        @SerializedName("exercise_name")
+        val exerciseName: String,
+        val reps: Int?,
+        val sets: Int?,
+        val seconds: Int?,
+        @SerializedName("is_completed")
+        val isCompleted: Boolean,
+        @SerializedName("is_time_type")
+        val isTimeType: Boolean
+    )
+
+    // 서버로부터 받아올 월별 운동 완료율 데이터 구조
+    data class DateCompletionRateDto(
+        val date: String, // "YYYY-MM-DD" 형식의 문자열
+        @SerializedName("completion_rate")
+        val completionRate: Int
+    )
+
+    data class MonthlySummaryResponse(
+        @SerializedName("mostFrequentPart")
+        val mostFrequentPart: SummaryItem?,
+
+        @SerializedName("mostFrequentExercise")
+        val mostFrequentExercise: SummaryItem?
+    )
+
+    data class SummaryItem(
+        val part: String?,
+        val name: String?,
+        val count: Int
+    )
+
+    data class WeightRecordDto(
+        val id: Long,
+        @SerializedName("user_id")
+        val userId: Int,
+        val date: String, // "YYYY-MM-DD"
+        val weight: Double,
+        @SerializedName("body_fat_percentage")
+        val bodyFatPercentage: Double?,
+        @SerializedName("skeletal_muscle_mass")
+        val skeletalMuscleMass: Double?
+    )
+
+    // 서버로 보낼 때 사용할 DTO
+    data class WeightRecordRequest(
+        @SerializedName("userId")
+        val userId: Int,
+        @SerializedName("date")
+        val date: String, // "YYYY-MM-DD"
+        @SerializedName("weight")
+        val weight: Double,
+        @SerializedName("bodyFatPercentage")
+        val bodyFatPercentage: Double?,
+        @SerializedName("skeletalMuscleMass")
+        val skeletalMuscleMass: Double?
+    )
+
+    // 상점
     // 서버로 보낼 요청 DTO
     data class PurchaseRequest(
         val userId: Int,

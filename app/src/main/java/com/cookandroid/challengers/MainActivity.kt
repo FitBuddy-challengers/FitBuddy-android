@@ -59,6 +59,7 @@ class MainActivity : AppCompatActivity() {
                     }
                     true
                 }
+
                 R.id.exerciseFragment -> {
                     if (currentDest != R.id.exerciseFragment) {
                         navController.navigate(
@@ -72,24 +73,28 @@ class MainActivity : AppCompatActivity() {
                     }
                     true
                 }
+
                 R.id.challengeFragment -> {
                     if (currentDest != R.id.challengeFragment) {
                         navController.navigate(R.id.challengeFragment)
                     }
                     true
                 }
+
                 R.id.recordFragment -> {
                     if (currentDest != R.id.recordFragment) {
                         navController.navigate(R.id.recordFragment)
                     }
                     true
                 }
+
                 R.id.storeFragment -> {
                     if (currentDest != R.id.storeFragment) {
                         navController.navigate(R.id.storeFragment)
                     }
                     true
                 }
+
                 else -> false
             }
         }
@@ -154,9 +159,11 @@ class MainActivity : AppCompatActivity() {
                         is RestTimerFragment,
                         is CoolDownStretchFragment,
                         is RecordAddWeightFragment,
+                        is RecordCalendarFragment,
                         is ChallengeUploadPhotoFragment -> {
                             binding.mainBnv.visibility = View.GONE
                         }
+
                         else -> {
                             binding.mainBnv.visibility = View.VISIBLE
                         }
@@ -177,7 +184,10 @@ class MainActivity : AppCompatActivity() {
     // ★★★ 함수 시그니처에 userId 파라미터 추가 ★★★
     private fun createDummyPlanOnServer(userIdToUse: Int) {
         if (userIdToUse == -1) {
-            Log.e("DummyPlan", "createDummyPlanOnServer: 유효하지 않은 사용자 ID (-1). 더미 플랜 생성을 건너<0xEB><0x9B><0x84>니다.")
+            Log.e(
+                "DummyPlan",
+                "createDummyPlanOnServer: 유효하지 않은 사용자 ID (-1). 더미 플랜 생성을 건너<0xEB><0x9B><0x84>니다."
+            )
             return
         }
 
@@ -196,10 +206,16 @@ class MainActivity : AppCompatActivity() {
                     if (response.isSuccessful) {
                         val planId = response.body()?.planId
                         val dateStr = response.body()?.date
-                        Log.d("DummyPlan", "✅ 더미 운동 계획 생성 응답 - planId: $planId, date: $dateStr, message: ${response.body()?.message}")
+                        Log.d(
+                            "DummyPlan",
+                            "✅ 더미 운동 계획 생성 응답 - planId: $planId, date: $dateStr, message: ${response.body()?.message}"
+                        )
                         // planId 저장 로직 추가 가능
                     } else {
-                        Log.w("DummyPlan", "⚠️ 더미 운동 계획 생성 서버 응답 오류: ${response.code()} - ${response.message()}")
+                        Log.w(
+                            "DummyPlan",
+                            "⚠️ 더미 운동 계획 생성 서버 응답 오류: ${response.code()} - ${response.message()}"
+                        )
                         try {
                             val errorBody = response.errorBody()?.string()
                             Log.w("DummyPlan", "Error body: $errorBody")
