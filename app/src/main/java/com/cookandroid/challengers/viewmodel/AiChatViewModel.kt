@@ -1,8 +1,10 @@
 package com.cookandroid.challengers.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cookandroid.challengers.api.ExerciseApi
+import com.cookandroid.challengers.model.ChatMessage
 import com.cookandroid.challengers.model.UserInfo
 import com.cookandroid.challengers.model.ScheduleInfo
 import com.cookandroid.challengers.repository.AiWorkoutRepository
@@ -25,6 +27,9 @@ sealed class AichatState {
     object Rejected : AichatState()
 }
 
+
+
+
 class AiChatViewModel(
     private val workoutRepository: AiWorkoutRepository,
     private val exerciseApi: ExerciseApi,
@@ -33,6 +38,18 @@ class AiChatViewModel(
 
     private val _state = MutableStateFlow<AichatState>(AichatState.Welcome)
     val state: StateFlow<AichatState> = _state
+
+    // 1. 메시지 리스트 상태 추가
+    private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
+    val messages: StateFlow<List<ChatMessage>> get() = _messages
+
+    // 2. 메시지 추가 함수
+    fun addMessage(message: ChatMessage) {
+        _messages.value = _messages.value + message
+    }
+
+    var hasWelcomed = false // ⚠️ 첫 Welcome 메시지 출력 여부
+    var hasShownResult = false // ⚠️ 결과 메시지 중복 방지용
 
     private var userId: Int = -1
     private lateinit var userInfo: UserInfo
@@ -50,6 +67,7 @@ class AiChatViewModel(
         userId = userPreference.getUserId()
         if (userId == -1) {
             _state.value = AichatState.Rejected
+            Log.d("Debug", "📛 userId: ${userPreference.getUserId()}")  // -1이라면 비정상
             return
         }
 
@@ -163,6 +181,7 @@ class AiChatViewModel(
             _state.value = AichatState.Generating
             generateWorkoutPlan()
         } else {
+            hasShownResult = false // 다시 추천할 때 ShowResult 다시 보여주기 위해 리셋
             _state.value = AichatState.Rejected
         }
     }
