@@ -13,7 +13,7 @@ import android.widget.FrameLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import com.cookandroid.challengers.databinding.FragmentStoreBinding // ★ View Binding 임포트
+import com.cookandroid.challengers.databinding.FragmentStoreBinding
 import com.cookandroid.challengers.util.UserPreference
 
 // 캐릭터&아이템 레이어 상수
@@ -42,12 +42,12 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
     ): View {
         _binding = FragmentStoreBinding.inflate(inflater, container, false)
         storeViewModel = ViewModelProvider(requireActivity()).get(StoreViewModel::class.java)
-        userPreference = UserPreference(requireContext())
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        userPreference = UserPreference(requireContext())
         characterContainer = binding.characterContainer
         binding.view.visibility = View.GONE
         binding.btnOpenStore.setOnClickListener {
@@ -58,7 +58,6 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
 
     override fun onResume() {
         super.onResume()
-        // 이 화면으로 돌아올 때마다 사용자 정보(레벨, 코인 등)를 새로고침
         val userId = userPreference.getUserId()
         if (userId != -1) {
             storeViewModel.loadUserData(userId)
@@ -68,17 +67,12 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
     }
 
     private fun observeViewModel() {
-        // 착용된 아이템 관찰
         storeViewModel.equippedItems.observe(viewLifecycleOwner, Observer { equippedMap ->
             updateCharacterDisplay(equippedMap)
         })
-
-        // 사용자 레벨 관찰
         storeViewModel.userLevel.observe(viewLifecycleOwner, Observer { level ->
             binding.userLevelTextView.text = "Lv.$level"
         })
-
-        // 사용자 코인 관찰
         storeViewModel.userCoin.observe(viewLifecycleOwner, Observer { coin ->
             binding.userCoinTextView.text = coin.toString()
         })
@@ -87,22 +81,16 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
     private fun updateCharacterDisplay(equippedItems: Map<String, ProductItem?>) {
         if (!isAdded || _binding == null) return
 
-        // 기본 캐릭터 이미지 및 Elevation 설정
         val baseCharacterItem = equippedItems["character"]
-        binding.baseCharacterImageView.setImageResource(
-            baseCharacterItem?.imageResId ?: R.drawable.char_graycat
-        )
-        binding.baseCharacterImageView.elevation = ELEVATION_CHARACTER
-
-        // 토끼 캐릭터 y오프셋 조정
-        if (baseCharacterItem?.id == 2) {
-            val rabbitOffsetY = -44f
-            binding.baseCharacterImageView.translationY = rabbitOffsetY
-        } else {
-            binding.baseCharacterImageView.translationY = 0f
+        val offsetY = when (baseCharacterItem?.id) {
+            2 -> -44f // 토끼 캐릭터의 ID가 2
+            else -> 0f
         }
 
-        // 아이템 가져오기
+        binding.baseCharacterImageView.setImageResource(baseCharacterItem?.imageResId ?: R.drawable.char_graycat)
+        binding.baseCharacterImageView.elevation = ELEVATION_CHARACTER
+        binding.baseCharacterImageView.translationY = offsetY
+
         val costumeItem = equippedItems["costume"]
         val onepieceItem = equippedItems["onepiece"]
         val topItem = equippedItems["top"]
@@ -111,22 +99,21 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
         val hairAccItem = equippedItems["hairAcc"]
         val glassesItem = equippedItems["glasses"]
 
-        // 코스튬 (코스튬, 원피스, 상 하의)
         if (costumeItem != null) {
             binding.costumeItemImageView.setImageResource(costumeItem.imageResId)
             binding.costumeItemImageView.visibility = View.VISIBLE
             binding.costumeItemImageView.elevation = ELEVATION_COSTUME
+            binding.costumeItemImageView.translationY = offsetY // ★★★ 오프셋 적용
             binding.topItemImageView.visibility = View.GONE
             binding.pantsItemImageView.visibility = View.GONE
             binding.onepieceItemImageView.visibility = View.GONE
         } else {
             binding.costumeItemImageView.visibility = View.GONE
-
-            // 코스튬 미착용 시에만 원피스 vs 상/하의 로직 실행
             if (onepieceItem != null) {
                 binding.onepieceItemImageView.setImageResource(onepieceItem.imageResId)
                 binding.onepieceItemImageView.visibility = View.VISIBLE
                 binding.onepieceItemImageView.elevation = ELEVATION_ONEPIECE
+                binding.onepieceItemImageView.translationY = offsetY // ★★★ 오프셋 적용
                 binding.topItemImageView.visibility = View.GONE
                 binding.pantsItemImageView.visibility = View.GONE
             } else {
@@ -134,58 +121,59 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
                 binding.topItemImageView.visibility = if (topItem != null) {
                     binding.topItemImageView.setImageResource(topItem.imageResId)
                     binding.topItemImageView.elevation = ELEVATION_CLOTHING_TOP
+                    binding.topItemImageView.translationY = offsetY // ★★★ 오프셋 적용
                     View.VISIBLE
                 } else View.GONE
                 binding.pantsItemImageView.visibility = if (pantsItem != null) {
                     binding.pantsItemImageView.setImageResource(pantsItem.imageResId)
                     binding.pantsItemImageView.elevation = ELEVATION_CLOTHING_BOTTOM
+                    binding.pantsItemImageView.translationY = offsetY
                     View.VISIBLE
                 } else View.GONE
             }
-            characterContainer.post {
-                val bitmap = createBitmapFromView(characterContainer)
-                storeViewModel.updateCharacterBitmap(bitmap)
-            }
         }
 
-        // 일반 액세서리
-        if (accItem != null) {
+        binding.accItemImageView.visibility = if (accItem != null) {
             binding.accItemImageView.setImageResource(accItem.imageResId)
-            binding.accItemImageView.visibility = View.VISIBLE
             binding.accItemImageView.elevation = if (accItem.id == 1) ELEVATION_BEHIND_CHARACTER else ELEVATION_ACCESSORY_FRONT
-        } else {
-            binding.accItemImageView.visibility = View.GONE
-        }
+            binding.accItemImageView.translationY = offsetY
+            View.VISIBLE
+        } else View.GONE
 
-        // 헤어 액세서리
         binding.hairAccItemImageView.visibility = if (hairAccItem != null) {
             binding.hairAccItemImageView.setImageResource(hairAccItem.imageResId)
             binding.hairAccItemImageView.elevation = ELEVATION_HAIR_ACC
+            binding.hairAccItemImageView.translationY = offsetY
             View.VISIBLE
         } else View.GONE
 
-        // 안경
         binding.glassesItemImageView.visibility = if (glassesItem != null) {
             binding.glassesItemImageView.setImageResource(glassesItem.imageResId)
             binding.glassesItemImageView.elevation = ELEVATION_GLASSES
+            binding.glassesItemImageView.translationY = offsetY
             View.VISIBLE
         } else View.GONE
+
+        characterContainer.post {
+            val bitmap = createBitmapFromView(characterContainer)
+            storeViewModel.updateCharacterBitmap(bitmap)
+        }
     }
 
-    // FrameLayout과 같은 View를 Bitmap 이미지로 변환하는 헬퍼 함수
     private fun createBitmapFromView(view: View): Bitmap {
-        val desiredWidth = (view.width * 2).toInt()
-        val desiredHeight = (view.height * 2).toInt()
+        // 비트맵 해상도를 높여 화질 개선
+        val scale = 2.0f
+        val width = (view.width * scale).toInt()
+        val height = (view.height * scale).toInt()
 
-        view.measure(
-            View.MeasureSpec.makeMeasureSpec(view.width, View.MeasureSpec.EXACTLY),
-            View.MeasureSpec.makeMeasureSpec(view.height, View.MeasureSpec.EXACTLY)
-        )
-        view.layout(0, 0, view.measuredWidth, view.measuredHeight)
+        if (width <= 0 || height <= 0) {
+            // 뷰의 크기가 0이하일 경우 빈 비트맵을 반환하거나 예외처리
+            return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        }
 
-        val bitmap = Bitmap.createBitmap(desiredWidth, desiredHeight, Bitmap.Config.ARGB_8888)
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-        canvas.scale(desiredWidth.toFloat() / view.width, desiredHeight.toFloat() / view.height) // Canvas 스케일링
+        canvas.scale(scale, scale)
         view.draw(canvas)
         return bitmap
     }
@@ -211,7 +199,7 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
 
     override fun onDestroyView() {
         super.onDestroyView()
-        _binding = null // 메모리 누수 방지
+        _binding = null
     }
 
     companion object {
