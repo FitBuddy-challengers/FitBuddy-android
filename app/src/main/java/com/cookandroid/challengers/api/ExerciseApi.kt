@@ -183,6 +183,8 @@ interface ChallengeApi {
 
 //    @POST("/api/challenge/attendance/{userId}")
 //    suspend fun markAttendance(@Path("userId") userId: Int): Response<ResponseBody>
+    @POST("/api/challenge/exercise/{userId}")
+    suspend fun markExerciseDone(@Path("userId") userId: Int): retrofit2.Response<Unit>
 
     @POST("/api/challenge/attendance/{userId}")
     fun markAttendance(@Path("userId") userId: Int): Call<ResponseBody>

@@ -247,86 +247,216 @@ class ExerciseFragment : Fragment() {
         }
     }
 
-    private fun loadTodayPlanFromServer() {
-        if (!isAdded || _binding == null) {
-            Log.w(TAG, "loadTodayPlanFromServer: Fragment not added or binding is null. Aborting.")
-            return
-        }
-        Log.d(TAG, "loadTodayPlanFromServer: Fetching today's plan...")
+//    private fun loadTodayPlanFromServer() {
+//        if (!isAdded || _binding == null) {
+//            Log.w(TAG, "loadTodayPlanFromServer: Fragment not added or binding is null. Aborting.")
+//            return
+//        }
+//        Log.d(TAG, "loadTodayPlanFromServer: Fetching today's plan...")
+//
+//        serverJob?.cancel()
+//        serverJob = viewLifecycleOwner.lifecycleScope.launch {
+//            try {
+//                val userId = UserPreference(requireContext()).getUserId()
+//                if (userId == -1) {
+//                    if (isActive) Toast.makeText(
+//                        requireContext(),
+//                        "로그인이 필요합니다.",
+//                        Toast.LENGTH_SHORT
+//                    ).show()
+//                    return@launch
+//                }
+//
+//                val response =
+//                    withContext(Dispatchers.IO) { RetrofitClient.scheduleApi.getTodayPlan(userId) }
+//
+//                if (!isActive) return@launch
+//
+//                if (response.isSuccessful) {
+//                    val data = response.body()
+//                    planId = data?.plan?.id?.toLong() ?: -1L
+//
+//                    val validSchedules =
+//                        data?.schedules?.filter { it.exercise_id != 0 } ?: emptyList()
+//                    val enrichedSchedules = withContext(Dispatchers.Default) {
+//                        validSchedules.map { schedule ->
+//                            val localExercise =
+//                                db.exerciseDao().getExerciseById(schedule.exercise_id.toLong())
+//                            schedule.copy(
+//                                exercise_name = schedule.exercise_name.ifBlank {
+//                                    localExercise?.name ?: "운동 이름 없음"
+//                                },
+//                                image_path = if (schedule.image_path.isNullOrBlank()) localExercise?.imagePath else schedule.image_path,
+//                                equip = schedule.equip.ifBlank { localExercise?.equip ?: "정보 없음" },
+//                                part = schedule.part.ifBlank { localExercise?.part ?: "부위 없음" }
+//                            )
+//                        }.sortedBy { it.exercise_order }
+//                    }
+//
+//                    if (!isActive) return@launch
+//
+//                    currentScheduleList = enrichedSchedules
+//                    serverAdapter.submitList(currentScheduleList.toList())
+//                    checkAndShowInProgressHeader()
+//                    updateStartButtonState()
+//                    checkAndNavigateToPhotoUploadIfNeeded()
+//
+//                } else {
+//                    val errorCode = response.code()
+//                    currentScheduleList = emptyList()
+//                    serverAdapter.submitList(emptyList())
+//                    checkAndShowInProgressHeader()
+//                    updateStartButtonState()
+//                    val displayMessage =
+//                        if (errorCode == 404) "오늘 진행할 운동 계획이 없습니다." else "운동 계획 로드 실패 (코드: $errorCode)"
+//                    if (isActive) Toast.makeText(
+//                        requireContext(),
+//                        displayMessage,
+//                        Toast.LENGTH_LONG
+//                    ).show()
+//                }
+//            } catch (e: Exception) {
+//                if (isActive) {
+//                    Log.e(TAG, "loadTodayPlanFromServer: Exception.", e)
+//                    currentScheduleList = emptyList()
+//                    serverAdapter.submitList(emptyList())
+//                    checkAndShowInProgressHeader()
+//                    updateStartButtonState()
+//                    Toast.makeText(requireContext(), "네트워크 오류가 발생했습니다.", Toast.LENGTH_SHORT).show()
+//                }
+//            }
+//        }
+//    }
+private fun loadTodayPlanFromServer() {
+    if (!isAdded || _binding == null) {
+        Log.w(TAG, "loadTodayPlanFromServer: Fragment not added or binding is null. Aborting.")
+        return
+    }
+    Log.d(TAG, "loadTodayPlanFromServer: Fetching today's plan...")
 
-        serverJob?.cancel()
-        serverJob = viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                val userId = UserPreference(requireContext()).getUserId()
-                if (userId == -1) {
-                    if (isActive) Toast.makeText(
-                        requireContext(),
-                        "로그인이 필요합니다.",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    return@launch
+    serverJob?.cancel()
+    serverJob = viewLifecycleOwner.lifecycleScope.launch {
+        try {
+            val userId = UserPreference(requireContext()).getUserId()
+            if (userId == -1) {
+                if (isActive) Toast.makeText(
+                    requireContext(),
+                    "로그인이 필요합니다.",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@launch
+            }
+
+            val response = withContext(Dispatchers.IO) {
+                RetrofitClient.scheduleApi.getTodayPlan(userId)
+            }
+
+            if (!isActive) return@launch
+
+            if (response.isSuccessful) {
+                val data = response.body()
+                planId = data?.plan?.id?.toLong() ?: -1L
+
+                val validSchedules = data?.schedules?.filter { it.exercise_id != 0 } ?: emptyList()
+                val enrichedSchedules = withContext(Dispatchers.Default) {
+                    validSchedules.map { schedule ->
+                        val localExercise =
+                            db.exerciseDao().getExerciseById(schedule.exercise_id.toLong())
+                        schedule.copy(
+                            exercise_name = schedule.exercise_name.ifBlank {
+                                localExercise?.name ?: "운동 이름 없음"
+                            },
+                            image_path = if (schedule.image_path.isNullOrBlank()) localExercise?.imagePath else schedule.image_path,
+                            equip = schedule.equip.ifBlank { localExercise?.equip ?: "정보 없음" },
+                            part = schedule.part.ifBlank { localExercise?.part ?: "부위 없음" }
+                        )
+                    }.sortedBy { it.exercise_order }
                 }
-
-                val response =
-                    withContext(Dispatchers.IO) { RetrofitClient.scheduleApi.getTodayPlan(userId) }
 
                 if (!isActive) return@launch
 
-                if (response.isSuccessful) {
-                    val data = response.body()
-                    planId = data?.plan?.id?.toLong() ?: -1L
+                currentScheduleList = enrichedSchedules
+                serverAdapter.submitList(currentScheduleList.toList())
 
-                    val validSchedules =
-                        data?.schedules?.filter { it.exercise_id != 0 } ?: emptyList()
-                    val enrichedSchedules = withContext(Dispatchers.Default) {
-                        validSchedules.map { schedule ->
-                            val localExercise =
-                                db.exerciseDao().getExerciseById(schedule.exercise_id.toLong())
-                            schedule.copy(
-                                exercise_name = schedule.exercise_name.ifBlank {
-                                    localExercise?.name ?: "운동 이름 없음"
-                                },
-                                image_path = if (schedule.image_path.isNullOrBlank()) localExercise?.imagePath else schedule.image_path,
-                                equip = schedule.equip.ifBlank { localExercise?.equip ?: "정보 없음" },
-                                part = schedule.part.ifBlank { localExercise?.part ?: "부위 없음" }
-                            )
-                        }.sortedBy { it.exercise_order }
+                checkAndShowInProgressHeader()
+                updateStartButtonState()
+
+
+//                // ✅ 모든 운동 완료 + 오늘 인증 안 했을 때만 서버에 완료 카운트 요청
+//                if (
+//                    currentScheduleList.isNotEmpty() &&
+//                    currentScheduleList.all { it.is_completed } &&
+//                    !hasPhotoUploadBeenCompletedToday()
+//                ) {
+//                    Log.d(TAG, "운동 완료 API 호출 시도")
+//                    try {
+//                        val countResponse = withContext(Dispatchers.IO) {
+//                            RetrofitClient.challengeApi.markExerciseDone(userId)
+//                        }
+//                        if (countResponse.isSuccessful) {
+//                            Log.i(TAG, "✅ 운동 완료 1회 기록 성공")
+//                        } else {
+//                            Log.w(TAG, "⚠️ 운동 완료 기록 실패: ${countResponse.code()} ${countResponse.message()}")
+//                            Log.d(TAG, "운동 완료 조건 불충족: " +
+//                                    "currentScheduleList.size=${currentScheduleList.size}, " +
+//                                    "allCompleted=${currentScheduleList.all { it.is_completed }}, " +
+//                                    "photoUploaded=${hasPhotoUploadBeenCompletedToday()}")
+//                        }
+//                    } catch (e: Exception) {
+//                        Log.e(TAG, "🚨 운동 완료 기록 중 예외 발생", e)
+//                    }
+//                }
+                // ✅ 모든 운동 완료 시 서버에 완료 카운트 요청 (사진 인증 여부와 무관)
+                if (
+                    currentScheduleList.isNotEmpty() &&
+                    currentScheduleList.all { it.is_completed }
+                ) {
+                    Log.d(TAG, "운동 완료 API 호출 시도")
+                    try {
+                        val countResponse = withContext(Dispatchers.IO) {
+                            RetrofitClient.challengeApi.markExerciseDone(userId)
+                        }
+                        if (countResponse.isSuccessful) {
+                            Log.i(TAG, "✅ 운동 완료 1회 기록 성공")
+                        } else {
+                            Log.w(TAG, "⚠️ 운동 완료 기록 실패: ${countResponse.code()} ${countResponse.message()}")
+                            Log.d(TAG, "운동 완료 조건 불충족: " +
+                                    "currentScheduleList.size=${currentScheduleList.size}, " +
+                                    "allCompleted=${currentScheduleList.all { it.is_completed }}")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "🚨 운동 완료 기록 중 예외 발생", e)
                     }
-
-                    if (!isActive) return@launch
-
-                    currentScheduleList = enrichedSchedules
-                    serverAdapter.submitList(currentScheduleList.toList())
-                    checkAndShowInProgressHeader()
-                    updateStartButtonState()
-                    checkAndNavigateToPhotoUploadIfNeeded()
-
-                } else {
-                    val errorCode = response.code()
-                    currentScheduleList = emptyList()
-                    serverAdapter.submitList(emptyList())
-                    checkAndShowInProgressHeader()
-                    updateStartButtonState()
-                    val displayMessage =
-                        if (errorCode == 404) "오늘 진행할 운동 계획이 없습니다." else "운동 계획 로드 실패 (코드: $errorCode)"
-                    if (isActive) Toast.makeText(
-                        requireContext(),
-                        displayMessage,
-                        Toast.LENGTH_LONG
-                    ).show()
                 }
-            } catch (e: Exception) {
-                if (isActive) {
-                    Log.e(TAG, "loadTodayPlanFromServer: Exception.", e)
-                    currentScheduleList = emptyList()
-                    serverAdapter.submitList(emptyList())
-                    checkAndShowInProgressHeader()
-                    updateStartButtonState()
-                    Toast.makeText(requireContext(), "네트워크 오류가 발생했습니다.", Toast.LENGTH_SHORT).show()
-                }
+
+                checkAndNavigateToPhotoUploadIfNeeded()
+
+            } else {
+                val errorCode = response.code()
+                currentScheduleList = emptyList()
+                serverAdapter.submitList(emptyList())
+                checkAndShowInProgressHeader()
+                updateStartButtonState()
+                val displayMessage =
+                    if (errorCode == 404) "오늘 진행할 운동 계획이 없습니다." else "운동 계획 로드 실패 (코드: $errorCode)"
+                if (isActive) Toast.makeText(
+                    requireContext(),
+                    displayMessage,
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        } catch (e: Exception) {
+            if (isActive) {
+                Log.e(TAG, "loadTodayPlanFromServer: Exception.", e)
+                currentScheduleList = emptyList()
+                serverAdapter.submitList(emptyList())
+                checkAndShowInProgressHeader()
+                updateStartButtonState()
+                Toast.makeText(requireContext(), "네트워크 오류가 발생했습니다.", Toast.LENGTH_SHORT).show()
             }
         }
     }
+}
 
     private fun updateStartButtonState() {
         if (_binding == null || !isAdded) return
