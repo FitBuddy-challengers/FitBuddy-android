@@ -51,6 +51,7 @@ interface ExerciseApi {
     @GET("/api/user-info/{userId}")
     suspend fun getUserInfo(@Path("userId") userId: Int): Response<UserInfo>
 
+
 }
 
 

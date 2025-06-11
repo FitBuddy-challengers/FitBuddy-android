@@ -3,6 +3,8 @@ package com.cookandroid.challengers.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cookandroid.challengers.api.AiExercise
+import com.cookandroid.challengers.api.AiPlanRequest
 import com.cookandroid.challengers.api.ExerciseApi
 import com.cookandroid.challengers.model.ChatMessage
 import com.cookandroid.challengers.model.UserInfo
@@ -97,13 +99,26 @@ class AiChatViewModel(
     }
 
     // 상태별 메시지 표시
-    fun showWelcomeMessage() {
-        if (!hasWelcomed && ::userInfo.isInitialized) {
-            val time = getCurrentTime()
-            addMessage(ChatMessage.FromBot("안녕하세요. ${userInfo.name}님!\nAI Buddy와 함께 운동 루틴을 계획하시겠어요?", time))
-            hasWelcomed = true
-        }
-    }
+//    fun showWelcomeMessage() {
+//        if (!hasWelcomed && ::userInfo.isInitialized) {
+//            val time = getCurrentTime()
+//            addMessage(ChatMessage.FromBot("안녕하세요. ${userInfo.name}님!\nAI Buddy와 함께 운동 루틴을 계획하시겠어요?", time))
+//            hasWelcomed = true
+//        }
+
+//    }
+// 상태별 메시지 표시
+fun showWelcomeMessage() {
+    if (hasWelcomed) return  // ✅ 중복 방지 플래그
+
+    val userName = if (::userInfo.isInitialized) userInfo.name else "운동러"
+    val time = getCurrentTime()
+
+    // ✅ 문자열 템플릿 + 접미사는 따로 문자열에 포함
+    addMessage(ChatMessage.FromBot("안녕하세요, ${userName}님!\nAI Buddy와 함께 운동 루틴을 계획해 볼까요?", time))
+
+    hasWelcomed = true
+}
 
     fun showResultMessage(planText: String, isSecondTry: Boolean) {
         if (!hasShownResult) {
@@ -146,6 +161,7 @@ class AiChatViewModel(
     }
 
     private fun generateWorkoutPlan() {
+        Log.d("AiChatVM", "🧾 GPT로부터 받은 planText:\n$lastGeneratedPlan")
         hasShownResult = false // 새로운 결과 생성 시 플래그 리셋
 
         viewModelScope.launch {
@@ -168,45 +184,91 @@ class AiChatViewModel(
     fun onAcceptPlan() {
         viewModelScope.launch {
             Log.d("ChatDebug", "✅ User accepted plan")
-            val parsedList = parseRoutineToTriples(lastGeneratedPlan)
 
-            val allExercises = exerciseApi.getAllExercises()
-            if (!allExercises.isSuccessful) {
+
+            // 1️⃣ GPT 텍스트 파싱
+            val parsedList = parseRoutineToTriples(lastGeneratedPlan)
+            Log.d("AiChatVM", "✅ 파싱된 운동 리스트: ${parsedList.size}개")
+            parsedList.forEach {
+                Log.d("AiChatVM", "🧩 파싱: ${it.first} - ${it.second ?: "-"}회 x ${it.third ?: "-"}세트")
+            }
+
+            // 2️⃣ 서버에 있는 운동 전체 목록 조회
+            val allExercisesResponse = exerciseApi.getAllExercises()
+            if (!allExercisesResponse.isSuccessful) {
+                Log.e("ChatDebug", "❌ 운동 목록 조회 실패")
                 _state.value = AichatState.Rejected
                 return@launch
             }
 
-            val exerciseMap = allExercises.body()?.associateBy { it.name } ?: emptyMap()
-            val convertedList = parsedList.mapNotNull { (name, reps, sets) ->
-                val id = exerciseMap[name]?.id?.toInt() ?: return@mapNotNull null
-                Triple(id, reps, sets)
+            val exerciseMap = allExercisesResponse.body()?.associateBy { it.name } ?: emptyMap()
+            Log.d("AiChatVM", "📦 매핑 시작: parsedList = ${parsedList.size}개, exerciseMap = ${exerciseMap.size}개")
+            parsedList.forEach { (name, _, _) ->
+                val exists = exerciseMap.containsKey(name)
+                Log.d("AiChatVM", "🔍 $name → 매핑 ${if (exists) "성공" else "실패"}")
             }
 
-            if (createdPlanId == null) {
-                createdPlanId = workoutRepository.createPlan(scheduleInfo.start_date)
-                if (createdPlanId == null) {
-                    _state.value = AichatState.Rejected
-                    return@launch
+            // 3️⃣ reps/sets → AiExercise 로 변환 (is_time_type 기준으로 seconds or reps 분기)
+            val aiExercises = parsedList.mapNotNull { (name, reps, sets) ->
+                val exercise = exerciseMap[name] ?: return@mapNotNull null
+                if (exercise.isTimeType == true) {
+                    // 시간 기반 운동
+                    val seconds = reps ?: 30 // "30회" → "30초"로 간주
+                    AiExercise(name = name, seconds = seconds)
+                } else {
+                    // 반복 기반 운동
+                    AiExercise(name = name, reps = reps, sets = sets)
                 }
             }
-
-            val routineDates = generateDates(scheduleInfo.start_date, scheduleInfo.end_date, scheduleInfo.days_of_week)
-
-            for (date in routineDates) {
-                val success = workoutRepository.addExercisesToSchedule(
-                    planId = createdPlanId!!,
-                    exerciseList = convertedList,
-                    date = date
-                )
-                if (!success) {
-                    _state.value = AichatState.Rejected
-                    return@launch
-                }
+            // ✅ 여기 로그 추가!!!
+            Log.d("AiChatVM", "✅ 전송할 루틴: ${aiExercises.size}개")
+            aiExercises.forEach {
+                Log.d("AiChatVM", "📝 ${it.name} - ${it.sets ?: "-"}세트 x ${it.reps ?: it.seconds ?: "-"}")
             }
 
-            _state.value = AichatState.Done
+            // 4️⃣ 서버에 전송
+            submitAiRoutine(userId, scheduleInfo.start_date, aiExercises)
         }
     }
+//            val parsedList = parseRoutineToTriples(lastGeneratedPlan)
+//
+//            val allExercises = exerciseApi.getAllExercises()
+//            if (!allExercises.isSuccessful) {
+//                _state.value = AichatState.Rejected
+//                return@launch
+//            }
+//
+//            val exerciseMap = allExercises.body()?.associateBy { it.name } ?: emptyMap()
+//            val convertedList = parsedList.mapNotNull { (name, reps, sets) ->
+//                val id = exerciseMap[name]?.id?.toInt() ?: return@mapNotNull null
+//                Triple(id, reps, sets)
+//            }
+//
+//            if (createdPlanId == null) {
+//                createdPlanId = workoutRepository.createPlan(scheduleInfo.start_date)
+//                if (createdPlanId == null) {
+//                    _state.value = AichatState.Rejected
+//                    return@launch
+//                }
+//            }
+//
+//            val routineDates = generateDates(scheduleInfo.start_date, scheduleInfo.end_date, scheduleInfo.days_of_week)
+//
+//            for (date in routineDates) {
+//                val success = workoutRepository.addExercisesToSchedule(
+//                    planId = createdPlanId!!,
+//                    exerciseList = convertedList,
+//                    date = date
+//                )
+//                if (!success) {
+//                    _state.value = AichatState.Rejected
+//                    return@launch
+//                }
+//            }
+//
+//            _state.value = AichatState.Done
+//        }
+//    }
 
     fun onRejectPlan() {
         Log.d("ChatDebug", "❌ User rejected plan, count: $recommendationCount")
@@ -248,17 +310,42 @@ class AiChatViewModel(
 
     private fun parseRoutineToTriples(planText: String): List<Triple<String, Int?, Int?>> {
         val result = mutableListOf<Triple<String, Int?, Int?>>()
-        val regex = Regex("\"(.*?)\"\\s*\"?(\\d+)?\"?회?\\s*\"?(\\d+)?\"?세트?")
+
+        val koreanRegex = Regex("""\d+\.\s*(.+?)[\:\-\s]\s*(\d+)[회초]?\s*(\d+)?세트""")
+        val englishRegex = Regex("""\d+\.\s*(.+?)\s*-\s*(\d+)\s*sets\s*(of)?\s*(\d+)\s*(reps|times)?""", RegexOption.IGNORE_CASE)
+
         planText.lines().forEach { line ->
-            val match = regex.find(line)
-            if (match != null) {
-                val name = match.groupValues[1]
-                val reps = match.groupValues[2].toIntOrNull()
-                val sets = match.groupValues[3].toIntOrNull()
+            val korMatch = koreanRegex.find(line)
+            if (korMatch != null) {
+                val name = korMatch.groupValues[1].trim()
+                val reps = korMatch.groupValues[2].toIntOrNull()
+                val sets = korMatch.groupValues.getOrNull(3)?.toIntOrNull()
+                result.add(Triple(name, reps, sets))
+                return@forEach
+            }
+
+            val engMatch = englishRegex.find(line)
+            if (engMatch != null) {
+                val name = engMatch.groupValues[1].trim()
+                val sets = engMatch.groupValues[2].toIntOrNull()
+                val reps = engMatch.groupValues[4].toIntOrNull()
                 result.add(Triple(name, reps, sets))
             }
         }
+
         return result
+//        val result = mutableListOf<Triple<String, Int?, Int?>>()
+//        val regex = Regex("\"(.*?)\"\\s*\"?(\\d+)?\"?회?\\s*\"?(\\d+)?\"?세트?")
+//        planText.lines().forEach { line ->
+//            val match = regex.find(line)
+//            if (match != null) {
+//                val name = match.groupValues[1]
+//                val reps = match.groupValues[2].toIntOrNull()
+//                val sets = match.groupValues[3].toIntOrNull()
+//                result.add(Triple(name, reps, sets))
+//            }
+//        }
+//        return result
     }
 
     private fun generateDates(start: String, end: String, daysOfWeek: List<String>): List<String> {
@@ -296,6 +383,25 @@ class AiChatViewModel(
     private fun getCurrentTime(): String {
         val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
         return sdf.format(Date())
+    }
+    fun submitAiRoutine(userId: Int, startDate: String, exercises: List<AiExercise>) {
+        viewModelScope.launch {
+            val request = AiPlanRequest(
+                user_id = userId,
+                start_date = startDate,
+                end_date = startDate,
+                exercises = exercises
+            )
+            val result = workoutRepository.submitAiPlan(request)
+            if (result != null) {
+                Log.d("AiChatVM", "🎉 루틴 저장 완료: planId=${result.plan_id}")
+                _state.value = AichatState.Done
+                // ✅ 필요 시 result.schedules, result.reps 등 사용 가능
+            } else {
+                Log.e("AiChatVM", "💥 루틴 저장 실패")
+                _state.value = AichatState.Rejected
+            }
+        }
     }
 }
 

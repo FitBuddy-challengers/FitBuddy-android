@@ -59,7 +59,8 @@ class HomeAichatFragment : Fragment() {
         setupDateHeader()
         setupClickListeners()
         observeViewModel()
-        observeMessages()
+
+        observeMessages() //  메시지 옵저빙 함수 호출
 
         // 사용자 정보 불러오기
         viewModel.loadUserInfo()
@@ -106,31 +107,38 @@ class HomeAichatFragment : Fragment() {
 
                 when (state) {
                     is AichatState.Welcome -> {
+                        Log.d("ChatDebug", "👋 상태: Welcome → 인사 메시지 출력 시도")
                         viewModel.showWelcomeMessage()
                     }
 
                     is AichatState.AskDate -> {
+                        Log.d("ChatDebug", "📅 상태: AskDate → 날짜 선택 요청 메시지 출력 + DatePicker 호출")
                         viewModel.handleStateMessage(state)
                         showDatePicker(isStart = true)
                     }
 
                     is AichatState.AskDays -> {
+                        Log.d("ChatDebug", "📆 상태: AskDays → 요일 입력 메시지 출력")
                         viewModel.handleStateMessage(state)
                     }
 
                     is AichatState.AskFocusArea -> {
+                        Log.d("ChatDebug", "💪 상태: AskFocusArea → 부위 입력 메시지 출력")
                         viewModel.handleStateMessage(state)
                     }
 
                     is AichatState.Generating -> {
+                        Log.d("ChatDebug", "⚙️ 상태: Generating → GPT 요청 전송 전 메시지 출력")
                         viewModel.handleStateMessage(state)
                     }
 
                     is AichatState.ShowResult -> {
+                        Log.d("ChatDebug", "📦 상태: ShowResult → GPT 응답 출력 준비 (2회 이상?: ${state.isSecondTry})")
                         viewModel.showResultMessage(state.planText, state.isSecondTry)
                     }
 
                     is AichatState.Done -> {
+                        Log.d("ChatDebug", "✅ 상태: Done → 루틴 저장 완료, 홈으로 이동 예정")
                         viewModel.handleStateMessage(state)
                         // 잠깐 기다린 후 navigate
                         kotlinx.coroutines.delay(1000)
@@ -138,6 +146,7 @@ class HomeAichatFragment : Fragment() {
                     }
 
                     is AichatState.Rejected -> {
+                        Log.d("ChatDebug", "❌ 상태: Rejected → 사용자 거절 또는 실패, 홈으로 이동 예정")
                         viewModel.handleStateMessage(state)
                         kotlinx.coroutines.delay(1000)
                         findNavController().navigate(R.id.action_homeAichatFragment_to_homeFragment)
@@ -146,6 +155,10 @@ class HomeAichatFragment : Fragment() {
             }
         }
     }
+
+
+
+
 
 //    private fun observeViewModel() {
 //        viewLifecycleOwner.lifecycleScope.launch {
@@ -209,10 +222,11 @@ class HomeAichatFragment : Fragment() {
 //            }
 //        }
 //    }
-
+// 메시지 리스트 옵저버 함수 추가
     private fun observeMessages() {
         lifecycleScope.launch {
             viewModel.messages.collectLatest { messages: List<ChatMessage> ->
+                Log.d("ChatDebug", "📩 메시지 옵저빙됨: ${messages.size}개") // 로그 추가
                 adapter.setMessages(messages)
                 binding.rvChat.scrollToPosition(messages.size - 1)
             }
@@ -231,41 +245,81 @@ class HomeAichatFragment : Fragment() {
 
         when (viewModel.state.value) {
             is AichatState.Welcome -> {
-                if (input.contains("네", ignoreCase = true) ||
-                    input.contains("예", ignoreCase = true) ||
-                    input.contains("좋아", ignoreCase = true)) {
-                    viewModel.onUserConfirmedStart()
-                } else {
-                    viewModel.onUserDeclined()
+                val inputLower = input.lowercase()
+                val positiveKeywords = listOf("네", "예", "좋아", "yes", "y", "응", "ㅇㅋ", "그래", "시작")
+                val negativeKeywords = listOf("아니", "no", "싫어", "안 해", "거절")
+
+                when {
+                    positiveKeywords.any { inputLower.contains(it) } -> viewModel.onUserConfirmedStart()
+                    negativeKeywords.any { inputLower.contains(it) } -> viewModel.onUserDeclined()
+                    else -> {
+                        val time = getCurrentTime()
+                        viewModel.addMessage(
+                            ChatMessage.FromBot("운동 루틴을 시작하시겠어요?\n예: 네 / 예 / 좋아요", time)
+                        )
+                    }
                 }
             }
+
+//            is AichatState.AskDays -> {
+//                val days = input.split(" ", ",", "\n").mapNotNull {
+//                    it.trim().takeIf { it.isNotEmpty() }
+//                }
+//                if (days.isNotEmpty()) {
+//                    viewModel.onDaysSelected(days)
+//                } else {
+//                    val time = getCurrentTime()
+//                    viewModel.addMessage(ChatMessage.FromBot("요일을 입력해 주세요. 예: 월 수 금", time))
+//                }
+//            }
             is AichatState.AskDays -> {
-                val days = input.split(" ", ",", "\n").mapNotNull {
-                    it.trim().takeIf { it.isNotEmpty() }
+                val dayMapping = mapOf(
+                    "mon" to "월", "monday" to "월",
+                    "tue" to "화", "tuesday" to "화",
+                    "wed" to "수", "wednesday" to "수",
+                    "thu" to "목", "thursday" to "목",
+                    "fri" to "금", "friday" to "금",
+                    "sat" to "토", "saturday" to "토",
+                    "sun" to "일", "sunday" to "일"
+                )
+
+                val days = input.split(" ", ",", "\n").mapNotNull { raw ->
+                    val trimmed = raw.trim().lowercase()
+                    when {
+                        trimmed in dayMapping -> dayMapping[trimmed]
+                        trimmed in listOf("월", "화", "수", "목", "금", "토", "일") -> trimmed
+                        else -> null
+                    }
                 }
+
                 if (days.isNotEmpty()) {
                     viewModel.onDaysSelected(days)
+
+                    val time = getCurrentTime()
+                    val koreanDays = days.joinToString(" ")
+                    viewModel.addMessage(
+                        ChatMessage.FromBot("좋아요! ${koreanDays} 요일에 운동하겠습니다 💪", time)
+                    )
                 } else {
                     val time = getCurrentTime()
-                    viewModel.addMessage(ChatMessage.FromBot("요일을 입력해 주세요. 예: 월 수 금", time))
+                    viewModel.addMessage(ChatMessage.FromBot("요일을 입력해 주세요. 예: 월 수 금 또는 Mon Wed Fri", time))
                 }
             }
+
             is AichatState.AskFocusArea -> {
                 if (input.isNotBlank()) {
                     viewModel.onFocusAreaEntered(input)
                 }
             }
+
             is AichatState.ShowResult -> {
+                val inputLower = input.lowercase()
+                val acceptKeywords = listOf("이대로", "좋아", "승인", "ok", "ㅇㅋ", "예", "네", "할게요")
+                val rejectKeywords = listOf("다시", "재생성", "별로", "싫어", "다른")
+
                 when {
-                    input.contains("이대로", ignoreCase = true) ||
-                            input.contains("좋아", ignoreCase = true) ||
-                            input.contains("승인", ignoreCase = true) -> {
-                        viewModel.onAcceptPlan()
-                    }
-                    input.contains("다시", ignoreCase = true) ||
-                            input.contains("재생성", ignoreCase = true) -> {
-                        viewModel.onRejectPlan()
-                    }
+                    acceptKeywords.any { inputLower.contains(it) } -> viewModel.onAcceptPlan()
+                    rejectKeywords.any { inputLower.contains(it) } -> viewModel.onRejectPlan()
                     else -> {
                         val time = getCurrentTime()
                         viewModel.addMessage(
@@ -274,8 +328,56 @@ class HomeAichatFragment : Fragment() {
                     }
                 }
             }
+
             else -> Unit
         }
+//        when (viewModel.state.value) {
+//            is AichatState.Welcome -> {
+//                if (input.contains("네", ignoreCase = true) ||
+//                    input.contains("예", ignoreCase = true) ||
+//                    input.contains("좋아", ignoreCase = true)) {
+//                    viewModel.onUserConfirmedStart()
+//                } else {
+//                    viewModel.onUserDeclined()
+//                }
+//            }
+//            is AichatState.AskDays -> {
+//                val days = input.split(" ", ",", "\n").mapNotNull {
+//                    it.trim().takeIf { it.isNotEmpty() }
+//                }
+//                if (days.isNotEmpty()) {
+//                    viewModel.onDaysSelected(days)
+//                } else {
+//                    val time = getCurrentTime()
+//                    viewModel.addMessage(ChatMessage.FromBot("요일을 입력해 주세요. 예: 월 수 금", time))
+//                }
+//            }
+//            is AichatState.AskFocusArea -> {
+//                if (input.isNotBlank()) {
+//                    viewModel.onFocusAreaEntered(input)
+//                }
+//            }
+//            is AichatState.ShowResult -> {
+//                when {
+//                    input.contains("이대로", ignoreCase = true) ||
+//                            input.contains("좋아", ignoreCase = true) ||
+//                            input.contains("승인", ignoreCase = true) -> {
+//                        viewModel.onAcceptPlan()
+//                    }
+//                    input.contains("다시", ignoreCase = true) ||
+//                            input.contains("재생성", ignoreCase = true) -> {
+//                        viewModel.onRejectPlan()
+//                    }
+//                    else -> {
+//                        val time = getCurrentTime()
+//                        viewModel.addMessage(
+//                            ChatMessage.FromBot("'이대로 할게요' 또는 '다시 추천해 주세요' 중 하나를 입력해 주세요!", time)
+//                        )
+//                    }
+//                }
+//            }
+//            else -> Unit
+//        }
     }
 
 //    private fun handleUserInput(input: String) {

@@ -1,5 +1,6 @@
 package com.cookandroid.challengers
 
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
@@ -29,7 +30,9 @@ class ChatAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         notifyItemInserted(messages.size - 1)
     }
 
+    //  메시지 전체 갱신용 함수: ViewModel의 메시지를 반영
     fun setMessages(newMessages: List<ChatMessage>) {
+        Log.d("ChatAdapter", "🔄 setMessages 호출됨: ${newMessages.size}개 메시지 수신") //  로그 추가
         messages.clear()                  // 기존 메시지 모두 제거
         messages.addAll(newMessages)     // 새 메시지 추가
         notifyDataSetChanged()           // 전체 갱신
