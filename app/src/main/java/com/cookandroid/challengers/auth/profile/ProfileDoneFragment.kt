@@ -12,6 +12,7 @@ import com.cookandroid.challengers.MainActivity
 import com.cookandroid.challengers.api.RetrofitClient
 import com.cookandroid.challengers.databinding.FragmentProfileDoneBinding
 import com.cookandroid.challengers.model.ProfileData
+import com.cookandroid.challengers.util.UserPreference
 import com.cookandroid.challengers.viewmodel.ProfileViewModel
 import retrofit2.Call
 import retrofit2.Callback
@@ -59,6 +60,11 @@ class ProfileDoneFragment : Fragment() {
                             // ✅ 로그인 상태 저장
                             val prefs = requireActivity().getSharedPreferences("user", Context.MODE_PRIVATE)
                             prefs.edit().putBoolean("isLoggedIn", true).apply()
+
+                            // ✅ 사용자 기본 정보 저장
+                            val userPref = UserPreference(requireContext())
+                            userPref.saveUserName(viewModel.name)
+                            userPref.saveUserEmail(viewModel.email)
 
                             // 홈 화면으로 이동
                             val intent = Intent(requireContext(), MainActivity::class.java)
