@@ -79,6 +79,9 @@ class RecordDateFragment : Fragment() {
                 updateRadarChart(dataMap)
             }
         }
+        recordDateViewModel.recommendationText.observe(viewLifecycleOwner) { text ->
+            binding.tvAiComment.text = text
+        }
 
         storeViewModel.characterBitmap.observe(viewLifecycleOwner) { bitmap ->
             if (bitmap != null) {

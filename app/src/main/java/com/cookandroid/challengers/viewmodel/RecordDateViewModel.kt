@@ -6,7 +6,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.cookandroid.challengers.api.RecordApi // DTO 위치에 따라 경로 수정
 import com.cookandroid.challengers.api.RetrofitClient
 import com.cookandroid.challengers.util.UserPreference
 import kotlinx.coroutines.Dispatchers
@@ -23,8 +22,13 @@ class RecordDateViewModel(application: Application) : AndroidViewModel(applicati
     private val _radarData = MutableLiveData<Map<String, Float>>()
     val radarData: LiveData<Map<String, Float>> = _radarData
 
+    private val _recommendationText = MutableLiveData<String>()
+    val recommendationText: LiveData<String> = _recommendationText
+
+
     init {
         loadMonthlySummary() // ViewModel 생성 시 요약 정보 로드
+        loadAIRecommendation()
     }
 
 
@@ -108,6 +112,33 @@ class RecordDateViewModel(application: Application) : AndroidViewModel(applicati
                 // 예외 발생 시에도 빈 맵 할당
                 _radarData.value = emptyMap()
                 Log.e("RecordDateViewModel", "Error loading radar data", e)
+            }
+        }
+    }
+
+    fun loadAIRecommendation() {
+        val userId = userPreference.getUserId()
+        if (userId == -1) {
+            _recommendationText.value = "로그인이 필요합니다."
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.recommendApi.getExerciseRecommendation(
+                    RetrofitClient.RecommendExerciseRequest(userId)
+                )
+
+                if (response.isSuccessful) {
+                    val result = response.body()?.recommendation ?: "추천이 비어있습니다."
+                    _recommendationText.value = result
+                } else {
+                    Log.e("ViewModel", "추천 실패: ${response.code()}")
+                    _recommendationText.value = "추천을 가져오지 못했습니다."
+                }
+            } catch (e: Exception) {
+                Log.e("ViewModel", "추천 호출 오류", e)
+                _recommendationText.value = "AI 추천 실패: 네트워크 오류"
             }
         }
     }

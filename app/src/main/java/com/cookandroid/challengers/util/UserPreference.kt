@@ -13,6 +13,9 @@ class UserPreference(context: Context) {
         private const val USER_ID = "userId"
         private const val IS_LOGGED_IN = "isLoggedIn"
         private const val EQUIPPED_ITEMS = "equippedItems" // 착용 아이템 저장 키
+        private const val USER_NAME = "userName"
+        private const val USER_EMAIL = "userEmail"
+        private const val LAST_VISIT_DATE = "lastVisitDate"
 
     }
 
@@ -41,4 +44,38 @@ class UserPreference(context: Context) {
         return gson.fromJson(jsonString, type) ?: emptyMap()
     }
 
+    // 닉네임 저장 및 조회
+    fun saveUserName(name: String) {
+        prefs.edit().putString(USER_NAME, name).apply()
+    }
+
+    fun getUserName(): String {
+        return prefs.getString(USER_NAME, "") ?: ""
+    }
+
+    // 이메일 저장 및 조회
+    fun saveUserEmail(email: String) {
+        prefs.edit().putString(USER_EMAIL, email).apply()
+    }
+
+    fun getUserEmail(): String {
+        return prefs.getString(USER_EMAIL, "") ?: ""
+    }
+
+    // 접속일 저장 및 조회
+    fun saveLastVisitDate() {
+        prefs.edit().putLong(LAST_VISIT_DATE, System.currentTimeMillis()).apply()
+    }
+    fun getLastVisitDate(): Long {
+        return prefs.getLong(LAST_VISIT_DATE, 0L)
+    }
+
+    // 알림 저장 및 조회
+    fun setNotificationEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("notification_enabled", enabled).apply()
+    }
+
+    fun isNotificationEnabled(): Boolean {
+        return prefs.getBoolean("notification_enabled", true) // 기본값
+    }
 }
