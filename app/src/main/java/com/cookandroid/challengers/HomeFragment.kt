@@ -109,6 +109,14 @@ class HomeFragment : Fragment() {
         binding.btnAiChat.setOnClickListener {
             findNavController().navigate(R.id.action_home_to_homeAichatFragment)
         }
+
+        binding.btnNoti.setOnClickListener {
+            findNavController().navigate(R.id.action_home_to_mypageNotiSetFragment)
+        }
+
+        binding.btnMypage.setOnClickListener {
+            findNavController().navigate(R.id.action_home_to_homeMypageFragment)
+        }
     }
 
     private fun markAttendance(userId: Int) {
@@ -133,6 +141,11 @@ class HomeFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applyCharacterFromPreference()
     }
 
     private fun loadTodayWorkoutPlan() {
@@ -207,6 +220,40 @@ class HomeFragment : Fragment() {
             }
         }
     }
+    private fun applyCharacterFromPreference() {
+        val equippedMap = UserPreference(requireContext()).getEquippedItemIds()
+        val imageViews = mapOf(
+            "character" to binding.baseCharacterImageView,
+            "top" to binding.topItemImageView,
+            "pants" to binding.pantsItemImageView,
+            "onepiece" to binding.onepieceItemImageView,
+            "costume" to binding.costumeItemImageView,
+            "acc" to binding.accItemImageView,
+            "glasses" to binding.glassesItemImageView,
+            "hairAcc" to binding.hairAccItemImageView
+        )
+
+        for ((category, view) in imageViews) {
+            val itemId = equippedMap[category]
+            val productItem = itemId?.let { com.cookandroid.challengers.data.StoreItemData.findItemById(it) }
+
+            if (productItem != null) {
+                view.setImageResource(productItem.imageResId)
+                view.visibility = View.VISIBLE
+            } else {
+                view.visibility = View.GONE
+            }
+        }
+
+        // 토끼 캐릭터 Y 오프셋 조정
+        val characterId = equippedMap["character"]
+        if (characterId == 2) {
+            binding.baseCharacterImageView.translationY = -44f
+        } else {
+            binding.baseCharacterImageView.translationY = 0f
+        }
+    }
+
 }
 
 // ✅ 하루에 한 번 출석 여부를 저장하고 확인하는 유틸
