@@ -21,6 +21,7 @@ import java.time.LocalDate
 import java.time.DayOfWeek
 import java.time.format.DateTimeFormatter
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.cookandroid.challengers.data.StoreItemData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -220,38 +221,118 @@ class HomeFragment : Fragment() {
             }
         }
     }
+//    private fun applyCharacterFromPreference() {
+//        val equippedMap = UserPreference(requireContext()).getEquippedItemIds()
+//        val imageViews = mapOf(
+//            "character" to binding.baseCharacterImageView,
+//            "top" to binding.topItemImageView,
+//            "pants" to binding.pantsItemImageView,
+//            "onepiece" to binding.onepieceItemImageView,
+//            "costume" to binding.costumeItemImageView,
+//            "acc" to binding.accItemImageView,
+//            "glasses" to binding.glassesItemImageView,
+//            "hairAcc" to binding.hairAccItemImageView
+//        )
+//
+//        for ((category, view) in imageViews) {
+//            val itemId = equippedMap[category]
+//            val productItem = itemId?.let { com.cookandroid.challengers.data.StoreItemData.findItemById(it) }
+//
+//            if (productItem != null) {
+//                view.setImageResource(productItem.imageResId)
+//                view.visibility = View.VISIBLE
+//            } else {
+//                view.visibility = View.GONE
+//            }
+//        }
+//
+//        // 토끼 캐릭터 Y 오프셋 조정
+//        val characterId = equippedMap["character"]
+//        if (characterId == 2) {
+//            binding.baseCharacterImageView.translationY = -44f
+//        } else {
+//            binding.baseCharacterImageView.translationY = 0f
+//        }
+//    }
+
     private fun applyCharacterFromPreference() {
-        val equippedMap = UserPreference(requireContext()).getEquippedItemIds()
-        val imageViews = mapOf(
-            "character" to binding.baseCharacterImageView,
-            "top" to binding.topItemImageView,
-            "pants" to binding.pantsItemImageView,
-            "onepiece" to binding.onepieceItemImageView,
-            "costume" to binding.costumeItemImageView,
-            "acc" to binding.accItemImageView,
-            "glasses" to binding.glassesItemImageView,
-            "hairAcc" to binding.hairAccItemImageView
-        )
+        if (!isAdded || _binding == null) return
 
-        for ((category, view) in imageViews) {
-            val itemId = equippedMap[category]
-            val productItem = itemId?.let { com.cookandroid.challengers.data.StoreItemData.findItemById(it) }
+        val equippedMapIds = UserPreference(requireContext()).getEquippedItemIds()
 
-            if (productItem != null) {
-                view.setImageResource(productItem.imageResId)
-                view.visibility = View.VISIBLE
-            } else {
-                view.visibility = View.GONE
-            }
+        // ID 맵을 ProductItem 맵으로 변환
+        val equippedItems = mutableMapOf<String, ProductItem?>()
+        equippedMapIds.forEach { (category, itemId) ->
+            equippedItems[category] = itemId?.let { StoreItemData.findItemById(it) }
         }
 
+        // 기본 캐릭터 이미지 설정
+        val baseCharacterItem = equippedItems["character"]
+        binding.baseCharacterImageView.setImageResource(
+            baseCharacterItem?.imageResId ?: R.drawable.char_graycat
+        )
+
         // 토끼 캐릭터 Y 오프셋 조정
-        val characterId = equippedMap["character"]
-        if (characterId == 2) {
+        if (baseCharacterItem?.id == 2) {
             binding.baseCharacterImageView.translationY = -44f
         } else {
             binding.baseCharacterImageView.translationY = 0f
         }
+
+        // 아이템 가져오기
+        val costumeItem = equippedItems["costume"]
+        val onepieceItem = equippedItems["onepiece"]
+        val topItem = equippedItems["top"]
+        val pantsItem = equippedItems["pants"]
+        val accItem = equippedItems["acc"]
+        val hairAccItem = equippedItems["hairAcc"]
+        val glassesItem = equippedItems["glasses"]
+
+        // 2. 코스튬 처리
+        if (costumeItem != null) {
+            binding.costumeItemImageView.setImageResource(costumeItem.imageResId)
+            binding.costumeItemImageView.visibility = View.VISIBLE
+            binding.topItemImageView.visibility = View.GONE
+            binding.pantsItemImageView.visibility = View.GONE
+            binding.onepieceItemImageView.visibility = View.GONE
+        } else {
+            binding.costumeItemImageView.visibility = View.GONE
+            // 코스튬 미착용 시 원피스 vs 상/하의 로직 실행
+            if (onepieceItem != null) {
+                binding.onepieceItemImageView.setImageResource(onepieceItem.imageResId)
+                binding.onepieceItemImageView.visibility = View.VISIBLE
+                binding.topItemImageView.visibility = View.GONE
+                binding.pantsItemImageView.visibility = View.GONE
+            } else {
+                binding.onepieceItemImageView.visibility = View.GONE
+                binding.topItemImageView.visibility = if (topItem != null) {
+                    binding.topItemImageView.setImageResource(topItem.imageResId)
+                    View.VISIBLE
+                } else View.GONE
+                binding.pantsItemImageView.visibility = if (pantsItem != null) {
+                    binding.pantsItemImageView.setImageResource(pantsItem.imageResId)
+                    View.VISIBLE
+                } else View.GONE
+            }
+        }
+
+        // 3. 일반 액세서리 처리 (acc)
+        binding.accItemImageView.visibility = if (accItem != null) {
+            binding.accItemImageView.setImageResource(accItem.imageResId)
+            View.VISIBLE
+        } else View.GONE
+
+        // 4. 헤어 액세서리
+        binding.hairAccItemImageView.visibility = if (hairAccItem != null) {
+            binding.hairAccItemImageView.setImageResource(hairAccItem.imageResId)
+            View.VISIBLE
+        } else View.GONE
+
+        // 5. 안경
+        binding.glassesItemImageView.visibility = if (glassesItem != null) {
+            binding.glassesItemImageView.setImageResource(glassesItem.imageResId)
+            View.VISIBLE
+        } else View.GONE
     }
 
 }

@@ -39,12 +39,23 @@ object StoreItemData {
             add(ProductItem(402, "오렌지 팬츠", R.drawable.pants_orange, "pants", 100, 1))
             add(ProductItem(403, "핑크 팬츠", R.drawable.pants_pink, "pants", 100, 1))
             // hairAcc
-            add(ProductItem(501, "천사 날개", R.drawable.acc_angel, "hairAcc", 500, 5))
-            add(ProductItem(502, "천사 날개", R.drawable.acc_angel, "hariAcc", 500, 5))
+            add(ProductItem(501, "블루 리본", R.drawable.ribbon_blue, "hairAcc", 200, 1))
+            add(ProductItem(502, "핑크 리본", R.drawable.ribbon_pink, "hairAcc", 200, 1))
+            add(ProductItem(503, "퍼플 리본", R.drawable.ribbon_purple, "hairAcc", 200, 1))
+            add(ProductItem(504, "레드 리본", R.drawable.ribbon_red, "hairAcc", 200, 1))
+            add(ProductItem(505, "옐로우 리본", R.drawable.ribbon_yellow, "hairAcc", 200, 1))
             // acc
             add(ProductItem(601, "천사 날개", R.drawable.acc_angel, "acc", 500, 5))
             add(ProductItem(602, "네잎클로버", R.drawable.acc_clover, "acc", 300, 1))
             add(ProductItem(603, "마법봉", R.drawable.acc_magicstick, "acc", 400, 3))
+            add(ProductItem(604, "파란 풍선", R.drawable.acc_balloon_blue, "acc", 400, 3))
+            add(ProductItem(605, "핑크 풍선", R.drawable.acc_balloon_pink, "acc", 400, 3))
+            add(ProductItem(606, "보라 풍선", R.drawable.acc_balloon_purple, "acc", 400, 3))
+            add(ProductItem(607, "빨간 풍선", R.drawable.acc_balloon_red, "acc", 400, 3))
+            // glasses
+            add(ProductItem(701, "안경", R.drawable.eyewear_glasses, "glasses", 300, 1))
+            add(ProductItem(702, "선글라스", R.drawable.eyewear_sunglasses, "glasses", 400, 3))
+
         }
     }
 

@@ -76,15 +76,12 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/tvStoreTitle">
-
         <ImageView
             android:id="@+id/baseCharacterImageView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:adjustViewBounds="true"
             android:scaleType="fitCenter"
             android:src="@drawable/char_graycat" />
-
         <ImageView
             android:id="@+id/costumeItemImageView"
             android:layout_width="match_parent"
