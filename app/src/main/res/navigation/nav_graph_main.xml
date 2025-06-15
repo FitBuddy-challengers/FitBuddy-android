@@ -164,8 +164,6 @@
         <action
             android:id="@+id/action_exerciseDoing_to_exerciseDoing"
             app:destination="@id/exerciseDoingFragment" />
-
-        <!-- 기존 쿨다운 이동은 이걸로 수정해야 할 수도 있음 -->
         <action
             android:id="@+id/action_exerciseDoing_to_coolDownStretch"
             app:destination="@id/coolDownStretchFragment" />
@@ -188,6 +186,9 @@
         <action
             android:id="@+id/action_coolDownStretch_to_home"
             app:destination="@id/homeFragment" />
+        <action
+            android:id="@+id/action_coolDownStretch_to_challengeUpload"
+            app:destination="@id/challengeUploadPhotoFragment" />
     </fragment>
 
     <fragment
@@ -248,8 +249,12 @@
         android:label="챌린지 사진 업로드"
         tools:layout="@layout/fragment_upload_photo">
         <action
+            android:id="@+id/action_challengeUploadPhotoFragment_to_challengeFragment"
+            app:destination="@id/challengeFragment" />
+        <action
             android:id="@+id/action_challengeUploadPhotoFragment_to_homeFragment"
             app:destination="@id/homeFragment" />
     </fragment>
+
 
 </navigation>

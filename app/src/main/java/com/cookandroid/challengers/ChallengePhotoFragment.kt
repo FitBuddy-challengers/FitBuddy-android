@@ -12,17 +12,32 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.cookandroid.challengers.BuildConfig.BASE_URL
+import com.cookandroid.challengers.api.RetrofitClient
+import com.cookandroid.challengers.api.RetrofitClient.PhotoChallengeItem
 import com.cookandroid.challengers.databinding.FragmentChallengePhotoBinding
+import com.cookandroid.challengers.util.UserPreference
+import com.cookandroid.challengers.viewmodel.ChallengePhotoViewModel
 import com.google.android.material.imageview.ShapeableImageView
 
 class ChallengePhotoFragment : Fragment() {
     private var _binding: FragmentChallengePhotoBinding? = null
     private val binding get() = _binding!!
 
+    private lateinit var photoAdapter: PhotoAdapter
+    private lateinit var viewModel: ChallengePhotoViewModel
+    private lateinit var userPreference: UserPreference
+
     companion object {
+        private const val TAG = "ChallengePhotoFragment"
+
         private const val SPAN_COUNT = 4
         private const val GRID_SPACING_DP = 16
     }
@@ -39,8 +54,13 @@ class ChallengePhotoFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        viewModel = ViewModelProvider(this)[ChallengePhotoViewModel::class]
+        userPreference = UserPreference(requireContext())
+
         setupPhotoRecyclerView()
         setupExerciseNowRecyclerView()
+
+        observeViewModel()
 
         binding.fabAddPhoto.setOnClickListener {
             try {
@@ -53,11 +73,33 @@ class ChallengePhotoFragment : Fragment() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // 화면이 보일 때마다 최신 데이터 로드
+        val userId = userPreference.getUserId()
+        if (userId != -1) {
+            viewModel.fetchWeeklyPhotos(userId)
+        }
+    }
+
+    private fun observeViewModel() {
+        viewModel.weeklyPhotos.observe(viewLifecycleOwner) { photoList ->
+            Log.d(TAG, "Observed weeklyPhotos LiveData. Received ${photoList.size} items.")
+            photoAdapter.submitList(photoList)
+        }
+        viewModel.error.observe(viewLifecycleOwner) { errorMessage ->
+            if (errorMessage.isNotEmpty()) {
+                Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                Log.e(TAG, "Error from ViewModel: $errorMessage")
+            }
+        }
+    }
+
     private fun setupPhotoRecyclerView() {
-        val photoItems = List(7) { TempPhotoItem("사진 ${it + 1}", R.drawable.avartar_sample) }
+        photoAdapter = PhotoAdapter()
         binding.photoRecyclerView.apply {
             layoutManager = GridLayoutManager(context, 1, GridLayoutManager.HORIZONTAL, false)
-            adapter = PhotoAdapter(photoItems)
+            adapter = photoAdapter
         }
     }
 
@@ -138,7 +180,6 @@ class ChallengePhotoFragment : Fragment() {
         }
     }
 
-    // --- Photo RecyclerView Adapter ---
     private data class TempPhotoItem(val title: String, val avatarResId: Int)
     private class PhotoViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val bg: ImageView = itemView.findViewById(R.id.ivMainBackground)
@@ -155,16 +196,57 @@ class ChallengePhotoFragment : Fragment() {
             }
         }
     }
-    private class PhotoAdapter(private val items: List<TempPhotoItem>) :
-        RecyclerView.Adapter<PhotoViewHolder>() {
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = PhotoViewHolder(
-            LayoutInflater.from(parent.context).inflate(R.layout.item_challenge_photo, parent, false)
-        )
-        override fun onBindViewHolder(holder: PhotoViewHolder, pos: Int) = holder.bind(items[pos], pos)
-        override fun getItemCount() = items.size
+    private class PhotoAdapter : ListAdapter<PhotoChallengeItem, PhotoAdapter.PhotoViewHolder>(PhotoDiffCallback()) {
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PhotoViewHolder {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_challenge_photo, parent, false)
+            return PhotoViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: PhotoViewHolder, position: Int) {
+            holder.bind(getItem(position), position)
+        }
+
+        // ★ ListAdapter는 자체적으로 getItemCount를 관리하므로 오버라이드할 필요가 없습니다.
+        // override fun getItemCount(): Int = 7
+
+        class PhotoViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+            private val imageView: ImageView = itemView.findViewById(R.id.ivMainBackground)
+            // item_challenge_photo.xml에 요일 표시용 TextView가 있다면 아래 코드 사용
+            // private val dayTextView: TextView = itemView.findViewById(R.id.tvDayOfWeek)
+
+            fun bind(item: PhotoChallengeItem?, position: Int) {
+                // val dayNames = listOf("일", "월", "화", "수", "목", "금", "토")
+                // dayTextView.text = dayNames[position]
+
+                if (item != null) {
+                    // ★ 해결 2: RetrofitClient.BASE_URL 대신 companion object에 정의된 BASE_URL 사용
+                    val fullUrl = BASE_URL.removeSuffix("/") + item.imageUrl
+                    Glide.with(itemView.context)
+                        .load(fullUrl)
+                        .centerCrop()
+                        .placeholder(R.drawable.ic_fitbuddy_logo) // 기본 이미지 리소스
+                        .error(R.drawable.ic_fitbuddy_logo) // 에러 시 이미지 리소스
+                        .into(imageView)
+                    itemView.alpha = 1.0f
+                } else {
+                    // 인증 사진이 없는 경우
+                    imageView.setImageResource(R.drawable.ic_fitbuddy_logo) // 사진 추가 유도 이미지
+                    itemView.alpha = 0.5f // 비활성화된 느낌
+                }
+            }
+        }
     }
 
-    // --- ExerciseNow RecyclerView Adapter ---
+    private class PhotoDiffCallback : DiffUtil.ItemCallback<PhotoChallengeItem>() {
+        override fun areItemsTheSame(oldItem: PhotoChallengeItem, newItem: PhotoChallengeItem): Boolean {
+            return oldItem.date == newItem.date
+        }
+        override fun areContentsTheSame(oldItem: PhotoChallengeItem, newItem: PhotoChallengeItem): Boolean {
+            return oldItem == newItem
+        }
+    }
+
     private data class TempUserItem(val name: String, val progress: String, val avatarResId: Int)
     private class UserViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val avatar: ShapeableImageView = itemView.findViewById(R.id.sivAvatar)

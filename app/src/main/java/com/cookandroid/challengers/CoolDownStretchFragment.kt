@@ -34,6 +34,9 @@ class CoolDownStretchFragment : Fragment() {
 
     private val stopwatchViewModel: StopwatchViewModel by activityViewModels()
 
+    private var completionTimestamp: Long = 0L
+    private var totalWorkoutDuration: Long = 0L
+
     // --- SharedPreferences 정의부 ---
     companion object {
         // ExerciseFragment와 동일한 키 값을 사용하거나, 이 프래그먼트만의 키를 정의할 수 있습니다.
@@ -55,6 +58,15 @@ class CoolDownStretchFragment : Fragment() {
 
     private val prefs by lazy {
         requireContext().getSharedPreferences(PREFS_PROGRESS, Context.MODE_PRIVATE)
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // arguments로부터 데이터 수신
+        arguments?.let {
+            completionTimestamp = it.getLong("completion_time_millis", 0L)
+            totalWorkoutDuration = it.getLong("total_duration_millis", 0L)
+        }
     }
 
     override fun onCreateView(
@@ -222,30 +234,28 @@ class CoolDownStretchFragment : Fragment() {
         }
     }
 
-    // ★ 운동 세션 전체 완료 처리 함수
+    // ★ 운동 세션 전체 완료 처리 함수 수정
     private fun completeWorkoutSession() {
-        // SharedPreferences에서 진행 상태 초기화
-        prefs.edit()
-            .putBoolean(KEY_IN_PROGRESS, false)
-            .remove(KEY_SAVED_EXERCISE_INDEX) // ExerciseFragment와 공유하는 키들
-            .remove(KEY_SET_INDEX)            // ExerciseDoingFragment와 공유하는 키들
-            .remove(KEY_START_TIME)           // ExerciseDoingFragment와 공유하는 키들
-            .remove(KEY_SAVED_SCHEDULE_ID)
-            .remove(KEY_SAVED_EXERCISE_ID)
-            .remove(KEY_SAVED_PLAN_ID)
-            .remove(KEY_ELAPSED_TIME)
-            .apply()
-        Log.d("CoolDownStretchFragment", "Workout session completed. Navigating to home.")
+        // SharedPreferences 정리는 ExerciseDoingFragment에서 이미 처리됨
+        stopwatchViewModel.stopStopwatch() // 여기서 스톱워치 최종 리셋
+
+        Log.d("CoolDownStretchFragment", "Cooldown session finished. Navigating to photo upload.")
         try {
-            // 홈 화면으로 네비게이션 (또는 운동 결과 화면 등)
-            // R.id.action_coolDownStretch_to_home는 nav_graph에 정의된 액션 ID여야 함
-            findNavController().navigate(R.id.action_coolDownStretch_to_home)
-        } catch (e: Exception) {
-            Log.e("CoolDownStretchFragment", "네비게이션 오류 (홈으로 이동 실패)", e)
-            // 안전하게 이전 화면으로 이동 시도
-            if (findNavController().previousBackStackEntry != null) {
-                findNavController().popBackStack(R.id.homeFragment, false) // 홈으로 바로 가기 (백스택 조정)
+            // ★★★ 사진 인증 화면으로 네비게이션 ★★★
+            if (findNavController().currentDestination?.id == R.id.coolDownStretchFragment) {
+                val args = Bundle().apply {
+                    putLong("completion_time_millis", completionTimestamp)
+                    putLong("total_duration_millis", totalWorkoutDuration)
+                }
+                // 네비게이션 그래프에 정의된 실제 액션 ID로 변경해야 합니다.
+                val actionId = R.id.action_coolDownStretch_to_challengeUpload
+                findNavController().navigate(actionId, args)
+                Log.i("CoolDownStretchFragment", "Navigating to ChallengeUploadPhotoFragment with duration: $totalWorkoutDuration")
             }
+        } catch (e: Exception) {
+            Log.e("CoolDownStretchFragment", "네비게이션 오류 (사진 업로드로 이동 실패)", e)
+            // 실패 시 홈으로 이동하는 등의 예외 처리
+            if (isAdded) findNavController().navigate(R.id.action_coolDownStretch_to_home)
         }
     }
 

@@ -20,13 +20,23 @@ import androidx.fragment.app.setFragmentResult
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.bumptech.glide.Glide
-import com.cookandroid.challengers.databinding.FragmentUploadPhotoBinding // 생성된 ViewBinding 클래스명
-// import com.cookandroid.challengers.api.RetrofitClient // 실제 API 호출 시 필요
+import com.cookandroid.challengers.api.RetrofitClient
+import com.cookandroid.challengers.databinding.FragmentUploadPhotoBinding
+import com.cookandroid.challengers.util.UserPreference
 import kotlinx.coroutines.launch
-import java.io.File
-import java.text.SimpleDateFormat
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.Date
 import java.util.Locale
+import org.threeten.bp.Instant
+import org.threeten.bp.ZoneId
+import org.threeten.bp.format.DateTimeFormatter
+import java.io.File
+import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.*
 import java.util.concurrent.TimeUnit
 
 class ChallengeUploadPhotoFragment : Fragment() {
@@ -51,7 +61,10 @@ class ChallengeUploadPhotoFragment : Fragment() {
         const val RESULT_KEY_PHOTO_ACTION_DONE = "photo_action_done_result"
 
 
-        fun newInstance(completionTimeMillis: Long, totalDurationMillis: Long): ChallengeUploadPhotoFragment {
+        fun newInstance(
+            completionTimeMillis: Long,
+            totalDurationMillis: Long
+        ): ChallengeUploadPhotoFragment {
             val fragment = ChallengeUploadPhotoFragment()
             val args = Bundle().apply {
                 putLong(ARG_COMPLETION_TIME_MILLIS, completionTimeMillis)
@@ -72,7 +85,10 @@ class ChallengeUploadPhotoFragment : Fragment() {
             completionTimeMillis = it.getLong(ARG_COMPLETION_TIME_MILLIS)
             totalDurationMillis = it.getLong(ARG_TOTAL_DURATION_MILLIS)
         }
-        Log.d(TAG, "onCreate: completionTimeMillis=$completionTimeMillis, totalDurationMillis=$totalDurationMillis")
+        Log.d(
+            TAG,
+            "onCreate: completionTimeMillis=$completionTimeMillis, totalDurationMillis=$totalDurationMillis"
+        )
         setupActivityResultLaunchers()
     }
 
@@ -92,42 +108,50 @@ class ChallengeUploadPhotoFragment : Fragment() {
     }
 
     private fun setupActivityResultLaunchers() {
-        requestCameraPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            if (isGranted) {
-                Log.d(TAG, "Camera permission granted")
-                launchCamera()
-            } else {
-                Log.w(TAG, "Camera permission denied")
-                Toast.makeText(requireContext(), "카메라 권한이 거부되었습니다.", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        takePictureLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
-            if (success) {
-                cameraImageUri?.let { uri ->
-                    Log.d(TAG, "Picture taken successfully: $uri")
-                    finalSelectedImageUri = uri
-                    galleryImageUri = null
-                    displaySelectedImage(uri, isCamera = true)
+        requestCameraPermissionLauncher =
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+                if (isGranted) {
+                    Log.d(TAG, "Camera permission granted")
+                    launchCamera()
+                } else {
+                    Log.w(TAG, "Camera permission denied")
+                    Toast.makeText(requireContext(), "카메라 권한이 거부되었습니다.", Toast.LENGTH_SHORT).show()
                 }
-            } else {
-                Log.d(TAG, "Picture taking cancelled or failed")
-                cameraImageUri = null
             }
-        }
 
-        pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-            uri?.let {
-                Log.d(TAG, "Image picked from gallery: $it")
-                galleryImageUri = it
-                finalSelectedImageUri = it
-                cameraImageUri = null
-                displaySelectedImage(it, isCamera = false)
-            } ?: run {
-                Log.d(TAG, "No image picked from gallery")
+        takePictureLauncher =
+            registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+                if (success) {
+                    cameraImageUri?.let { uri ->
+                        Log.d(TAG, "Picture taken successfully: $uri")
+                        finalSelectedImageUri = uri
+                        galleryImageUri = null
+                        displaySelectedImage(uri, isCamera = true)
+                        // 사진 촬영 성공 후 바로 업로드 핸들러 호출
+                        handleUpload()
+                    }
+                } else {
+                    Log.d(TAG, "Picture taking cancelled or failed")
+                    cameraImageUri = null
+                }
             }
-        }
+
+        pickImageLauncher =
+            registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+                uri?.let {
+                    Log.d(TAG, "Image picked from gallery: $it")
+                    galleryImageUri = it
+                    finalSelectedImageUri = it
+                    cameraImageUri = null
+                    displaySelectedImage(it, isCamera = false)
+                    // 갤러리 선택 성공 후 바로 업로드 핸들러 호출
+                    handleUpload()
+                } ?: run {
+                    Log.d(TAG, "No image picked from gallery")
+                }
+            }
     }
+
 
     private fun setupInitialUI() {
         if (completionTimeMillis > 0) {
@@ -154,42 +178,56 @@ class ChallengeUploadPhotoFragment : Fragment() {
     private fun setupClickListeners() {
         binding.backButton.setOnClickListener {
             Log.d(TAG, "Back button clicked. Setting result and navigating to Home.")
-            // ★ 부모 프래그먼트(ExerciseFragment)에 사진 업로드 단계가 처리되었음을 알림
-            setFragmentResult(REQUEST_KEY_UPLOAD_PHOTO, bundleOf(RESULT_KEY_PHOTO_ACTION_DONE to true))
+            // 부모 프래그먼트(ExerciseFragment)에 사진 업로드 단계가 처리되었음을 알림
+            setFragmentResult(
+                REQUEST_KEY_UPLOAD_PHOTO,
+                bundleOf(RESULT_KEY_PHOTO_ACTION_DONE to true)
+            )
 
             try {
-                // TODO: 'action_challengeUploadPhotoFragment_to_homeFragment'를 실제 네비게이션 액션 ID로 변경.
-                // 홈으로 이동 시 이전 스택(운동화면들)을 제거하고 싶다면 popUpTo 옵션 사용.
-                findNavController().navigate(R.id.action_challengeUploadPhotoFragment_to_homeFragment) // 실제 액션 ID로 변경 필요
+                findNavController().navigate(R.id.action_challengeUploadPhotoFragment_to_homeFragment)
             } catch (e: Exception) {
-                Log.e(TAG, "Navigation to home failed. Action ID might be incorrect or destination not found.", e)
+                Log.e(
+                    TAG,
+                    "Navigation to home failed. Action ID might be incorrect or destination not found.",
+                    e
+                )
                 Toast.makeText(requireContext(), "홈 화면으로 이동 중 오류 발생", Toast.LENGTH_SHORT).show()
-                // Fallback: 홈으로 가는 액션이 없다면, 이전 화면으로 돌아감 (이 경우 ExerciseDoingFragment일 수 있음)
-                // findNavController().popBackStack()
             }
         }
 
         binding.cameraButtonContainer.setOnClickListener {
             Log.d(TAG, "Camera button container clicked")
+            // 유효성 검사 추가
+            if (completionTimeMillis <= 0) {
+                Toast.makeText(requireContext(), "운동한 날짜를 선택해주세요.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            // totalDurationMillis는 0초일 수 있으므로 0 이상인지 확인
+            if (totalDurationMillis < 0) {
+                Toast.makeText(requireContext(), "운동한 시간을 작성해주세요.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
             requestCameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
 
         binding.galleryButtonContainer.setOnClickListener {
             Log.d(TAG, "Gallery button container clicked")
+            // 유효성 검사 추가
+            if (completionTimeMillis <= 0) {
+                Toast.makeText(requireContext(), "운동한 날짜를 선택해주세요.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            if (totalDurationMillis < 0) {
+                Toast.makeText(requireContext(), "운동한 시간을 작성해주세요.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
             pickImageLauncher.launch("image/*")
         }
-
-        // TODO: XML에 "인증 완료" 또는 "건너뛰기" 버튼을 추가하고 해당 ID로 리스너 설정 필요
-        // 예시:
-        // binding.buttonCompleteUpload.setOnClickListener {
-        //     handleUpload() // 이 함수 내부에서 업로드 성공 후 setFragmentResult 호출 및 네비게이션
-        // }
-        // binding.buttonSkipUpload.setOnClickListener {
-        //     Log.d(TAG, "Skip button clicked. Setting result and navigating to Home.")
-        //     setFragmentResult(REQUEST_KEY_UPLOAD_PHOTO, bundleOf(RESULT_KEY_PHOTO_ACTION_DONE to true))
-        //     navigateToHome() // 홈으로 이동하는 공통 함수 호출
-        // }
-        Log.d(TAG, "TODO: Add an 'Upload/Done/Skip' button and its click listener to call handleUpload() or navigateToHome() with setFragmentResult.")
+        Log.d(
+            TAG,
+            "TODO: Add an 'Upload/Done' button and its click listener to call handleUpload()"
+        )
     }
 
     private fun launchCamera() {
@@ -212,14 +250,16 @@ class ChallengeUploadPhotoFragment : Fragment() {
             }
         } catch (ex: Exception) {
             Log.e(TAG, "Error creating image file or launching camera", ex)
-            Toast.makeText(requireContext(), "카메라 실행 중 오류 발생: ${ex.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "카메라 실행 중 오류 발생: ${ex.message}", Toast.LENGTH_SHORT)
+                .show()
             cameraImageUri = null
         }
     }
 
     @Throws(java.io.IOException::class)
     private fun createImageFile(context: Context): File {
-        val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val timeStamp: String =
+            SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val storageDir: File? = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
         if (storageDir != null && !storageDir.exists()) {
             storageDir.mkdirs()
@@ -248,35 +288,91 @@ class ChallengeUploadPhotoFragment : Fragment() {
     }
 
     private fun handleUpload() {
-        if (finalSelectedImageUri == null) {
+        val imageUri = finalSelectedImageUri
+        if (imageUri == null) {
             Toast.makeText(requireContext(), "인증할 사진을 선택해주세요.", Toast.LENGTH_SHORT).show()
             return
         }
-        // ... (기존 업로드 준비 로직) ...
-        Log.i(TAG, "Preparing to upload: Image URI: $finalSelectedImageUri")
-        Toast.makeText(requireContext(), "업로드 시작 (구현 필요)", Toast.LENGTH_SHORT).show()
 
-        // TODO: 실제 서버 업로드 로직 구현
-        // 업로드 성공 시:
-        // setFragmentResult(REQUEST_KEY_UPLOAD_PHOTO, bundleOf(RESULT_KEY_PHOTO_ACTION_DONE to true))
-        // navigateToHome() 또는 다른 적절한 화면으로 이동
+        val userId = UserPreference(requireContext()).getUserId()
+        if (userId == -1) {
+            Toast.makeText(requireContext(), "로그인 정보가 필요합니다.", Toast.LENGTH_SHORT).show()
+            return
+        }
 
-        // 임시로, handleUpload가 호출되면 바로 완료된 것으로 간주하고 결과 설정 및 홈으로 이동
-        Log.d(TAG, "handleUpload: Simulating upload completion.")
-        setFragmentResult(REQUEST_KEY_UPLOAD_PHOTO, bundleOf(RESULT_KEY_PHOTO_ACTION_DONE to true))
-        navigateToHome()
-    }
+        // 운동 완료 시간을 "YYYY-MM-DD" 형식으로 변환
+        val dateString = Instant.ofEpochMilli(completionTimeMillis)
+            .atZone(ZoneId.systemDefault())
+            .toLocalDate()
+            .format(DateTimeFormatter.ISO_LOCAL_DATE)
 
-    private fun navigateToHome() {
-        if (!isAdded) return
-        try {
-            // TODO: 'action_challengeUploadPhotoFragment_to_homeFragment'를 실제 네비게이션 액션 ID로 변경.
-            findNavController().navigate(R.id.action_challengeUploadPhotoFragment_to_homeFragment)
-        } catch (e: Exception) {
-            Log.e(TAG, "Navigation to home failed.", e)
-            Toast.makeText(requireContext(), "홈 화면으로 이동 중 오류 발생", Toast.LENGTH_SHORT).show()
+        // Uri를 실제 파일로 변환
+        val imageFile = getFileFromUri(requireContext(), imageUri)
+        if (imageFile == null) {
+            Toast.makeText(requireContext(), "사진 파일을 처리할 수 없습니다.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // 파일 및 다른 데이터 파트 생성
+        val requestFile = imageFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
+        val photoPart = MultipartBody.Part.createFormData("photo", imageFile.name, requestFile)
+        val userIdPart = userId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+        val datePart = dateString.toRequestBody("text/plain".toMediaTypeOrNull())
+
+//        binding.uploadProgressBar.visibility = View.VISIBLE // 프로그레스바 표시
+
+        lifecycleScope.launch {
+            try {
+                val response = RetrofitClient.challengeApi.uploadPhoto(photoPart, userIdPart, datePart)
+
+                if (response.isSuccessful && response.body()?.success == true) {
+                    navigateToChallengeScreen()
+                } else {
+                    val errorMsg = response.body()?.message ?: "업로드 실패: ${response.code()}"
+                    Toast.makeText(requireContext(), errorMsg, Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), "업로드 중 오류 발생", Toast.LENGTH_SHORT).show()
+                Log.e(TAG, "Upload failed", e)
+            } finally {
+//                if(isAdded) binding.uploadProgressBar.visibility = View.GONE
+            }
         }
     }
+
+    private fun getFileFromUri(context: Context, uri: Uri): File? {
+        val fileName = "upload_temp_${System.currentTimeMillis()}.jpg"
+        val tempFile = File(context.cacheDir, fileName)
+        return try {
+            context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                tempFile.outputStream().use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
+            tempFile
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get file from URI", e)
+            null
+        }
+    }
+
+    private fun navigateToChallengeScreen() {
+        if (!isAdded) return
+        try {
+            Toast.makeText(requireContext(), "인증 완료! 챌린지 화면으로 이동합니다.", Toast.LENGTH_SHORT).show()
+
+            val args = Bundle().apply {
+                putString("initialTab", "photo")
+            }
+            val actionId = R.id.action_challengeUploadPhotoFragment_to_challengeFragment
+            findNavController().navigate(actionId, args)
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Navigation to Challenge Screen failed.", e)
+            Toast.makeText(requireContext(), "화면 이동 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
 
     override fun onDestroyView() {
         super.onDestroyView()

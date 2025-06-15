@@ -320,6 +320,17 @@ object RetrofitClient {
         val exercise: Int
     )
 
+    data class UploadPhotoResponse(
+        val success: Boolean,
+        val message: String
+    )
+
+    data class PhotoChallengeItem(
+        @SerializedName("image_url")
+        val imageUrl: String,
+        val date: String // "YYYY-MM-DD"
+    )
+
     // 기록
     // 서버로부터 받아올 특정 날짜의 운동 기록 데이터 구조
     data class ExerciseRecordItem(
