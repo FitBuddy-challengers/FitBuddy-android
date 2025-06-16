@@ -1,9 +1,13 @@
 package com.cookandroid.challengers
 
+import android.content.pm.PackageManager
+import android.Manifest
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.lifecycleScope
@@ -24,6 +28,10 @@ import retrofit2.Response
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import androidx.navigation.NavOptions
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
 
@@ -31,12 +39,31 @@ class MainActivity : AppCompatActivity() {
     private lateinit var navController: NavController
     private lateinit var userPreference: UserPreference
 
+    companion object {
+        private const val REQUEST_NOTIFICATION_PERMISSION = 1001
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         userPreference = UserPreference(this)
+
+        // 알림 권한 요청
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    REQUEST_NOTIFICATION_PERMISSION
+                )
+            }
+        }
 
         val navHostFragment =
             supportFragmentManager.findFragmentById(R.id.fragment_container_view) as NavHostFragment
@@ -151,6 +178,10 @@ class MainActivity : AppCompatActivity() {
                         is com.cookandroid.challengers.auth.signup.SignUpOtpFragment,
                         is com.cookandroid.challengers.auth.signup.SignUpDoneFragment,
                         is HomeAichatFragment,
+                        is HomeMypageFragment,
+                        is MypageAccountSetFragment,
+                        is MypageInfoSetFragment,
+                        is MypageNotiSetFragment,
                         is ExerciseListFragment,
                         is ExerciseDoingFragment,
                         is ExerciseDetailFragment,
@@ -171,6 +202,39 @@ class MainActivity : AppCompatActivity() {
                 }
             }, true
         )
+
+        if (userPreference.isNotificationEnabled()) {
+            val workRequest = PeriodicWorkRequestBuilder<InactivityWorker>(1, TimeUnit.DAYS).build()
+
+            WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+                "InactivityCheckWork",
+                ExistingPeriodicWorkPolicy.KEEP,
+                workRequest
+            )
+        } else {
+            Log.d("MainActivity", "알림 예약 생략")
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        userPreference.saveLastVisitDate()
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        if (requestCode == REQUEST_NOTIFICATION_PERMISSION) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d("MainActivity", "🔔 알림 권한 허용")
+            } else {
+                Log.w("MainActivity", "🚫 알림 권한 거부")
+            }
+        }
     }
 
     private fun checkExerciseTable() {

@@ -1,5 +1,7 @@
 package com.cookandroid.challengers.api
 
+import com.cookandroid.challengers.api.RetrofitClient.PhotoChallengeItem
+import com.cookandroid.challengers.api.RetrofitClient.UploadPhotoResponse
 import com.cookandroid.challengers.data.ExerciseSetEntity
 import com.cookandroid.challengers.model.UserInfo
 import com.cookandroid.challengers.network.dto.DummyPlanRequest
@@ -8,14 +10,18 @@ import com.cookandroid.challengers.network.dto.ExerciseDto
 import com.cookandroid.challengers.network.dto.ExerciseSetDto
 
 import com.cookandroid.challengers.network.dto.TodayPlanResponse
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Multipart
 import retrofit2.http.PATCH
 import retrofit2.http.POST
+import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -189,6 +195,22 @@ interface ChallengeApi {
 
     @POST("/api/challenge/attendance/{userId}")
     fun markAttendance(@Path("userId") userId: Int): Call<ResponseBody>
+
+    // 사진 인증 업로드
+    @Multipart
+    @POST("/api/challenge/upload-photo")
+    suspend fun uploadPhoto(
+        @Part photo: MultipartBody.Part,
+        @Part("user_id") userId: RequestBody,
+        @Part("date") date: RequestBody
+    ): Response<UploadPhotoResponse>
+
+    // 주간 인증 사진 목록 조회
+    @GET("/api/challenge/weekly-photos")
+    suspend fun getWeeklyPhotos(
+        @Query("userId") userId: Int,
+        @Query("startDate") startDate: String // "YYYY-MM-DD" 형식의 일요일
+    ): Response<List<PhotoChallengeItem>>
 }
 
 

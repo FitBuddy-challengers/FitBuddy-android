@@ -142,6 +142,7 @@
             android:background="#D6D6D6" />
 
         <TextView
+            android:id="@+id/editInfo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="회원정보 수정"
@@ -156,6 +157,7 @@
             android:background="#D6D6D6" />
 
         <TextView
+            android:id="@+id/editAccount"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="계정 설정"
@@ -164,24 +166,6 @@
             android:textSize="20dp"
             android:textColor="#7E7E7E"
             android:fontFamily="@font/pretendard_bold" />
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#D6D6D6" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="알림 설정"
-            android:paddingTop="16dp"
-            android:paddingBottom="16dp"
-            android:textSize="20dp"
-            android:textColor="#7E7E7E"
-            android:fontFamily="@font/pretendard_bold" />
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#D6D6D6" />
 
     </LinearLayout>
 

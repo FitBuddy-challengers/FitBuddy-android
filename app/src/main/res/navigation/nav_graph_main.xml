@@ -12,8 +12,8 @@
 
         <!-- 알림 -->
         <action
-            android:id="@+id/action_home_to_homeNotiFragment"
-            app:destination="@id/homeNotiFragment" />
+            android:id="@+id/action_home_to_mypageNotiSetFragment"
+            app:destination="@id/mypageNotiSetFragment" />
 
         <!-- 마이페이지 -->
         <action
@@ -36,16 +36,28 @@
             app:destination="@id/exerciseFragment" />
     </fragment>
 
-    <!-- 홈(알림, 마이페이지, 채팅) -->
-    <fragment
-        android:id="@+id/homeNotiFragment"
-        android:name="com.cookandroid.challengers.HomeNotiFragment"
-        android:label="알림" />
+    <!-- 홈(마이페이지, 채팅) -->
 
     <fragment
         android:id="@+id/homeMypageFragment"
         android:name="com.cookandroid.challengers.HomeMypageFragment"
-        android:label="마이페이지" />
+        android:label="마이페이지" >
+
+    <action
+        android:id="@+id/action_homeMypageFragment_to_mypageInfoSetFragment"
+        app:destination="@id/mypageInfoSetFragment" />
+
+    <action
+        android:id="@+id/action_homeMypageFragment_to_mypageAccountSetFragment"
+        app:destination="@id/mypageAccountSetFragment" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/mypageNotiSetFragment"
+        android:name="com.cookandroid.challengers.MypageNotiSetFragment"
+        android:label="MypageNotiSetFragment"
+        tools:layout="@layout/fragment_mypage_noti_set" />
 
     <fragment
         android:id="@+id/homeAichatFragment"
@@ -56,6 +68,18 @@
             android:id="@+id/action_homeAichatFragment_to_homeFragment"
             app:destination="@id/homeFragment" />
     </fragment>
+
+    <fragment
+        android:id="@+id/mypageInfoSetFragment"
+        android:name="com.cookandroid.challengers.MypageInfoSetFragment"
+        android:label="MypageInfoSetFragment"
+        tools:layout="@layout/fragment_mypage_info_set" />
+
+    <fragment
+        android:id="@+id/mypageAccountSetFragment"
+        android:name="com.cookandroid.challengers.MypageAccountSetFragment"
+        android:label="MypageAccountSetFragment"
+        tools:layout="@layout/fragment_mypage_account_set" />
 
     <fragment
         android:id="@+id/challengeFragment"
@@ -140,8 +164,6 @@
         <action
             android:id="@+id/action_exerciseDoing_to_exerciseDoing"
             app:destination="@id/exerciseDoingFragment" />
-
-        <!-- 기존 쿨다운 이동은 이걸로 수정해야 할 수도 있음 -->
         <action
             android:id="@+id/action_exerciseDoing_to_coolDownStretch"
             app:destination="@id/coolDownStretchFragment" />
@@ -164,6 +186,9 @@
         <action
             android:id="@+id/action_coolDownStretch_to_home"
             app:destination="@id/homeFragment" />
+        <action
+            android:id="@+id/action_coolDownStretch_to_challengeUpload"
+            app:destination="@id/challengeUploadPhotoFragment" />
     </fragment>
 
     <fragment
@@ -224,8 +249,12 @@
         android:label="챌린지 사진 업로드"
         tools:layout="@layout/fragment_upload_photo">
         <action
+            android:id="@+id/action_challengeUploadPhotoFragment_to_challengeFragment"
+            app:destination="@id/challengeFragment" />
+        <action
             android:id="@+id/action_challengeUploadPhotoFragment_to_homeFragment"
             app:destination="@id/homeFragment" />
     </fragment>
+
 
 </navigation>

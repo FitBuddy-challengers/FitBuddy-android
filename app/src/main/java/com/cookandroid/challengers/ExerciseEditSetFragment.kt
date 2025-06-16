@@ -1,259 +1,246 @@
 package com.cookandroid.challengers
 
-import android.app.Dialog
-import android.content.DialogInterface
-import android.content.res.ColorStateList
 import android.os.Bundle
-import android.text.InputType
+import android.text.Editable
+import android.text.TextWatcher
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import androidx.core.content.ContextCompat
+import android.widget.Toast
+import androidx.fragment.app.setFragmentResult
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
-import androidx.recyclerview.widget.ListUpdateCallback
 import androidx.recyclerview.widget.RecyclerView
-import com.cookandroid.challengers.data.ExerciseSet
-import com.cookandroid.challengers.data.ExerciseSetDao
-import com.cookandroid.challengers.data.db.AppDatabase
+import com.cookandroid.challengers.api.RetrofitClient
+import com.cookandroid.challengers.databinding.FragmentExerciseEditSetBinding
 import com.cookandroid.challengers.databinding.ItemEditSetBinding
-import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.ArrayList
-
-
-// 세트 수 수정
+import java.util.concurrent.atomic.AtomicLong
 class ExerciseEditSetFragment : BottomSheetDialogFragment() {
+    private var _binding: FragmentExerciseEditSetBinding? = null
+    private val binding get() = _binding!!
+
+    private lateinit var setAdapter: EditSetAdapter
+    private var scheduleId: Long = -1L
+
+    data class RepsSetUiModel(
+        val id: Long,
+        val setNumber: Int,
+        val reps: Int,
+        val weight: Float,
+        val isCompleted: Boolean
+    )
 
     companion object {
-        const val TAG = "ExerciseEditSetFragment"
-        private const val ARG_PLAN_ID = "planId"
-        private const val ARG_EXERCISE_ID = "exerciseId"
-        private const val ARG_INITIAL_SET_LIST = "initialSetList"
-        private const val ARG_HIGHLIGHT_INDEX = "highlightIndex"
-        private const val ARG_EQUIP = "equip"
+        const val TAG = "RepsSetEditDebug" // 로그 확인을 위해 태그 변경
+        private const val ARG_SCHEDULE_ID = "scheduleId"
+        private val idCounter = AtomicLong(System.currentTimeMillis())
 
-        fun newInstance(
-            planId: Long,
-            exerciseId: Long,
-            initialSetList: List<ExerciseSet>,
-            highlightIndex: Int,
-            equip: String?
-        ): ExerciseEditSetFragment {
+        fun newInstance(scheduleId: Long): ExerciseEditSetFragment {
             return ExerciseEditSetFragment().apply {
                 arguments = Bundle().apply {
-                    putLong(ARG_PLAN_ID, planId)
-                    putLong(ARG_EXERCISE_ID, exerciseId)
-                    putParcelableArrayList(ARG_INITIAL_SET_LIST, ArrayList(initialSetList))
-                    putInt(ARG_HIGHLIGHT_INDEX, highlightIndex)
-                    putString(ARG_EQUIP, equip)
+                    putLong(ARG_SCHEDULE_ID, scheduleId)
                 }
             }
         }
     }
-
-    private lateinit var exerciseSetDao: ExerciseSetDao
-    private lateinit var adapter: EditSetAdapter
-    private var planId: Long = -1L
-    private var exerciseId: Long = -1L
-    private val initialSetList: MutableList<ExerciseSet> = mutableListOf()
-    private var currentEquip: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.let {
-            planId = it.getLong(ARG_PLAN_ID)
-            exerciseId = it.getLong(ARG_EXERCISE_ID)
-            currentEquip = it.getString(ARG_EQUIP)
-            it.getParcelableArrayList<ExerciseSet>(ARG_INITIAL_SET_LIST)?.let { list ->
-                initialSetList.addAll(list)
-            }
+            scheduleId = it.getLong(ARG_SCHEDULE_ID)
         }
     }
 
-    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val dialog = BottomSheetDialog(requireContext(), R.style.BottomSheetDialogTheme)
-        dialog.setOnShowListener { d ->
-            val bottomSheet = (d as BottomSheetDialog)
-                .findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
-            bottomSheet?.background = ContextCompat.getDrawable(
-                dialog.context,
-                R.drawable.bottom_sheet_background
-            )
-            BottomSheetBehavior.from(bottomSheet!!).apply {
-                val h = resources.getDimensionPixelSize(R.dimen.rest_timer_peek_height)
-                peekHeight = h
-                maxHeight = h
-                state = BottomSheetBehavior.STATE_EXPANDED
-            }
-        }
-        return dialog
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentExerciseEditSetBinding.inflate(inflater, container, false)
+        return binding.root
     }
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? = inflater.inflate(R.layout.fragment_exercise_edit_set, container, false)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val db = AppDatabase.getDatabase(requireContext(), viewLifecycleOwner.lifecycleScope)
-        exerciseSetDao = db.exerciseSetDao()
-        val recyclerView = view.findViewById<RecyclerView>(R.id.recyclerViewSetList)
-        val addButton = view.findViewById<Button>(R.id.buttonAddSet)
-        val highlightIndex = arguments?.getInt(ARG_HIGHLIGHT_INDEX, -1) ?: -1
+        setupRecyclerView()
+        setupClickListeners()
+        loadSetsFromServer()
+    }
 
-        adapter = EditSetAdapter(currentEquip)
-        recyclerView.layoutManager = LinearLayoutManager(requireContext())
-        recyclerView.adapter = adapter
-
-        val initial = initialSetList.sortedBy { it.setNumber }
-        val withHighlight = initial.mapIndexed { idx, set ->
-            if (idx == highlightIndex) set.copy(isHighlighted = true, setNumber = idx + 1)
-            else set.copy(setNumber = idx + 1)
+    private fun setupRecyclerView() {
+        setAdapter = EditSetAdapter(
+            onItemChanged = { updatedItem ->
+                val newList = setAdapter.currentList.map { item ->
+                    if (item.id == updatedItem.id) updatedItem else item
+                }
+                setAdapter.submitList(newList)
+            },
+            onDeleteItem = { itemToDelete ->
+                val oldList = setAdapter.currentList
+                Log.d(TAG, "Deleting item: $itemToDelete")
+                val newList = oldList
+                    .filter { it.id != itemToDelete.id }
+                    .mapIndexed { index, item -> item.copy(setNumber = index + 1) }
+                Log.d(TAG, "New list after deletion: $newList")
+                setAdapter.submitList(newList)
+            }
+        )
+        binding.recyclerViewSetList.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = setAdapter
         }
-        adapter.submitList(withHighlight)
+    }
 
-        addButton.setOnClickListener {
-            val currentList = adapter.currentList.toMutableList()
-            val newSet = ExerciseSet(
-                id = 0,
-                exercisePlanId = planId,
-                exerciseId = exerciseId,
-                setNumber = currentList.size + 1,
-                weight = currentList.lastOrNull()?.weight,
-                reps = currentList.lastOrNull()?.reps ?: 0,
+    private fun setupClickListeners() {
+        binding.buttonAddSet.setOnClickListener {
+            val oldList = setAdapter.currentList
+            val lastSet = oldList.lastOrNull()
+            val newSet = RepsSetUiModel(
+                id = idCounter.incrementAndGet(),
+                setNumber = oldList.size + 1,
+                reps = lastSet?.reps ?: 12,
+                weight = lastSet?.weight ?: 0f,
                 isCompleted = false
             )
-            currentList.add(newSet)
-            adapter.updateSetNumbers(currentList)
-            adapter.submitList(currentList)
-            recyclerView.scrollToPosition(currentList.size - 1)
+            setAdapter.submitList(oldList + newSet)
+            binding.recyclerViewSetList.smoothScrollToPosition(setAdapter.currentList.size - 1)
+        }
+
+        binding.buttonSaveSet.setOnClickListener {
+            saveChangesToServer()
         }
     }
 
-    override fun onDismiss(dialog: DialogInterface) {
-        super.onDismiss(dialog)
-        view?.findFocus()?.clearFocus()
-        saveSets()
-    }
+    private fun loadSetsFromServer() {
+        if (scheduleId == -1L) return
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val response = RetrofitClient.scheduleApi.getRepsSets(scheduleId).execute()
+                if (response.isSuccessful) {
+                    val dtoList = response.body() ?: emptyList()
+                    // ⭐️ STEP 1: 서버에서 받은 원본 데이터 확인
+                    Log.d(TAG, "1. DTO from Server: $dtoList")
 
-    private fun saveSets() {
-        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-            val currentList = adapter.currentList.toList()
-            val initialSnapshot = initialSetList.toList()
-            val diff = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
-                override fun getOldListSize() = initialSnapshot.size
-                override fun getNewListSize() = currentList.size
-                override fun areItemsTheSame(old: Int, new: Int) =
-                    initialSnapshot.getOrNull(old)?.id == currentList.getOrNull(new)?.id
-
-                override fun areContentsTheSame(old: Int, new: Int) =
-                    initialSnapshot.getOrNull(old) == currentList.getOrNull(new)
-            })
-
-            val toInsert = mutableListOf<ExerciseSet>()
-            val toUpdate = mutableListOf<ExerciseSet>()
-            val toDelete = mutableListOf<ExerciseSet>()
-
-            diff.dispatchUpdatesTo(object : ListUpdateCallback {
-                override fun onInserted(pos: Int, cnt: Int) =
-                    (pos until pos + cnt).forEach { currentList.getOrNull(it)?.let(toInsert::add) }
-
-                override fun onRemoved(pos: Int, cnt: Int) =
-                    (pos until pos + cnt).forEach {
-                        initialSnapshot.getOrNull(it)?.let(toDelete::add)
+                    val uiModelList = dtoList.map { dto ->
+                        RepsSetUiModel(
+                            id = idCounter.incrementAndGet(),
+                            setNumber = dto.setNumber,
+                            reps = dto.reps,
+                            weight = dto.weight,
+                            isCompleted = dto.isCompleted
+                        )
                     }
+                    // ⭐️ STEP 2: 어댑터에 전달할 UI 모델 데이터 확인
+                    Log.d(TAG, "2. Mapped UI Model List: $uiModelList")
 
-                override fun onMoved(from: Int, to: Int) {}
-                override fun onChanged(pos: Int, cnt: Int, payload: Any?) =
-                    (pos until pos + cnt).forEach { currentList.getOrNull(it)?.let(toUpdate::add) }
-            })
-
-            toInsert.forEach { exerciseSetDao.insert(it) }
-            toDelete.forEach { exerciseSetDao.delete(it) }
-            toUpdate.forEach { exerciseSetDao.update(it) }
-
-            withContext(Dispatchers.Main) {
-                initialSetList.clear()
-                initialSetList.addAll(currentList)
-                parentFragmentManager.setFragmentResult("sets_updated", Bundle())
+                    withContext(Dispatchers.Main) {
+                        setAdapter.submitList(uiModelList)
+                    }
+                } else {
+                    Log.e(TAG, "Server error: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Network exception", e)
             }
         }
     }
 
-    inner class EditSetAdapter(private val equip: String?) :
-        ListAdapter<ExerciseSet, EditSetAdapter.ViewHolder>(object :
-            DiffUtil.ItemCallback<ExerciseSet>() {
-            override fun areItemsTheSame(old: ExerciseSet, new: ExerciseSet) =
-                old.id == new.id && old.exercisePlanId == new.exercisePlanId && old.exerciseId == new.exerciseId
-
-            override fun areContentsTheSame(old: ExerciseSet, new: ExerciseSet) = old == new
-        }) {
-
-        fun updateSetNumbers(list: MutableList<ExerciseSet>) {
-            list.forEachIndexed { i, s -> s.setNumber = i + 1 }
-        }
-
-        inner class ViewHolder(val binding: ItemEditSetBinding) :
-            RecyclerView.ViewHolder(binding.root) {
-
-            /* TextWatchers, listeners 생략 */
-
-            fun bind(set: ExerciseSet) {
-                binding.setNumberTextView.text = "${bindingAdapterPosition + 1}세트"
-                binding.repsEditText.setText(set.reps.toString())
-                binding.repsEditText.inputType = InputType.TYPE_CLASS_NUMBER
-
-                if (equip in listOf("맨몸", "스텝박스", "세라밴드", "짐볼")) {
-                    binding.weightEditText.visibility = View.INVISIBLE
-                    binding.weightText.visibility = View.INVISIBLE
-                } else {
-                    binding.weightEditText.visibility = View.VISIBLE
-                    binding.weightText.visibility = View.VISIBLE
-                    binding.weightEditText.setText(set.weight?.toString() ?: "")
-                    binding.weightEditText.inputType = InputType.TYPE_CLASS_NUMBER
-                }
-
-                binding.weightEditText.isEnabled = !set.isCompleted
-                binding.repsEditText.isEnabled = !set.isCompleted
-
-                when {
-                    set.isCompleted -> binding.itemRoot.setBackgroundResource(R.drawable.set_item_background_completed2)
-                    set.isHighlighted -> binding.itemRoot.setBackgroundResource(R.drawable.set_item_background_emphasized)
-                    else -> binding.itemRoot.setBackgroundResource(R.drawable.set_item_background)
-                }
-
-                val hColor = ContextCompat.getColor(binding.root.context, R.color.light_gray2)
-                val dColor = ContextCompat.getColor(binding.root.context, R.color.white)
-                binding.weightEditText.backgroundTintList =
-                    ColorStateList.valueOf(if (set.isHighlighted) hColor else dColor)
-                binding.repsEditText.backgroundTintList =
-                    ColorStateList.valueOf(if (set.isHighlighted) hColor else dColor)
-            }
-
-            private fun updateWeightAndReps() { /* ... */
-            }
-        }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-            ViewHolder(
-                ItemEditSetBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false
-                )
+    private fun saveChangesToServer() {
+        if (scheduleId == -1L) return
+        val dtoList = setAdapter.currentList.map { uiModel ->
+            RetrofitClient.RepsSetDto(
+                setNumber = uiModel.setNumber,
+                reps = uiModel.reps,
+                weight = uiModel.weight,
+                isCompleted = uiModel.isCompleted
             )
+        }
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val response = RetrofitClient.scheduleApi.updateRepsSets(scheduleId, dtoList).execute()
+                withContext(Dispatchers.Main) {
+                    if (response.isSuccessful) {
+                        Toast.makeText(context, "세트가 저장되었습니다.", Toast.LENGTH_SHORT).show()
+                        setFragmentResult("sets_updated", Bundle())
+                        dismiss()
+                    } else {
+                        Toast.makeText(context, "저장 실패: ${response.code()}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "네트워크 오류로 저장에 실패했습니다.", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) =
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+
+    private class EditSetAdapter(
+        private val onItemChanged: (RepsSetUiModel) -> Unit,
+        private val onDeleteItem: (RepsSetUiModel) -> Unit
+    ) : ListAdapter<RepsSetUiModel, EditSetAdapter.ViewHolder>(RepsSetDiffCallback()) {
+
+        inner class ViewHolder(val binding: ItemEditSetBinding) : RecyclerView.ViewHolder(binding.root) {
+            private val textWatcher = object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    if (bindingAdapterPosition == RecyclerView.NO_POSITION) return
+                    val currentItem = getItem(bindingAdapterPosition)
+                    val updatedItem = currentItem.copy(
+                        weight = binding.weightEditText.text.toString().toFloatOrNull() ?: 0f,
+                        reps = binding.repsEditText.text.toString().toIntOrNull() ?: 0
+                    )
+                    onItemChanged(updatedItem)
+                }
+                override fun afterTextChanged(s: Editable?) {}
+            }
+
+            fun bind(set: RepsSetUiModel) {
+                // ⭐️ STEP 3: 각 아이템이 UI에 바인딩될 때의 데이터 확인
+                Log.d(TAG, "3. Binding item at position $bindingAdapterPosition with data: $set")
+
+                binding.weightEditText.removeTextChangedListener(textWatcher)
+                binding.repsEditText.removeTextChangedListener(textWatcher)
+
+                binding.setNumberTextView.text = "${set.setNumber}세트"
+                binding.weightEditText.setText(if (set.weight == 0f) "" else set.weight.toString().removeSuffix(".0"))
+                binding.repsEditText.setText(if (set.reps == 0) "" else set.reps.toString())
+
+                binding.deleteButton.setOnClickListener {
+                    if (bindingAdapterPosition != RecyclerView.NO_POSITION) {
+                        onDeleteItem(getItem(bindingAdapterPosition))
+                    }
+                }
+
+                binding.weightEditText.addTextChangedListener(textWatcher)
+                binding.repsEditText.addTextChangedListener(textWatcher)
+            }
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            val binding = ItemEditSetBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+            return ViewHolder(binding)
+        }
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             holder.bind(getItem(position))
+        }
+    }
+
+    private class RepsSetDiffCallback : DiffUtil.ItemCallback<RepsSetUiModel>() {
+        override fun areItemsTheSame(oldItem: RepsSetUiModel, newItem: RepsSetUiModel): Boolean {
+            return oldItem.id == newItem.id
+        }
+        override fun areContentsTheSame(oldItem: RepsSetUiModel, newItem: RepsSetUiModel): Boolean {
+            return oldItem == newItem
+        }
     }
 }

@@ -48,6 +48,11 @@ object RetrofitClient {
         retrofit.create(AiRoutineApi::class.java)
     }
 
+    // AI 추천 api
+    val recommendApi: RecommendExerciseApi by lazy {
+        retrofit.create(RecommendExerciseApi::class.java)
+    }
+
     // 기록 API 인터페이스
     val recordApi: RecordApi by lazy {
         retrofit.create(RecordApi::class.java)
@@ -315,6 +320,17 @@ object RetrofitClient {
         val exercise: Int
     )
 
+    data class UploadPhotoResponse(
+        val success: Boolean,
+        val message: String
+    )
+
+    data class PhotoChallengeItem(
+        @SerializedName("image_url")
+        val imageUrl: String,
+        val date: String // "YYYY-MM-DD"
+    )
+
     // 기록
     // 서버로부터 받아올 특정 날짜의 운동 기록 데이터 구조
     data class ExerciseRecordItem(
@@ -388,4 +404,15 @@ object RetrofitClient {
         val message: String,
         val updatedCoin: Int
     )
+
+    // GPT 운동 추천 요청 DTO
+    data class RecommendExerciseRequest(
+        @SerializedName("userId") val userId: Int
+    )
+
+    // GPT 운동 추천 응답 DTO
+    data class RecommendExerciseResponse(
+        val recommendation: String
+    )
+
 }

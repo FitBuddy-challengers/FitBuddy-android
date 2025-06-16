@@ -45,7 +45,7 @@
         <TextView
             android:id="@+id/tvDate"
             android:layout_width="match_parent"
-            android:layout_height="16dp"
+            android:layout_height="22dp"
             android:text="2025.03.20 목요일"
             android:textColor="#4F4F4F"
             android:textSize="14dp"
@@ -81,17 +81,17 @@
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/chatInputLayout"
             android:layout_width="match_parent"
-            android:layout_height="36dp"
+            android:layout_height="52dp"
             android:background="@drawable/et_home_aichat"
             android:paddingStart="16dp"
-            android:paddingBottom="11.5dp"
+            android:paddingEnd="8dp"
             app:endIconDrawable="@drawable/ic_home_chat_send"
             app:endIconMode="custom">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etMessage"
                 android:layout_width="match_parent"
-                android:layout_height="16dp"
+                android:layout_height="match_parent"
                 android:hint="내용을 입력하세요."
                 android:textSize="14dp"
                 android:background="@android:color/transparent"/>

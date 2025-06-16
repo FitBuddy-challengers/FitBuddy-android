@@ -111,4 +111,7 @@ dependencies {
     implementation("org.threeten:threetenbp:1.6.8")
     // 체중 그래프 
     implementation ("com.github.PhilJay:MPAndroidChart:v3.1.0")
+
+    // 접속일
+    implementation ("androidx.work:work-runtime-ktx:2.9.0")
 }

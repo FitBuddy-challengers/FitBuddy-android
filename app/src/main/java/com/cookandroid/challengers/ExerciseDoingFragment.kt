@@ -471,16 +471,37 @@ class ExerciseDoingFragment : Fragment() {
                     val response = RetrofitClient.scheduleApi.getTimeSets(scheduleId).execute()
                     if (response.isSuccessful) {
                         response.body()?.map { dto ->
-                            ExerciseSet(exercisePlanId = exercisePlanId, exerciseId = exerciseIdForSetsApi, setNumber = dto.setNumber, weight = dto.weight.toInt(), reps = 0, times = dto.seconds.toLong(), isCompleted = dto.isCompleted, elapsedTimeMillis = dto.seconds * 1000L)
+                            ExerciseSet(
+                                exercisePlanId = exercisePlanId,
+                                exerciseId = exerciseIdForSetsApi,
+                                setNumber = dto.setNumber,
+                                weight = dto.weight.toInt(),
+                                reps = 0,
+                                times = dto.seconds.toLong(),
+                                isCompleted = dto.isCompleted,
+                                elapsedTimeMillis = dto.seconds * 1000L
+                            )
                         } ?: emptyList()
-                    } else { emptyList() }
+                    } else {
+                        emptyList()
+                    }
                 } else {
                     val response = RetrofitClient.scheduleApi.getRepsSets(scheduleId).execute()
                     if (response.isSuccessful) {
                         response.body()?.map { dto ->
-                            ExerciseSet(exercisePlanId = exercisePlanId, exerciseId = exerciseIdForSetsApi, setNumber = dto.setNumber, weight = dto.weight.toInt(), reps = dto.reps, times = 0L, isCompleted = dto.isCompleted)
+                            ExerciseSet(
+                                exercisePlanId = exercisePlanId,
+                                exerciseId = exerciseIdForSetsApi,
+                                setNumber = dto.setNumber,
+                                weight = dto.weight.toInt(),
+                                reps = dto.reps,
+                                times = 0L,
+                                isCompleted = dto.isCompleted
+                            )
                         } ?: emptyList()
-                    } else { emptyList() }
+                    } else {
+                        emptyList()
+                    }
                 }
 
                 currentExerciseSets = fetchedExerciseSetsSource.sortedBy { it.setNumber }.toMutableList()
@@ -690,7 +711,13 @@ class ExerciseDoingFragment : Fragment() {
     private fun showEditSetBottomSheet() {
         if (scheduleId == -1L ) { Toast.makeText(requireContext(), "편집할 운동 정보가 없습니다.", Toast.LENGTH_SHORT).show(); return }
         val isTimeType = planExerciseList.getOrNull(currentExerciseOrderIndex)?.is_time_type ?: false
-        val sheet: BottomSheetDialogFragment = if (isTimeType) TimeSetEditDialogFragment.newInstance(scheduleId) else RepsSetEditDialogFragment.newInstance(scheduleId)
+        val sheet: BottomSheetDialogFragment = if (isTimeType) {
+            // ✅ 항상 이 부분이 실행되어, 시간 기반 수정 창이 열림
+            TimeSetEditDialogFragment.newInstance(scheduleId)
+        } else {
+            // ❌ 저희가 계속 수정하던 이 부분은 실행되지 않음
+            ExerciseEditSetFragment.newInstance(scheduleId)
+        }
         sheet.show(parentFragmentManager, if(isTimeType) TimeSetEditDialogFragment.TAG else RepsSetEditDialogFragment.TAG)
     }
 
@@ -862,22 +889,20 @@ class ExerciseDoingFragment : Fragment() {
             // 이 프래그먼트 내부 상태도 모두 초기화
             internalPrefs.edit().clear().apply()
 
-            // ★★★ 사진 인증 화면(ChallengeUploadPhotoFragment)으로 이동 ★★★
+            // ★★★ 쿨다운 스트레칭 화면으로 이동 ★★★
             try {
-                // 현재 화면이 ExerciseDoingFragment일 때만 네비게이션 실행 (중복 실행 방지)
                 if (findNavController().currentDestination?.id == R.id.exerciseDoingFragment) {
                     val args = Bundle().apply {
                         putLong("completion_time_millis", completionTimestamp)
                         putLong("total_duration_millis", totalWorkoutDuration)
                     }
-                    // 네비게이션 그래프에 정의된 실제 액션 ID로 변경해야 합니다.
-                    val actionId = R.id.action_exerciseDoing_to_challengeUpload
+                    val actionId = R.id.action_exerciseDoing_to_coolDownStretch
                     findNavController().navigate(actionId, args)
-                    Log.i(TAG, "Navigating to ChallengeUploadPhotoFragment with duration: $totalWorkoutDuration")
+                    Log.i(TAG, "Navigating to CoolDownStretchFragment with duration: $totalWorkoutDuration")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Navigation to ChallengeUploadPhotoFragment failed: ${e.message}", e)
-                if(isAdded) Toast.makeText(requireContext(), "사진 인증 화면으로 이동 중 오류 발생", Toast.LENGTH_SHORT).show()
+                Log.e(TAG, "Navigation to CoolDownStretchFragment failed: ${e.message}", e)
+                if(isAdded) Toast.makeText(requireContext(), "쿨다운 스트레칭으로 이동 중 오류 발생", Toast.LENGTH_SHORT).show()
             }
         }
     }
