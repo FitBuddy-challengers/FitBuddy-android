@@ -66,13 +66,14 @@ class ServerExerciseAdapter(
             val context = binding.root.context
             val resId = if (!imagePath.isNullOrBlank()) {
                 try { context.resources.getIdentifier(imagePath, "drawable", context.packageName).takeIf { it != 0 } }
-                catch (e: Exception) { R.drawable.ic_launcher_background }
-            } else { R.drawable.ic_launcher_background }
+                catch (e: Exception) { R.drawable.ic_fitbuddy_logo }
+            } else { R.drawable.ic_fitbuddy_logo }
 
             Glide.with(context)
+                .asBitmap()
                 .load(resId)
-                .placeholder(R.drawable.ic_launcher_background) // 기본 이미지 리소스 필요
-                .error(R.drawable.ic_launcher_background)     // 에러 시 이미지 리소스 필요
+                .placeholder(R.drawable.ic_fitbuddy_logo) // 기본 이미지 리소스 필요
+                .error(R.drawable.ic_fitbuddy_logo)     // 에러 시 이미지 리소스 필요
                 .into(binding.exerciseImageView)
 
             // ★★★ 클릭 리스너 분리 ★★★

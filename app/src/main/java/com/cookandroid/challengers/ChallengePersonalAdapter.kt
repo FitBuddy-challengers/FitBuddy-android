@@ -14,8 +14,9 @@ import com.cookandroid.challengers.api.RetrofitClient
 
 import com.google.android.material.progressindicator.LinearProgressIndicator
 
-class ChallengePersonalAdapter :
-    ListAdapter<RetrofitClient.ChallengeItemUiModel, ChallengePersonalAdapter.ChallengeViewHolder>(DiffCallback) {
+class ChallengePersonalAdapter(
+    private val onItemClicked: (RetrofitClient.ChallengeItemUiModel) -> Unit
+) : ListAdapter<RetrofitClient.ChallengeItemUiModel, ChallengePersonalAdapter.ChallengeViewHolder>(DiffCallback) {
 
     inner class ChallengeViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val challengeNameTextView: TextView = itemView.findViewById(R.id.challengeNameTextView)
@@ -29,13 +30,21 @@ class ChallengePersonalAdapter :
             progressBar.progress = item.progressPercent
             progressTextView.text = "${item.progressPercent}%"
             rewardCoinTextView.text = item.reward.toString()
-            rewardCoinImageView.setImageResource(R.drawable.ic_coin) // drawable/ic_coin 이미지를 사용
-            if (item.progressPercent >= 100) {
-                itemView.setBackgroundResource(R.drawable.bg_challenge_complete) // ✅ 달성 배경
-            } else {
-                itemView.setBackgroundResource(R.drawable.set_item_background) // 기본 배경
+            rewardCoinImageView.setImageResource(R.drawable.ic_coin)
+
+            itemView.setOnClickListener {
+                // 100% 달성한 챌린지만 클릭 이벤트 처리
+                if (item.progressPercent >= 100) {
+                    onItemClicked(item)
+                }
             }
 
+            // 달성 여부에 따라 배경 변경
+            if (item.progressPercent >= 100) {
+                itemView.setBackgroundResource(R.drawable.bg_challenge_complete)
+            } else {
+                itemView.setBackgroundResource(R.drawable.set_item_background)
+            }
         }
     }
 
@@ -51,7 +60,7 @@ class ChallengePersonalAdapter :
 
     companion object DiffCallback : DiffUtil.ItemCallback<RetrofitClient.ChallengeItemUiModel>() {
         override fun areItemsTheSame(oldItem: RetrofitClient.ChallengeItemUiModel, newItem: RetrofitClient.ChallengeItemUiModel): Boolean {
-            return oldItem.title == newItem.title
+            return oldItem.type == newItem.type
         }
 
         override fun areContentsTheSame(oldItem: RetrofitClient.ChallengeItemUiModel, newItem: RetrofitClient.ChallengeItemUiModel): Boolean {

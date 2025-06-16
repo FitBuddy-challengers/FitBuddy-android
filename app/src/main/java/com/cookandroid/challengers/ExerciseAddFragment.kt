@@ -540,9 +540,10 @@ class ExerciseAddFragment : Fragment() {
                 } else { null }
 
                 Glide.with(context)
-                    .load(resId ?: R.drawable.ic_launcher_background)
-                    .placeholder(R.drawable.ic_launcher_background)
-                    .error(R.drawable.ic_launcher_background)
+                    .asBitmap()
+                    .load(resId ?: R.drawable.ic_fitbuddy_logo)
+                    .placeholder(R.drawable.ic_fitbuddy_logo)
+                    .error(R.drawable.ic_fitbuddy_logo)
                     .into(binding.exerciseImageView)
 
                 updateViewSelectionState(currentSelectedIds.contains(exercise.id))

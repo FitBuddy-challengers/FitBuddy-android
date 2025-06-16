@@ -5,7 +5,9 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.cookandroid.challengers.api.RetrofitClient
@@ -18,22 +20,36 @@ class ChallengePersonalFragment : Fragment() {
     private var _binding: FragmentChallengePersonalBinding? = null
     private val binding get() = _binding!!
 
+    private lateinit var challengeAdapter: ChallengePersonalAdapter
 
-    private lateinit var challengeAdapter: ChallengePersonalAdapter // 어댑터 준비 필요
+    private lateinit var storeViewModel: StoreViewModel
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentChallengePersonalBinding.inflate(inflater, container, false)
+        // 공유 StoreViewModel 초기화
+        storeViewModel = ViewModelProvider(requireActivity()).get(StoreViewModel::class.java)
         return binding.root
     }
+
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        challengeAdapter = ChallengePersonalAdapter()
+        challengeAdapter = ChallengePersonalAdapter { clickedItem ->
+            Log.d("ChallengeFragment", "Challenge item clicked: ${clickedItem.title}")
+            // 100% 달성된 챌린지만 클릭에 반응 (어댑터에서 이미 필터링했지만, 여기서 한번 더 확인 가능)
+            if (clickedItem.progressPercent >= 100) {
+                val userId = UserPreference(requireContext()).getUserId()
+                if (userId != -1) {
+                    claimRewardAndRefresh(userId, clickedItem)
+                }
+            }
+        }
         binding.personalChallengeRecyclerView.adapter = challengeAdapter
+        observeViewModel() // ★ ViewModel 관찰 시작
 
         val userId = UserPreference(requireContext()).getUserId() // ✅ 저장된 로그인 사용자 ID
         if (userId != -1) {
@@ -50,6 +66,29 @@ class ChallengePersonalFragment : Fragment() {
         }
     }
 
+    private fun observeViewModel() {
+        // 공유 ViewModel의 characterBitmap LiveData를 관찰
+        storeViewModel.characterBitmap.observe(viewLifecycleOwner) { bitmap ->
+            if (!isAdded) return@observe // 프래그먼트가 화면에 없을 때 UI 조작 방지
+
+            if (bitmap != null) {
+                // 비트맵이 있으면 아바타 이미지로 설정
+                Glide.with(this@ChallengePersonalFragment)
+                    .load(bitmap)
+                    .circleCrop()
+                    .into(binding.userProfileImageView)
+                Log.d("ChallengeFragment", "Profile image updated from StoreViewModel.")
+            } else {
+                // 비트맵이 없으면(초기 상태, 로딩 실패 등) 기본 샘플 이미지로 설정
+                Glide.with(this@ChallengePersonalFragment)
+                    .load(R.drawable.default_profile) // 기본 이미지 리소스
+                    .circleCrop()
+                    .into(binding.userProfileImageView)
+                Log.d("ChallengeFragment", "Profile image set to default (bitmap from ViewModel is null).")
+            }
+        }
+    }
+
     private fun loadUserChallengeProgress(userId: Int) {
         lifecycleScope.launch {
             try {
@@ -61,42 +100,61 @@ class ChallengePersonalFragment : Fragment() {
                 binding.userLevelTextView.text = "Lv.${response.level}"
                 binding.userCoinTextView.text = response.coin.toString()
 
-                // 프로필 이미지 (기본 이미지로 설정됨)
-                Glide.with(this@ChallengePersonalFragment)
-                    //.load(response.profileImage)
-                    //.placeholder(R.drawable.default_profile)
-                    //.into(binding.userProfileImageView)
-                    .load(R.drawable.default_profile)
-                    .into(binding.userProfileImageView)
-
-                // ✅ 퍼센트 직접 계산해서 전달
                 val challengeList = listOf(
                     RetrofitClient.ChallengeItemUiModel(
                         title = "출석 ${response.current.attendance}회 / ${response.required.attendance}회",
                         progressPercent = calculatePercent(response.current.attendance, response.required.attendance),
-                        reward = response.reward.attendance
+                        reward = response.reward.attendance,
+                        type = "attendance"
                     ),
                     RetrofitClient.ChallengeItemUiModel(
                         title = "운동 횟수 ${response.current.exercise}회 / ${response.required.exercise}회",
                         progressPercent = calculatePercent(response.current.exercise, response.required.exercise),
-                        reward = response.reward.exercise
+                        reward = response.reward.exercise,
+                        type = "exercise"
                     ),
                     RetrofitClient.ChallengeItemUiModel(
                         title = "사진 인증 ${response.current.photo}회 / ${response.required.photo}회",
                         progressPercent = calculatePercent(response.current.photo, response.required.photo),
-                        reward = response.reward.photo
+                        reward = response.reward.photo,
+                        type = "photo"
                     )
                 )
-
                 challengeAdapter.submitList(challengeList)
-
-                // 레벨업 버튼 조건 (선택적으로 사용 가능)
-                val allCompleted = challengeList.all { it.progressPercent == 100 }
-                //binding.levelUpButton.visibility = if (allCompleted) View.VISIBLE else View.GONE
 
                 Log.d("ChallengeFragment", "✅ API 응답 nickname=${response.nickname}, level=${response.level}, coin=${response.coin}")
             } catch (e: Exception) {
                 Log.e("ChallengeFragment", "❌ 챌린지 데이터 로드 실패: ${e.message}")
+                if (isAdded) {
+                    Toast.makeText(requireContext(), "데이터 로드에 실패했습니다.", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    // 실제 서버 API 호출 로직 추가
+    private fun claimRewardAndRefresh(userId: Int, item: RetrofitClient.ChallengeItemUiModel) {
+        Log.d("ChallengeFragment", "Claiming reward for challenge type: ${item.type}")
+        lifecycleScope.launch {
+            try {
+                // 서버에 보상 요청 API 호출
+                val request = RetrofitClient.ClaimRewardRequest(userId, item.type)
+                val response = RetrofitClient.challengeApi.claimReward(request)
+
+                if (response.isSuccessful && response.body()?.success == true) {
+                    Toast.makeText(context, "'${item.title}' 챌린지 보상을 획득했습니다!", Toast.LENGTH_SHORT).show()
+                    // 보상 획득 성공 시, 최신 사용자 정보를 다시 불러와 화면을 갱신합니다.
+                    loadUserChallengeProgress(userId)
+                } else {
+                    val errorMsg = response.body()?.message ?: "알 수 없는 오류"
+                    Toast.makeText(context, "보상 획득 실패: $errorMsg", Toast.LENGTH_SHORT).show()
+                    Log.e("ChallengeFragment", "❌ 보상 획득 실패: ${response.code()} - $errorMsg")
+                }
+            } catch (e: Exception) {
+                Log.e("ChallengeFragment", "❌ 보상 획득 중 예외 발생: ${e.message}", e)
+                if (isAdded) {
+                    Toast.makeText(requireContext(), "보상 획득 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

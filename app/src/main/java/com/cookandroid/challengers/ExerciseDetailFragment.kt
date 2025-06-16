@@ -81,12 +81,12 @@ class ExerciseDetailFragment : Fragment() {
         if (resId != 0) {
             Glide.with(requireContext())
                 .load(resId)
-                .placeholder(R.drawable.ic_launcher_background) // 로딩 중 표시할 이미지 (선택 사항)
-                .error(R.drawable.ic_launcher_background)     // 에러 발생 시 표시할 이미지 (선택 사항)
+                .placeholder(R.drawable.ic_fitbuddy_logo) // 로딩 중 표시할 이미지 (선택 사항)
+                .error(R.drawable.ic_fitbuddy_logo)     // 에러 발생 시 표시할 이미지 (선택 사항)
                 .transition(withCrossFade())
                 .into(binding.imagePlaceholder)
         } else {
-            binding.imagePlaceholder.setImageResource(R.drawable.ic_launcher_background)
+            binding.imagePlaceholder.setImageResource(R.drawable.ic_fitbuddy_logo)
         }
 
         // 시작 자세 텍스트

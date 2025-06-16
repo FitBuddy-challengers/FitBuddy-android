@@ -446,8 +446,8 @@ private class HiddenExerciseListAdapter(
             } else { null }
 
             Glide.with(context)
-                .load(resId ?: R.drawable.ic_launcher_background) // 기본 이미지 리소스 필요
-                .placeholder(R.drawable.ic_launcher_background) // 로딩 중 이미지 리소스 필요
+                .load(resId ?: R.drawable.ic_fitbuddy_logo) // 기본 이미지 리소스 필요
+                .placeholder(R.drawable.ic_fitbuddy_logo) // 로딩 중 이미지 리소스 필요
                 .into(binding.exerciseImageView)
         }
     }

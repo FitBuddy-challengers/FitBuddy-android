@@ -188,13 +188,13 @@ class CoolDownStretchFragment : Fragment() {
             } catch (e: Exception) { 0 }
 
             Glide.with(requireContext())
-                .load(if (resId != 0) resId else R.drawable.ic_launcher_background)
+                .load(if (resId != 0) resId else R.drawable.ic_fitbuddy_logo)
                 .transition(withCrossFade())
-                .placeholder(R.drawable.ic_launcher_background)
-                .error(R.drawable.ic_launcher_background)
+                .placeholder(R.drawable.ic_fitbuddy_logo)
+                .error(R.drawable.ic_fitbuddy_logo)
                 .into(binding.stretchImageView)
         } ?: run {
-            binding.stretchImageView.setImageResource(R.drawable.ic_launcher_background)
+            binding.stretchImageView.setImageResource(R.drawable.ic_fitbuddy_logo)
         }
 
         binding.timerText.text = "00:20"
