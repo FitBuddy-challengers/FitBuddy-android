@@ -188,13 +188,13 @@ class CoolDownStretchFragment : Fragment() {
             } catch (e: Exception) { 0 }
 
             Glide.with(requireContext())
-                .load(if (resId != 0) resId else R.drawable.ic_launcher_background)
+                .load(if (resId != 0) resId else R.drawable.ic_fitbuddy_logo)
                 .transition(withCrossFade())
-                .placeholder(R.drawable.ic_launcher_background)
-                .error(R.drawable.ic_launcher_background)
+                .placeholder(R.drawable.ic_fitbuddy_logo)
+                .error(R.drawable.ic_fitbuddy_logo)
                 .into(binding.stretchImageView)
         } ?: run {
-            binding.stretchImageView.setImageResource(R.drawable.ic_launcher_background)
+            binding.stretchImageView.setImageResource(R.drawable.ic_fitbuddy_logo)
         }
 
         binding.timerText.text = "00:20"
@@ -237,15 +237,17 @@ class CoolDownStretchFragment : Fragment() {
     // ★ 운동 세션 전체 완료 처리 함수 수정
     private fun completeWorkoutSession() {
         // SharedPreferences 정리는 ExerciseDoingFragment에서 이미 처리됨
-        stopwatchViewModel.stopStopwatch() // 여기서 스톱워치 최종 리셋
 
         Log.d("CoolDownStretchFragment", "Cooldown session finished. Navigating to photo upload.")
         try {
-            // ★★★ 사진 인증 화면으로 네비게이션 ★★★
+            // 사진 인증 화면으로 네비게이션
             if (findNavController().currentDestination?.id == R.id.coolDownStretchFragment) {
                 val args = Bundle().apply {
                     putLong("completion_time_millis", completionTimestamp)
-                    putLong("total_duration_millis", totalWorkoutDuration)
+
+                    //ViewModel에서 최신 운동 시간을 직접 가져와 전달
+                    val finalWorkoutDuration = stopwatchViewModel.elapsedTime.value ?: totalWorkoutDuration
+                    putLong("total_duration_millis", finalWorkoutDuration)
                 }
                 // 네비게이션 그래프에 정의된 실제 액션 ID로 변경해야 합니다.
                 val actionId = R.id.action_coolDownStretch_to_challengeUpload

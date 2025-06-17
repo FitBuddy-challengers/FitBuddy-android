@@ -522,8 +522,8 @@ private fun loadTodayPlanFromServer() {
                 } catch (e: Exception) {
                     null
                 } else null
-                Glide.with(this).asBitmap().load(resId ?: R.drawable.ic_launcher_background)
-                    .error(R.drawable.ic_launcher_background).into(binding.exerciseImageView)
+                Glide.with(this).load(resId ?: R.drawable.ic_fitbuddy_logo)
+                    .error(R.drawable.ic_fitbuddy_logo).into(binding.exerciseImageView)
                 setRecyclerViewMargin(true)
                 Log.d(TAG, "In-progress header SHOWN for: $displayName")
 
@@ -705,7 +705,6 @@ private fun loadTodayPlanFromServer() {
                                 )
                                 clearInProgressState() // 진행 중 상태 헤더 제거
 
-                                // ★★★ 요구사항 반영: completeButton 클릭 시 스톱워치 초기화 ★★★
                                 stopwatchViewModel.stopStopwatch()
                                 Log.i(
                                     TAG,

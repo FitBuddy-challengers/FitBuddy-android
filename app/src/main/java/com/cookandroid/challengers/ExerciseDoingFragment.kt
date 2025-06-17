@@ -574,17 +574,36 @@ class ExerciseDoingFragment : Fragment() {
             binding.exerciseNameTextView.text = passedExerciseName ?: "운동 정보 없음"
             binding.titleTextView.text = passedExerciseName ?: "운동 로딩 중..."
             val imagePath = passedImagePath ?: ""
-            val resId = if (imagePath.isNotBlank()) try { resources.getIdentifier(imagePath, "drawable", requireContext().packageName).takeIf { it != 0 } } catch (_:Exception) {null} else null
-            Glide.with(requireContext()).load(resId ?: R.drawable.ic_launcher_background).into(binding.exerciseImageView)
+            val resId = if (imagePath.isNotBlank()) try {
+                resources.getIdentifier(imagePath, "drawable", requireContext().packageName)
+                    .takeIf { it != 0 }
+            } catch (_: Exception) {
+                null
+            } else null
+            Glide.with(requireContext()).load(resId ?: R.drawable.ic_fitbuddy_logo)
+                .into(binding.exerciseImageView)
             if (::setAdapter.isInitialized) setAdapter.updateEquipAndType(passedEquip, false)
-            Log.w(TAG, "updateExerciseInfoUI: currentScheduleDto is null or scheduleId invalid. Using passed arguments.")
+            Log.w(
+                TAG,
+                "updateExerciseInfoUI: currentScheduleDto is null or scheduleId invalid. Using passed arguments."
+            )
         } else {
             binding.exerciseNameTextView.text = currentScheduleDtoToDisplay.exercise_name
             binding.titleTextView.text = currentScheduleDtoToDisplay.exercise_name
             val imagePath = currentScheduleDtoToDisplay.image_path ?: ""
-            val resId = if (imagePath.isNotBlank()) try { resources.getIdentifier(imagePath, "drawable", requireContext().packageName).takeIf { it != 0 } } catch (_:Exception) {null} else null
-            Glide.with(requireContext()).load(resId ?: R.drawable.ic_launcher_background).transition(DrawableTransitionOptions.withCrossFade()).error(R.drawable.ic_launcher_background).into(binding.exerciseImageView)
-            if (::setAdapter.isInitialized) setAdapter.updateEquipAndType(currentScheduleDtoToDisplay.equip, currentScheduleDtoToDisplay.is_time_type)
+            val resId = if (imagePath.isNotBlank()) try {
+                resources.getIdentifier(imagePath, "drawable", requireContext().packageName)
+                    .takeIf { it != 0 }
+            } catch (_: Exception) {
+                null
+            } else null
+            Glide.with(requireContext()).load(resId ?: R.drawable.ic_fitbuddy_logo)
+                .transition(DrawableTransitionOptions.withCrossFade())
+                .error(R.drawable.ic_fitbuddy_logo).into(binding.exerciseImageView)
+            if (::setAdapter.isInitialized) setAdapter.updateEquipAndType(
+                currentScheduleDtoToDisplay.equip,
+                currentScheduleDtoToDisplay.is_time_type
+            )
         }
         updateProgressText()
     }
@@ -712,10 +731,8 @@ class ExerciseDoingFragment : Fragment() {
         if (scheduleId == -1L ) { Toast.makeText(requireContext(), "편집할 운동 정보가 없습니다.", Toast.LENGTH_SHORT).show(); return }
         val isTimeType = planExerciseList.getOrNull(currentExerciseOrderIndex)?.is_time_type ?: false
         val sheet: BottomSheetDialogFragment = if (isTimeType) {
-            // ✅ 항상 이 부분이 실행되어, 시간 기반 수정 창이 열림
             TimeSetEditDialogFragment.newInstance(scheduleId)
         } else {
-            // ❌ 저희가 계속 수정하던 이 부분은 실행되지 않음
             ExerciseEditSetFragment.newInstance(scheduleId)
         }
         sheet.show(parentFragmentManager, if(isTimeType) TimeSetEditDialogFragment.TAG else RepsSetEditDialogFragment.TAG)
@@ -870,7 +887,7 @@ class ExerciseDoingFragment : Fragment() {
             val totalWorkoutDuration = stopwatchViewModel.elapsedTime.value ?: 0L // 최종 전체 운동 시간
 
             // ★★★ 모든 운동 완료 시 스톱워치 정지 및 시간 0으로 리셋 ★★★
-            stopwatchViewModel.stopStopwatch()
+//            stopwatchViewModel.stopStopwatch()
             Log.i(TAG, "All exercises finished. Final total workout time: ${stopwatchViewModel.formatElapsedTime(totalWorkoutDuration)}. Stopwatch reset.")
 
             // ★★★ SharedPreferences 정리 ★★★

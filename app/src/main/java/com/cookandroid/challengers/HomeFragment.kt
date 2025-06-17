@@ -34,9 +34,6 @@ class HomeFragment : Fragment() {
     private lateinit var dateAdapter: DateAdapter
     private lateinit var workoutAdapter: WorkoutAdapter
 
-//    private lateinit var planDao: ExercisePlanDao
-//    private lateinit var planDetailDao: PlanDetailDao
-
     private val weekDates = mutableListOf<WeekDate>()
     private var selectedPosition = 0
     private var planId: Long = -1L
@@ -179,13 +176,15 @@ class HomeFragment : Fragment() {
                                     val reps = repsSets.first().reps
                                     val sets = repsSets.size
                                     val name = schedule.exercise_name
+                                    val isCompleted = repsSets.all { it.isCompleted }
 
                                     workoutItems.add(
                                         WorkoutUiModel(
                                             scheduleId = schedule.schedule_id.toLong(),
                                             name = name,
                                             reps = reps,
-                                            sets = sets
+                                            sets = sets,
+                                            isCompleted = isCompleted
                                         )
                                     )
                                 }
@@ -197,20 +196,50 @@ class HomeFragment : Fragment() {
                         }
                     }
 
-                    // UI 업데이트는 Main Thread에서!
                     withContext(Dispatchers.Main) {
-                        Log.d("HomeFragment", "🎯 최종 workout 개수: ${workoutItems.size}")
-                        // 👉 다음 단계에서 RecyclerView 어댑터에 연결할 예정
-                        // 👉 어댑터 생성 및 연결 (단 한 번만 실행)
-                        workoutAdapter = WorkoutAdapter { workoutItem ->
-                            Log.d("HomeFragment", "🟡 More 클릭된 운동: ${workoutItem.name}")
-                            // TODO: 여기에 운동 수정 Fragment 연결 가능
-                        }
-                        binding.rvWorkout.adapter = workoutAdapter
+                        // ✅ 운동 리스트 반영
+                        workoutAdapter = WorkoutAdapter { item, isChecked ->
+                            lifecycleScope.launch(Dispatchers.IO) {
+                                try {
+                                    val request = RetrofitClient.SetCompletionRequest(
+                                        scheduleId = item.scheduleId,
+                                        setNumber = 1,
+                                        isCompleted = isChecked
+                                    )
 
-                        // 👉 리스트 제출
+                                    val updateResponse = RetrofitClient.scheduleApi
+                                        .updateRepsSetCompletion(request)
+                                        .execute()
+
+                                    if (updateResponse.isSuccessful) {
+                                        Log.d("HomeFragment", "✅ 체크 상태 서버 반영 완료: ${item.name} → $isChecked")
+
+                                        val currentList = workoutAdapter.currentList.toMutableList()
+                                        val index = currentList.indexOfFirst { it.scheduleId == item.scheduleId }
+                                        if (index != -1) {
+                                            currentList[index] = item.copy(isCompleted = isChecked)
+                                            withContext(Dispatchers.Main) {
+                                                workoutAdapter.submitList(currentList)
+
+                                                // ✅ 체크 변경 후에도 게이지 반영
+                                                updateProgressGauge(currentList)
+                                            }
+                                        }
+                                    } else {
+                                        Log.w("HomeFragment", "❗ 체크 서버 반영 실패: ${updateResponse.code()}")
+                                    }
+
+                                } catch (e: Exception) {
+                                    Log.e("HomeFragment", "❌ 체크 상태 반영 중 오류", e)
+                                }
+                            }
+                        }
+
+                        binding.rvWorkout.adapter = workoutAdapter
                         workoutAdapter.submitList(workoutItems)
 
+                        // ✅ 운동 달성률에 따른 게이지 설정
+                        updateProgressGauge(workoutItems)
                     }
 
                 } else {
@@ -221,39 +250,17 @@ class HomeFragment : Fragment() {
             }
         }
     }
-//    private fun applyCharacterFromPreference() {
-//        val equippedMap = UserPreference(requireContext()).getEquippedItemIds()
-//        val imageViews = mapOf(
-//            "character" to binding.baseCharacterImageView,
-//            "top" to binding.topItemImageView,
-//            "pants" to binding.pantsItemImageView,
-//            "onepiece" to binding.onepieceItemImageView,
-//            "costume" to binding.costumeItemImageView,
-//            "acc" to binding.accItemImageView,
-//            "glasses" to binding.glassesItemImageView,
-//            "hairAcc" to binding.hairAccItemImageView
-//        )
-//
-//        for ((category, view) in imageViews) {
-//            val itemId = equippedMap[category]
-//            val productItem = itemId?.let { com.cookandroid.challengers.data.StoreItemData.findItemById(it) }
-//
-//            if (productItem != null) {
-//                view.setImageResource(productItem.imageResId)
-//                view.visibility = View.VISIBLE
-//            } else {
-//                view.visibility = View.GONE
-//            }
-//        }
-//
-//        // 토끼 캐릭터 Y 오프셋 조정
-//        val characterId = equippedMap["character"]
-//        if (characterId == 2) {
-//            binding.baseCharacterImageView.translationY = -44f
-//        } else {
-//            binding.baseCharacterImageView.translationY = 0f
-//        }
-//    }
+
+    private fun updateProgressGauge(items: List<WorkoutUiModel>) {
+        val total = items.size
+        val completed = items.count { it.isCompleted }
+
+        val progressPercent = if (total > 0) (completed * 100) / total else 0
+
+        Log.d("HomeFragment", "📊 운동 진행률: $completed/$total ($progressPercent%)")
+
+        binding.uiGauge.progress = progressPercent
+    }
 
     private fun applyCharacterFromPreference() {
         if (!isAdded || _binding == null) return

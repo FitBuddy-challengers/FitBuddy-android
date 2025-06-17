@@ -2,6 +2,7 @@ package com.cookandroid.challengers.api
 
 import com.cookandroid.challengers.api.RetrofitClient.PhotoChallengeItem
 import com.cookandroid.challengers.api.RetrofitClient.UploadPhotoResponse
+import com.cookandroid.challengers.api.RetrofitClient.WorkoutRecordDto
 import com.cookandroid.challengers.data.ExerciseSetEntity
 import com.cookandroid.challengers.model.UserInfo
 import com.cookandroid.challengers.network.dto.DummyPlanRequest
@@ -196,6 +197,14 @@ interface ChallengeApi {
     @POST("/api/challenge/attendance/{userId}")
     fun markAttendance(@Path("userId") userId: Int): Call<ResponseBody>
 
+    // 월간 운동 기록을 가져오는 함수 추가
+    @GET("api/challenge/monthly-records")
+    suspend fun getMonthlyWorkoutRecords(
+        @Query("userId") userId: Int,
+        @Query("year") year: Int,
+        @Query("month") month: Int
+    ): Response<List<WorkoutRecordDto>> // WorkoutRecordDto는 {"date": "..."} 형태의 객체
+
     // 사진 인증 업로드
     @Multipart
     @POST("/api/challenge/upload-photo")
@@ -211,6 +220,9 @@ interface ChallengeApi {
         @Query("userId") userId: Int,
         @Query("startDate") startDate: String // "YYYY-MM-DD" 형식의 일요일
     ): Response<List<PhotoChallengeItem>>
+
+    @POST("/api/challenge/claim")
+    suspend fun claimReward(@Body request: RetrofitClient.ClaimRewardRequest): Response<RetrofitClient.ClaimRewardResponse>
 }
 
 

@@ -4,5 +4,6 @@ data class WorkoutUiModel(
     val scheduleId: Long,
     val name: String,
     val reps: Int,
-    val sets: Int
+    val sets: Int,
+    var isCompleted: Boolean = false
 )
