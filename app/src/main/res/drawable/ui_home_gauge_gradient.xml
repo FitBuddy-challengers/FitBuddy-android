@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <rotate xmlns:android="http://schemas.android.com/apk/res/android"
-    android:fromDegrees="270"
+    android:fromDegrees="180"
     android:pivotX="50%"
     android:pivotY="50%">
     <shape
         android:shape="ring"
-        android:innerRadiusRatio="2.5"
-        android:thicknessRatio="13"
+        android:innerRadiusRatio="2.3"
+        android:thicknessRatio="17"
         android:useLevel="true">
         <gradient
             android:type="sweep"
