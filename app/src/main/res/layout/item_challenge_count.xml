@@ -6,34 +6,35 @@
     android:layout_height="wrap_content"
     android:gravity="center_horizontal"
     android:orientation="vertical"
-    android:paddingBottom="24dp">
+    android:paddingHorizontal="4dp"
+    android:paddingVertical="8dp">
 
     <com.google.android.material.imageview.ShapeableImageView
-        android:id="@+id/sivAvatar"
+        android:id="@+id/iv_stamp_image"
         android:layout_width="60dp"
         android:layout_height="60dp"
         android:layout_marginBottom="4dp"
         android:padding="1dp"
-        android:src="@drawable/default_profile"
+        android:src="@drawable/exercise_stamp"
         app:shapeAppearanceOverlay="@style/CircleShapeAppearance"
         app:strokeColor="#D6D6D6"
         app:strokeWidth="1dp" />
 
     <TextView
-        android:id="@+id/userNameTextView"
+        android:id="@+id/tv_date"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="4dp"
-        android:text="슈니"
+        tools:text="6월 17일"
         android:textColor="#4F4F4F"
         android:textSize="14sp" />
 
     <TextView
-        android:id="@+id/exerciseProgressTextView"
+        android:id="@+id/tv_status"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:fontFamily="@font/pretendard_semi_bold"
-        android:text="7/7"
+        android:text="운동완료"
         android:textColor="@color/black"
         android:textSize="14sp" />
 

@@ -32,6 +32,7 @@ class ChallengePhotoFragment : Fragment() {
     private val binding get() = _binding!!
 
     private lateinit var photoAdapter: PhotoAdapter
+    private lateinit var stampGridAdapter: StampGridAdapter // 하단 그리드용 어댑터
     private lateinit var viewModel: ChallengePhotoViewModel
     private lateinit var userPreference: UserPreference
 
@@ -75,22 +76,33 @@ class ChallengePhotoFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        // 화면이 보일 때마다 최신 데이터 로드
         val userId = userPreference.getUserId()
         if (userId != -1) {
             viewModel.fetchWeeklyPhotos(userId)
+            // 월간 운동 횟수 요청 함수 호출 추가
+            viewModel.fetchMonthlyWorkoutCount(userId)
         }
     }
 
+    // ★★★ observeViewModel 수정
     private fun observeViewModel() {
-        viewModel.weeklyPhotos.observe(viewLifecycleOwner) { photoList ->
-            Log.d(TAG, "Observed weeklyPhotos LiveData. Received ${photoList.size} items.")
-            photoAdapter.submitList(photoList)
+        viewModel.weeklyPhotos.observe(viewLifecycleOwner) { photoListWithNulls ->
+            photoAdapter.submitList(photoListWithNulls)
+
+            val completedList = photoListWithNulls.filterNotNull()
+            stampGridAdapter.submitList(completedList)
         }
+
+        // 월간 운동 횟수 LiveData를 관찰하여 TextView 업데이트
+        viewModel.monthlyWorkoutCount.observe(viewLifecycleOwner) { count ->
+//            binding.exerciseCountTextView.text = "${count}일째 운동 중"
+            binding.exerciseCountTextView.text = "2일째 운동 중"
+
+        }
+
         viewModel.error.observe(viewLifecycleOwner) { errorMessage ->
             if (errorMessage.isNotEmpty()) {
                 Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
-                Log.e(TAG, "Error from ViewModel: $errorMessage")
             }
         }
     }
@@ -104,28 +116,20 @@ class ChallengePhotoFragment : Fragment() {
     }
 
     private fun setupExerciseNowRecyclerView() {
-        val rawUsers = List(7) {
-            TempUserItem(
-                name = "날짜 ${it + 1}",
-                progress = "${it % 3 + 1}/${it % 4 + 5}",
-                avatarResId = R.drawable.avartar_sample
-            )
-        }
-        val remainder = rawUsers.size % SPAN_COUNT
-        val placeholders = if (remainder == 0) 0 else SPAN_COUNT - remainder
-        val items: List<TempUserItem?> = rawUsers + List(placeholders) { null }
-
+        stampGridAdapter = StampGridAdapter()
         binding.exerciseNowRecyclerView.apply {
-            layoutManager = GridLayoutManager(context, SPAN_COUNT)
-            adapter = UserAdapter(items)
+            layoutManager = GridLayoutManager(context, 4)
+            adapter = stampGridAdapter
             isVerticalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
+
+            // 기존 ItemDecoration 로직을 유지하여 간격을 설정할 수 있습니다.
             if (itemDecorationCount > 0) {
                 removeItemDecorationAt(0)
             }
-            val spacingPx = GRID_SPACING_DP.dpToPx(requireContext())
-            // ⭐ GridSpacingItemDecoration의 세로 간격 관련 로직은 제거 또는 0으로 설정
-            addItemDecoration(GridSpacingItemDecoration(SPAN_COUNT, spacingPx, includeEdge = false, applyVerticalSpacing = false))
+            // 필요에 따라 간격(spacing) 값을 조절하세요.
+            val spacingPx = 8.dpToPx(requireContext())
+            addItemDecoration(GridSpacingItemDecoration(4, spacingPx, includeEdge = true, applyVerticalSpacing = true))
         }
     }
 
@@ -180,22 +184,28 @@ class ChallengePhotoFragment : Fragment() {
         }
     }
 
-    private data class TempPhotoItem(val title: String, val avatarResId: Int)
-    private class PhotoViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val bg: ImageView = itemView.findViewById(R.id.ivMainBackground)
-        private val avatar: ShapeableImageView = itemView.findViewById(R.id.sivAvatar)
-        fun bind(item: TempPhotoItem, pos: Int) {
-            val colors = listOf(
-                android.R.color.holo_blue_light, android.R.color.holo_green_light,
-                android.R.color.holo_orange_light, android.R.color.holo_purple
-            )
-            bg.setBackgroundColor(ContextCompat.getColor(itemView.context, colors[pos % colors.size]))
-            avatar.setImageResource(item.avatarResId)
-            itemView.setOnClickListener {
-                Toast.makeText(itemView.context, "${item.title} 사진 클릭", Toast.LENGTH_SHORT).show()
+    private class StampGridAdapter : ListAdapter<PhotoChallengeItem, StampGridAdapter.ViewHolder>(PhotoDiffCallback()) {
+        class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+            private val dateTextView: TextView = itemView.findViewById(R.id.tv_date)
+            fun bind(item: PhotoChallengeItem) {
+                try {
+                    val date = org.threeten.bp.LocalDate.parse(item.date)
+                    val formatter = org.threeten.bp.format.DateTimeFormatter.ofPattern("M/d")
+                    dateTextView.text = date.format(formatter)
+                } catch (e: Exception) {
+                    dateTextView.text = ""
+                }
             }
         }
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_challenge_count, parent, false)
+            return ViewHolder(view)
+        }
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            holder.bind(getItem(position))
+        }
     }
+
     private class PhotoAdapter : ListAdapter<PhotoChallengeItem, PhotoAdapter.PhotoViewHolder>(PhotoDiffCallback()) {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PhotoViewHolder {

@@ -63,6 +63,9 @@ object RetrofitClient {
         retrofit.create(StoreApi::class.java)
     }
 
+    data class WorkoutRecordDto(val date: String)
+
+
 //    data class AddExerciseRequest(
 //        @SerializedName("exercise_id") val exerciseId: Int,
 //        @SerializedName("set_list") val setList: List<SetData>

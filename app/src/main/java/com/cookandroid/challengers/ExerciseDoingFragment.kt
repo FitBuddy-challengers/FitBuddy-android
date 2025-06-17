@@ -887,7 +887,7 @@ class ExerciseDoingFragment : Fragment() {
             val totalWorkoutDuration = stopwatchViewModel.elapsedTime.value ?: 0L // 최종 전체 운동 시간
 
             // ★★★ 모든 운동 완료 시 스톱워치 정지 및 시간 0으로 리셋 ★★★
-            stopwatchViewModel.stopStopwatch()
+//            stopwatchViewModel.stopStopwatch()
             Log.i(TAG, "All exercises finished. Final total workout time: ${stopwatchViewModel.formatElapsedTime(totalWorkoutDuration)}. Stopwatch reset.")
 
             // ★★★ SharedPreferences 정리 ★★★
