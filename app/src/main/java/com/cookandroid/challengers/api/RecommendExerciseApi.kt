@@ -5,6 +5,6 @@ import retrofit2.http.Body
 import retrofit2.http.POST
 
 interface RecommendExerciseApi {
-    @POST("recommend-exercise")
+    @POST("api/recommend-exercise")
     suspend fun getExerciseRecommendation(@Body request: RetrofitClient.RecommendExerciseRequest): Response<RetrofitClient.RecommendExerciseResponse>
 }
