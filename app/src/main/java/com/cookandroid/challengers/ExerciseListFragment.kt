@@ -554,9 +554,10 @@ class ExerciseListFragment : Fragment() {
                 }
 
                 Glide.with(context)
-                    .load(resId ?: R.drawable.ic_launcher_background) // resId가 null이면 기본 이미지
-                    .placeholder(R.drawable.ic_launcher_background)
-                    .error(R.drawable.ic_launcher_background) // ic_default_exercise_error drawable 필요
+                    .asBitmap()
+                    .load(resId ?: R.drawable.ic_fitbuddy_logo) // resId가 null이면 기본 이미지
+                    .placeholder(R.drawable.ic_fitbuddy_logo)
+                    .error(R.drawable.ic_fitbuddy_logo)
                     .into(binding.exerciseImageView)
             }
         }

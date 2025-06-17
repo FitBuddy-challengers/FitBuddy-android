@@ -333,15 +333,15 @@ class ExerciseChangeFragment : BottomSheetDialogFragment() {
                 val imagePath = exercise.imagePath ?: ""
                 val resId = if (imagePath.isNotBlank() && ::context.isInitialized) {
                     try { context.resources.getIdentifier(imagePath, "drawable", context.packageName).takeIf { it != 0 } }
-                    catch (e: Exception) { R.drawable.ic_launcher_background } // 리소스 못찾을 시 기본 이미지
+                    catch (e: Exception) { R.drawable.ic_fitbuddy_logo } // 리소스 못찾을 시 기본 이미지
                 } else {
-                    R.drawable.ic_launcher_background // 경로 없거나 context 미초기화 시 기본 이미지
+                    R.drawable.ic_fitbuddy_logo // 경로 없거나 context 미초기화 시 기본 이미지
                 }
 
                 Glide.with(binding.exerciseImageView.context) // ViewHolder의 context 사용
                     .load(resId)
-                    .placeholder(R.drawable.ic_launcher_background)
-                    .error(R.drawable.ic_launcher_background)
+                    .placeholder(R.drawable.ic_fitbuddy_logo)
+                    .error(R.drawable.ic_fitbuddy_logo)
                     .into(binding.exerciseImageView)
 
                 // 선택 상태에 따른 배경색 변경

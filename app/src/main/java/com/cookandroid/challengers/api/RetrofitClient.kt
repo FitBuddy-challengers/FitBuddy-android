@@ -311,13 +311,32 @@ object RetrofitClient {
     data class ChallengeItemUiModel(
         val title: String,
         val progressPercent: Int,
-        val reward: Int // 보상 코인 (현재는 0으로 표시)
+        val reward: Int, // 보상 코인 (현재는 0으로 표시)
+        val type: String // "attendance", "exercise", "photo" 등 챌린지 종류를 식별하기 위한 필드
+
     )
 
     data class Reward(
         val attendance: Int,
         val photo: Int,
         val exercise: Int
+    )
+
+    // 보상 요청 시 서버에 보낼 데이터 클래스
+    data class ClaimRewardRequest(
+        @SerializedName("userId")
+        val userId: Int,
+        @SerializedName("challengeType")
+        val challengeType: String
+    )
+
+
+    // 보상 요청 후 서버에서 받을 응답 데이터 클래스
+    data class ClaimRewardResponse(
+        val success: Boolean,
+        val message: String,
+        val updatedCoin: Int,
+        val updatedLevel: Int
     )
 
     data class UploadPhotoResponse(

@@ -208,6 +208,9 @@ interface ChallengeApi {
         @Query("userId") userId: Int,
         @Query("startDate") startDate: String // "YYYY-MM-DD" 형식의 일요일
     ): Response<List<PhotoChallengeItem>>
+
+    @POST("/api/challenge/claim")
+    suspend fun claimReward(@Body request: RetrofitClient.ClaimRewardRequest): Response<RetrofitClient.ClaimRewardResponse>
 }
 
 
