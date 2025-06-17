@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 import java.util.Collections
 
 class WorkoutAdapter(
-    private val onMoreClick: (WorkoutUiModel) -> Unit
+    private val onCheckChanged: (WorkoutUiModel, Boolean) -> Unit
 ) : ListAdapter<WorkoutUiModel, WorkoutAdapter.WorkoutViewHolder>(DiffCallback()) {
 
     inner class WorkoutViewHolder(val binding: ItemWorkoutBinding) :
@@ -37,11 +37,13 @@ class WorkoutAdapter(
             tvWorkoutDetail1.text = "${item.reps}회"
             tvWorkoutDetail2.text = "${item.sets}세트"
 
-            // 체크박스는 아직 기능 없음 (디자인용)
-            checkWorkout.isChecked = false
+            // 체크박스 임시
+            checkWorkout.setOnCheckedChangeListener(null)
+            checkWorkout.isChecked = item.isCompleted
 
-            btnMore.setOnClickListener {
-                onMoreClick(item)
+            checkWorkout.setOnCheckedChangeListener { _, isChecked ->
+                // 상태 변경은 외부에서 처리 후 submitList로 갱신할 것!
+                onCheckChanged(item.copy(isCompleted = isChecked), isChecked)
             }
         }
     }
