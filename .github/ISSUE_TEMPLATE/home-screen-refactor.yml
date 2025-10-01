@@ -1,27 +1,30 @@
-name: "Home screen code refactoring"
-description: "홈 화면 리팩터링 작업 이슈 템플릿"
-title: "Home: Refactor - <짧은 요약>"
-labels: [refactor, home-screen]
-assignees: [ugmin1030]
+name: "Code refactoring"
+description: "리팩터링 작업 이슈 템플릿"
+title: "Refactor: <짧은 요약>"
+labels: [refactor]
+assignees: [KateteDeveloper]
 body:
   - type: textarea
     id: description
     attributes:
       label: ✨ Description
       placeholder: |
-        - 현재 Home 화면에서 ...
+        - 현재 코드에서 문제점 ...
         - 리팩터링 목표: 성능/가독성/테스트 용이성 향상 등
-    validations: { required: true }
+    validations:
+      required: true
 
   - type: textarea
     id: implement
     attributes:
       label: ⚙️ What to do
       placeholder: |
-        - ViewModel 분리
+        - 모듈/컴포넌트 분리
         - UseCase 도입
+        - 의존성 주입 정리
         - Compose 최적화
-    validations: { required: true }
+    validations:
+      required: true
 
   - type: textarea
     id: checklist
@@ -29,7 +32,9 @@ body:
       label: ✅ Checklist
       value: |
         - [ ] 기존 코드 구조 파악
-        - [ ] ViewModel/UseCase 정의
+        - [ ] 모듈/UseCase 경계 정의
         - [ ] 불필요한 리컴포지션 제거
-        - [ ] 단위테스트 작성
-    validations: { required: true }
+        - [ ] 단위 테스트 작성
+        - [ ] 문서화 반영
+    validations:
+      required: true
