@@ -1,3 +1,13 @@
+|이유선|채윤지|서하늘|
+|:---:|:---:|:---:|
+|<img src="https://github.com/Sunny041800.png"  width="300" height="230">|<img src="https://github.com/KateteDeveloper.png"  width="300" height="230">|<img src="https://github.com/veraneu112.png"  width="300" height="230">|
+|[@Sunny041800](https://github.com/Sunny041800)|[@KateteDeveloper](https://github.com/KateteDeveloper)|[@veraneu112](https://github.com/veraneu112)|
+<br/>
+
+
+
+
+
 ### Git 작업 순서
 
 본인의 브랜치에서만 작업하고, `main` 브랜치는 해당 기능이 개발이 오류 없이 완료된 경우만 merge 합니다!
