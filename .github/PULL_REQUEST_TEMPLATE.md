@@ -20,3 +20,22 @@ Closes #번호
 - [ ] 신규 네비게이션 컴포넌트 정상 동작
 - [ ] 단위 테스트 추가
 - [ ] 문서화 반영
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant App as MainApp
+    participant Nav as LinkuNavigationBar
+    participant VM as HomeViewModel
+    participant R as Router
+
+    U->>Nav: 탭 아이템 탭(Feeds)
+    Nav->>App: onNavClick(item=Feeds)
+    App->>R: navigate("/feeds")
+    R-->>VM: onRouteChanged("/feeds")
+    VM-->>App: UiState(feeds, selected=Feeds)
+    App-->>Nav: props { selected=Feeds, badge=... }
+
+    U->>Nav: 중앙 FAB 클릭
+    Nav->>App: onFabClick()
+    App->>R: navigate("/quick-link")
