@@ -2,7 +2,7 @@ name: "Home screen code refactoring"
 description: "홈 화면 리팩터링 작업 이슈 템플릿"
 title: "Home: Refactor - <짧은 요약>"
 labels: [refactor, home-screen]
-assignees: [ugmin1030]
+assignees: 
 body:
   - type: textarea
     id: description
