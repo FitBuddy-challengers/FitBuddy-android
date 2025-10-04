@@ -2,6 +2,10 @@
 
     <style name="Theme.Challengers" parent="Theme.AppCompat.Light.NoActionBar" >
 
+        <!-- 전체 배경을 흰색으로 -->
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:colorBackground">@android:color/white</item>
+
     <item name="android:fontFamily">@font/pretendard_medium</item>
 
     </style>

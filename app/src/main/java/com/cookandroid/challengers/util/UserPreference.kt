@@ -19,9 +19,15 @@ class UserPreference(context: Context) {
 
     }
 
+//    fun saveLogin(userId: Int) {
+//        prefs.edit().putInt(USER_ID, userId).putBoolean(IS_LOGGED_IN, true).apply()
+//    }
     fun saveLogin(userId: Int) {
-        prefs.edit().putInt(USER_ID, userId).putBoolean(IS_LOGGED_IN, true).apply()
-    }
+        prefs.edit()
+            .putInt(USER_ID, userId)
+            .putBoolean(IS_LOGGED_IN, true)
+            .commit() // ✅ apply() → commit() : 저장이 즉시, 동기적으로 완료됨
+    } //이전은 회원가입 이후 진입시 오류가 났었음! 수정함.
 
     fun getUserId(): Int = prefs.getInt(USER_ID, -1)
 

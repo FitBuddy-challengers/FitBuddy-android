@@ -21,7 +21,12 @@ android {
         versionName = "1.0"
 
         // ✅ 모든 빌드타입에 공통 적용
-        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:3000/\"")
+        buildConfigField(
+            "String",
+            "BASE_URL",
+            "\"https://fitbuddy-server-p6r6.onrender.com/\"" // ★ 끝에 / 꼭 유지!
+        )
+        //buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:3000/\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

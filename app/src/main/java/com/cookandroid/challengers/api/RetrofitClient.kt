@@ -3,7 +3,7 @@ package com.cookandroid.challengers.api
 
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import com.cookandroid.challengers.BuildConfig // ★ 명시적으로 추가!
+//import com.cookandroid.challengers.BuildConfig // ★ 명시적으로 추가!
 import com.cookandroid.challengers.auth.login.LoginService
 import com.cookandroid.challengers.network.dto.PlanDto
 import com.cookandroid.challengers.network.dto.ScheduleDto
@@ -14,7 +14,9 @@ import com.google.gson.annotations.SerializedName
 // 서버와 애뮬레이터 연동을 위한 코드 절대 수정 XXX
 object RetrofitClient {
     // private val BASE_URL: String = BuildConfig.BASE_URL // ★ 타입 명시!
-    private const val BASE_URL = "http://10.0.2.2:3000/"//<- 원래 내 pc
+
+    private const val BASE_URL = "https://fitbuddy-server-p6r6.onrender.com/" // ← 슬래시 추가!
+    //private const val BASE_URL = "http://10.0.2.2:3000/"//<- 원래 내 pc
     //private const val BASE_URL = "http://172.19.27.182:3000/" //내 갤럭시//172.19.27.182
 
     //  먼저 gson 정의Add commentMore actions
