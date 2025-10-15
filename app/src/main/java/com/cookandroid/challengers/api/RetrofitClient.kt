@@ -296,10 +296,10 @@ object RetrofitClient {
         val coin: Int,
         val nickname: String,
         val profileImage: String,
-        val required: Requirement,
-        val current: Requirement,
-        val progress: Progress,
-        val reward: Reward
+        val required: Requirement?,
+        val current: Requirement?,
+        val progress: Progress?,
+        val reward: Reward?
     )
 
     data class Requirement(

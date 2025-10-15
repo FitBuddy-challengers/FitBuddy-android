@@ -23,6 +23,11 @@ class LoginActivity : AppCompatActivity() {
         val savedUserId = userPref.getUserId()
         if (savedUserId != -1) { // SharedPreferences에 저장된 ID가 있으면 자동 로그인
             Log.d("LoginActivity", "✅ 자동 로그인 시도. UserId from Prefs: $savedUserId")
+
+
+
+
+
             navigateToMain(savedUserId) // ★ 자동 로그인 시에도 userId 전달
             return // MainActivity로 이동 후 LoginActivity는 종료
         }

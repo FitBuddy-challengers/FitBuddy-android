@@ -102,21 +102,24 @@ class ChallengePersonalFragment : Fragment() {
 
                 val challengeList = listOf(
                     RetrofitClient.ChallengeItemUiModel(
-                        title = "출석 ${response.current.attendance}회 / ${response.required.attendance}회",
-                        progressPercent = calculatePercent(response.current.attendance, response.required.attendance),
-                        reward = response.reward.attendance,
+                        // ▼▼▼ null일 경우를 대비해 ?. 와 ?: 0 추가 ▼▼▼
+                        title = "출석 ${response.current?.attendance ?: 0}회 / ${response.required?.attendance ?: 0}회",
+                        progressPercent = calculatePercent(response.current?.attendance ?: 0, response.required?.attendance ?: 0),
+                        reward = response.reward?.attendance ?: 0,
                         type = "attendance"
                     ),
                     RetrofitClient.ChallengeItemUiModel(
-                        title = "운동 횟수 ${response.current.exercise}회 / ${response.required.exercise}회",
-                        progressPercent = calculatePercent(response.current.exercise, response.required.exercise),
-                        reward = response.reward.exercise,
+                        // ▼▼▼ null일 경우를 대비해 ?. 와 ?: 0 추가 ▼▼▼
+                        title = "운동 횟수 ${response.current?.exercise ?: 0}회 / ${response.required?.exercise ?: 0}회",
+                        progressPercent = calculatePercent(response.current?.exercise ?: 0, response.required?.exercise ?: 0),
+                        reward = response.reward?.exercise ?: 0,
                         type = "exercise"
                     ),
                     RetrofitClient.ChallengeItemUiModel(
-                        title = "사진 인증 ${response.current.photo}회 / ${response.required.photo}회",
-                        progressPercent = calculatePercent(response.current.photo, response.required.photo),
-                        reward = response.reward.photo,
+                        // ▼▼▼ null일 경우를 대비해 ?. 와 ?: 0 추가 ▼▼▼
+                        title = "사진 인증 ${response.current?.photo ?: 0}회 / ${response.required?.photo ?: 0}회",
+                        progressPercent = calculatePercent(response.current?.photo ?: 0, response.required?.photo ?: 0),
+                        reward = response.reward?.photo ?: 0,
                         type = "photo"
                     )
                 )
@@ -131,6 +134,49 @@ class ChallengePersonalFragment : Fragment() {
             }
         }
     }
+
+//    private fun loadUserChallengeProgress(userId: Int) {
+//        lifecycleScope.launch {
+//            try {
+//                Log.d("ChallengeFragment", "📡 요청 보냄 → /api/user-challenge-progress/$userId")
+//                val response = RetrofitClient.challengeApi.getUserChallengeProgress(userId)
+//
+//                // 👤 사용자 정보 표시
+//                binding.userNameTextView.text = response.nickname
+//                binding.userLevelTextView.text = "Lv.${response.level}"
+//                binding.userCoinTextView.text = response.coin.toString()
+//
+//                val challengeList = listOf(
+//                    RetrofitClient.ChallengeItemUiModel(
+//                        title = "출석 ${response.current.attendance}회 / ${response.required.attendance}회",
+//                        progressPercent = calculatePercent(response.current.attendance, response.required.attendance),
+//                        reward = response.reward.attendance,
+//                        type = "attendance"
+//                    ),
+//                    RetrofitClient.ChallengeItemUiModel(
+//                        title = "운동 횟수 ${response.current.exercise}회 / ${response.required.exercise}회",
+//                        progressPercent = calculatePercent(response.current.exercise, response.required.exercise),
+//                        reward = response.reward.exercise,
+//                        type = "exercise"
+//                    ),
+//                    RetrofitClient.ChallengeItemUiModel(
+//                        title = "사진 인증 ${response.current.photo}회 / ${response.required.photo}회",
+//                        progressPercent = calculatePercent(response.current.photo, response.required.photo),
+//                        reward = response.reward.photo,
+//                        type = "photo"
+//                    )
+//                )
+//                challengeAdapter.submitList(challengeList)
+//
+//                Log.d("ChallengeFragment", "✅ API 응답 nickname=${response.nickname}, level=${response.level}, coin=${response.coin}")
+//            } catch (e: Exception) {
+//                Log.e("ChallengeFragment", "❌ 챌린지 데이터 로드 실패: ${e.message}")
+//                if (isAdded) {
+//                    Toast.makeText(requireContext(), "데이터 로드에 실패했습니다.", Toast.LENGTH_SHORT).show()
+//                }
+//            }
+//        }
+//    }
 
     // 실제 서버 API 호출 로직 추가
     private fun claimRewardAndRefresh(userId: Int, item: RetrofitClient.ChallengeItemUiModel) {

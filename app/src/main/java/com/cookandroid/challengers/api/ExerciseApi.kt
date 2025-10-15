@@ -29,7 +29,9 @@ import retrofit2.http.Query
 
 interface ExerciseApi {
     @POST("/api/create-dummy-plan")
-    fun createDummyPlan(@Body request: DummyPlanRequest): Call<DummyPlanResponse>
+    fun createDummyPlan(
+        @Body request: DummyPlanRequest
+    ): Call<DummyPlanResponse>
 
     // ✅ 전체 운동 목록 가져오기
     @GET("/api/exercises")
