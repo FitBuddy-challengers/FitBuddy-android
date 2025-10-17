@@ -85,9 +85,13 @@ class HomeFragment : Fragment() {
         }
         Log.d("HomeFragment", "📆 주간 날짜 수: ${weekDates.size}")
 
-        //  리사이클러뷰에 레이아웃 매니저 반드시 설정!
+//          리사이클러뷰에 레이아웃 매니저 반드시 설정!
+//        binding.rvDate.layoutManager =
+//            LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+
+        // 기존 LinearLayoutManager를 GridLayoutManager로 변경
         binding.rvDate.layoutManager =
-            LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+            androidx.recyclerview.widget.GridLayoutManager(requireContext(), 7)
 
         //  어댑터 연결 및 날짜 클릭 이벤트 처리
         dateAdapter = DateAdapter(weekDates) { selected ->
@@ -201,46 +205,46 @@ class HomeFragment : Fragment() {
 
                             // ✅ 어댑터가 아직 초기화되지 않았을 때만 세팅 (중복 방지)
                             if (!::workoutAdapter.isInitialized) {
-                                workoutAdapter = WorkoutAdapter { item, isChecked ->
-                                    // 체크 상태 변경 시 서버 반영
-                                    viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-                                        try {
-                                            val request = RetrofitClient.SetCompletionRequest(
-                                                scheduleId = item.scheduleId,
-                                                setNumber = 1,
-                                                isCompleted = isChecked
-                                            )
-
-                                            val updateResponse = RetrofitClient.scheduleApi
-                                                .updateRepsSetCompletion(request)
-                                                .execute()
-
-                                            if (updateResponse.isSuccessful) {
-                                                Log.d(
-                                                    "HomeFragment",
-                                                    "✅ 체크 상태 서버 반영 완료: ${item.name} → $isChecked"
-                                                )
-
-                                                val currentList = workoutAdapter.currentList.toMutableList()
-                                                val index = currentList.indexOfFirst { it.scheduleId == item.scheduleId }
-
-                                                if (index != -1) {
-                                                    currentList[index] = item.copy(isCompleted = isChecked)
-
-                                                    withContext(Dispatchers.Main) {
-                                                        _binding?.let {
-                                                            workoutAdapter.submitList(currentList.toList())
-                                                            updateProgressGauge(currentList)
-                                                        }
-                                                    }
-                                                }
-                                            } else {
-                                                Log.w("HomeFragment", "❗ 체크 서버 반영 실패: ${updateResponse.code()}")
-                                            }
-                                        } catch (e: Exception) {
-                                            Log.e("HomeFragment", "❌ 체크 상태 반영 중 오류", e)
-                                        }
-                                    }
+                                workoutAdapter = WorkoutAdapter { _, _ ->
+//                                    // 체크 상태 변경 시 서버 반영
+//                                    viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+//                                        try {
+//                                            val request = RetrofitClient.SetCompletionRequest(
+//                                                scheduleId = item.scheduleId,
+//                                                setNumber = 1,
+//                                                isCompleted = isChecked
+//                                            )
+//
+//                                            val updateResponse = RetrofitClient.scheduleApi
+//                                                .updateRepsSetCompletion(request)
+//                                                .execute()
+//
+//                                            if (updateResponse.isSuccessful) {
+//                                                Log.d(
+//                                                    "HomeFragment",
+//                                                    "✅ 체크 상태 서버 반영 완료: ${item.name} → $isChecked"
+//                                                )
+//
+//                                                val currentList = workoutAdapter.currentList.toMutableList()
+//                                                val index = currentList.indexOfFirst { it.scheduleId == item.scheduleId }
+//
+//                                                if (index != -1) {
+//                                                    currentList[index] = item.copy(isCompleted = isChecked)
+//
+//                                                    withContext(Dispatchers.Main) {
+//                                                        _binding?.let {
+//                                                            workoutAdapter.submitList(currentList.toList())
+//                                                            updateProgressGauge(currentList)
+//                                                        }
+//                                                    }
+//                                                }
+//                                            } else {
+//                                                Log.w("HomeFragment", "❗ 체크 서버 반영 실패: ${updateResponse.code()}")
+//                                            }
+//                                        } catch (e: Exception) {
+//                                            Log.e("HomeFragment", "❌ 체크 상태 반영 중 오류", e)
+//                                        }
+//                                    }
                                 }
 
                                 // ✅ 처음 한 번만 어댑터 연결

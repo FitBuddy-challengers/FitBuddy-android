@@ -11,7 +11,8 @@
         android:id="@+id/checkWorkout"
         android:layout_width="20dp"
         android:layout_height="20dp"
-        android:button="@drawable/check_home_workout_selector"/>
+        android:button="@drawable/check_home_workout_selector"
+        android:clickable="false"/>
 
     <TextView
         android:id="@+id/tvWorkoutName"
