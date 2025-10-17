@@ -1,9 +1,12 @@
 package com.cookandroid.challengers
 
+import android.R.attr.name
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
+import android.text.Editable // TextWatcher 사용을 위해 추가
+import android.text.TextWatcher // TextWatcher 사용을 위해 추가
 import android.util.Log
 import android.view.ContextThemeWrapper
 import android.view.LayoutInflater
@@ -21,9 +24,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.cookandroid.challengers.api.RetrofitClient
 import com.cookandroid.challengers.data.Exercise
-import com.cookandroid.challengers.data.PlanDetail // PlanDetail은 이제 서버 DTO로 대체될 수 있음
-// import com.cookandroid.challengers.data.PlanDetailDao // 서버에서 로드하므로 직접 사용 안 함
-import com.cookandroid.challengers.data.db.AppDatabase // 운동 정보 보완용으로만 사용
+import com.cookandroid.challengers.data.PlanDetail
+import com.cookandroid.challengers.data.db.AppDatabase
 import com.cookandroid.challengers.databinding.FragmentExerciseAddBinding
 import com.cookandroid.challengers.databinding.ItemAddExerciseBinding
 import com.cookandroid.challengers.network.dto.ExerciseDto
@@ -60,6 +62,7 @@ class ExerciseAddFragment : Fragment() {
     private var isMaxSelectionReached = false
 
     private var allExercisesFromServer = listOf<Exercise>()
+    private var searchQuery: String = "" // ★ 검색어 저장을 위한 변수 추가
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -82,6 +85,7 @@ class ExerciseAddFragment : Fragment() {
         setupRecyclerView()
         loadInitialDataFromServer()
         setupChipFilters()
+        setupSearchListener() // ★ 검색 리스너 설정
 
         binding.addCompleteButton.setOnClickListener {
             addSelectedExercisesToServer()
@@ -91,6 +95,20 @@ class ExerciseAddFragment : Fragment() {
             findNavController().popBackStack()
         }
     }
+
+    private fun setupSearchListener() { // ★ 검색 리스너 함수
+        // FragmentExerciseAddBinding에 searchEditText가 있다고 가정
+        binding.searchText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                searchQuery = s.toString().trim()
+                applyFilters(idsOfExistingExercisesInPlan) // 텍스트 변경 시 필터 다시 적용
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+    }
+
+    // ... (나머지 함수 생략)
 
     private fun setupAdapter() {
         adapter = AddExerciseAdapter(
@@ -227,21 +245,24 @@ class ExerciseAddFragment : Fragment() {
                     // val localDbForEnrich = AppDatabase.getDatabase(requireContext(), lifecycleScope) // 이미 멤버 변수로 dbForEnrich 있음
                     allExercisesFromServer = serverDtoList.map { dto ->
                         val localExercise = dbForEnrich.exerciseDao().getExerciseById(dto.id)
-                        Exercise( // ★★★ 요청하신 매핑 로직 유지 ★★★
+                        Exercise(
                             id = dto.id,
-                            name = dto.name.ifBlank { localExercise?.name ?: "이름 없음" },
-                            part = dto.part,
-                            equip = dto.equip,
-                            imagePath = if (dto.image_path.isNullOrBlank()) localExercise?.imagePath else dto.image_path,
-                            startPosition = dto.start_position ?: localExercise?.startPosition,
-                            exerciseMotion = dto.exercise_motion ?: localExercise?.exerciseMotion,
-                            breathing = dto.breathing ?: localExercise?.breathing,
-                            caution = dto.caution ?: localExercise?.caution,
-                            mets = dto.mets,
-                            isFavorite = dto.isFavorite,
-                            isTimeType = dto.isTimeType,
-                            isNoise = dto.is_noise,
-                            isHidden = dto.isHidden
+
+                            name = dto.name ?: "이름 없음",
+                            part = dto.part ?: "부위 정보 없음",
+                            equip = dto.equip ?: "장비 정보 없음",
+                            imagePath = dto.image_path ?: "",
+
+                            startPosition = dto.start_position,
+                            exerciseMotion = dto.exercise_motion,
+                            breathing = dto.breathing,
+                            caution = dto.caution,
+                            mets = dto.mets ?: 0.0,
+
+                            isFavorite = dto.isFavorite ?: false,
+                            isTimeType = dto.isTimeType ?: false,
+                            isHidden = dto.isHidden ?: false,
+                            isNoise = dto.is_noise ?: false
                         )
                     }
                     Log.d("ExerciseAddFragment", "서버 DTO 매핑 후 allExercisesFromServer 개수: ${allExercisesFromServer.size}")
@@ -388,6 +409,8 @@ class ExerciseAddFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             if (_binding == null) return@launch
 
+            val currentSearchQuery = searchQuery.lowercase() // ★ 검색어 소문자 변환
+
             val favFilter = binding.myChipGroup.checkedChipIds.any {
                 binding.myChipGroup.findViewById<Chip>(it)?.text == "즐겨찾기"
             }
@@ -402,7 +425,10 @@ class ExerciseAddFragment : Fragment() {
                 .filter { exercise -> !(exercise.isHidden ?: false) }
                 .filter { exercise -> currentExistingExerciseIds.none { it == exercise.id } }
                 .filter { e ->
-                    (!favFilter || (e.isFavorite ?: false)) &&
+                    // 1. 검색어 필터링
+                    (currentSearchQuery.isBlank() || e.name.lowercase().contains(currentSearchQuery)) && // ★ 검색 필터 적용
+                            // 2. 기타 필터
+                            (!favFilter || (e.isFavorite ?: false)) &&
                             (parts.isEmpty() || parts.any { e.part.contains(it, ignoreCase = true) }) &&
                             (equips.isEmpty() || equips.any { e.equip.contains(it, ignoreCase = true) })
                 }
@@ -412,6 +438,7 @@ class ExerciseAddFragment : Fragment() {
         }
     }
 
+    // ... (나머지 함수 생략)
     private fun updateSelectedText() {
         val currentMaxSelectable = maxSlots - countOfExistingExercisesInPlan // ★ countOfExistingExercisesInPlan 사용
         Log.d("ExerciseAddFragment", "updateSelectedText - selected: ${selectedExercises.size}, maxSelectable (m): $currentMaxSelectable (maxSlots: $maxSlots, existing: $countOfExistingExercisesInPlan)")

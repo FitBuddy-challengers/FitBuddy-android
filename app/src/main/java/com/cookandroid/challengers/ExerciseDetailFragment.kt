@@ -1,14 +1,18 @@
 package com.cookandroid.challengers
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade
+import com.cookandroid.challengers.api.RetrofitClient
 import com.cookandroid.challengers.data.Exercise
 import com.cookandroid.challengers.data.db.AppDatabase
 import com.cookandroid.challengers.databinding.FragmentExerciseDetailBinding
@@ -21,7 +25,7 @@ class ExerciseDetailFragment : Fragment() {
     private var _binding: FragmentExerciseDetailBinding? = null
     private val binding get() = _binding!!
 
-    private var exerciseId: Long = -1L
+//    private var exerciseId: Long = -1L
     private lateinit var db: AppDatabase
     private lateinit var currentExercise: Exercise
 
@@ -35,7 +39,10 @@ class ExerciseDetailFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        exerciseId = arguments?.getLong(ARG_EXERCISE_ID) ?: -1L
+        arguments?.getParcelable<Exercise>("exerciseObject")?.let {
+            currentExercise = it
+            Log.d("ID_CHECK", "3. [상세 화면] arguments로부터 받은 운동: ${currentExercise.name}, ID: ${currentExercise.id}")
+        }
     }
 
     override fun onCreateView(
@@ -47,26 +54,23 @@ class ExerciseDetailFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         db = AppDatabase.getDatabase(requireContext(), lifecycleScope)
 
-        // 운동 데이터 가져오기
-        lifecycleScope.launch(Dispatchers.IO) {
-            val exercise = db.exerciseDao().getExerciseById(exerciseId)
-            exercise?.let {
-                currentExercise = it
-                withContext(Dispatchers.Main) {
-                    bindExerciseData(it)
-                }
-            }
+        // 전달받은 currentExercise 객체가 초기화되었는지 확인
+        if (::currentExercise.isInitialized) {
+            // DB 조회나 네트워크 통신 없이 바로 UI에 데이터를 바인딩합니다.
+            bindExerciseData(currentExercise)
+        } else {
+            // 객체를 받지 못한 경우의 예외 처리
+            Toast.makeText(requireContext(), "운동 정보를 불러오는 데 실패했습니다.", Toast.LENGTH_SHORT).show()
+            findNavController().popBackStack()
+            return
         }
 
-        // 뒤로 가기 버튼
         binding.backButton.setOnClickListener {
-            parentFragmentManager.popBackStack()
+            findNavController().popBackStack()
         }
 
-        // 즐겨찾기(북마크) 버튼 클릭 처리
         binding.favoriteButton.setOnClickListener {
             toggleFavorite()
         }
@@ -167,13 +171,54 @@ class ExerciseDetailFragment : Fragment() {
     }
 
     private fun toggleFavorite() {
+        // currentExercise가 초기화되지 않았으면 아무것도 하지 않음 (안전장치)
+        if (!::currentExercise.isInitialized) return
+
         val newFavoriteStatus = !currentExercise.isFavorite
-        currentExercise = currentExercise.copy(isFavorite = newFavoriteStatus)
 
         lifecycleScope.launch(Dispatchers.IO) {
-            db.exerciseDao().update(currentExercise)
-            withContext(Dispatchers.Main) {
-                binding.favoriteButton.isSelected = newFavoriteStatus
+            try {
+                // 1. 🔥 서버에 즐겨찾기 상태 변경을 요청합니다. (로컬 DB 대신)
+                val response = RetrofitClient.exerciseApi.toggleExerciseFavorite(
+                    currentExercise.id,
+                    RetrofitClient.ToggleFavoriteRequest(newFavoriteStatus)
+                )
+
+                // 2. 서버 응답이 성공하면 UI를 업데이트하고 결과를 알립니다.
+                if (response.isSuccessful) {
+                    // 현재 객체의 상태를 서버 응답에 맞춰 업데이트합니다.
+                    currentExercise = currentExercise.copy(isFavorite = newFavoriteStatus)
+
+                    withContext(Dispatchers.Main) {
+                        // 프래그먼트가 화면에 없을 때 UI를 건드리지 않도록 방어합니다.
+                        if (_binding == null) return@withContext
+
+                        // UI(버튼 모양)에 변경 사항을 반영합니다.
+                        binding.favoriteButton.isSelected = newFavoriteStatus
+                        Toast.makeText(
+                            requireContext(),
+                            if (newFavoriteStatus) "즐겨찾기에 추가되었습니다." else "즐겨찾기에서 해제되었습니다.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        // ✨ 3. 이전 화면(ExerciseListFragment)에 상태가 변경되었음을 알립니다.
+                        // 이렇게 하면 뒤로 갔을 때 목록의 별 모양이 바로 갱신됩니다.
+                        parentFragmentManager.setFragmentResult("favorite_status_updated", Bundle().apply {
+                            putLong("exerciseId", currentExercise.id)
+                            putBoolean("isFavorite", newFavoriteStatus)
+                        })
+                    }
+                } else {
+                    // 서버 통신 실패 시 사용자에게 알립니다.
+                    withContext(Dispatchers.Main) {
+                        if (_binding != null) Toast.makeText(requireContext(), "즐겨찾기 변경에 실패했습니다.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                // 네트워크 오류 등 예외 발생 시 사용자에게 알립니다.
+                withContext(Dispatchers.Main) {
+                    if (_binding != null) Toast.makeText(requireContext(), "오류가 발생했습니다: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

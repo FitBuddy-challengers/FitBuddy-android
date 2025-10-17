@@ -223,7 +223,10 @@ class ExerciseEditFragment(
         }
 
         lifecycleScope.launch(Dispatchers.IO) {
+            var fetchedScheduleId: Long = -1L
+
             try {
+                // 1. scheduleId 가져오기 (기존 로직 유지)
                 Log.d(TAG, "Attempting to fetch scheduleId for planId: $planId, exerciseId: $exerciseId")
                 val scheduleIdResponse = RetrofitClient.scheduleApi.getScheduleId(planId, exerciseId)
 
@@ -240,12 +243,9 @@ class ExerciseEditFragment(
                     return@launch
                 }
 
-                val scheduleIdResponseBody = scheduleIdResponse.body()!!
-                val fetchedScheduleId = scheduleIdResponseBody.scheduleId
-                Log.i(TAG, "Fetched scheduleId DTO: $scheduleIdResponseBody, scheduleId value from DTO: $fetchedScheduleId")
-
+                fetchedScheduleId = scheduleIdResponse.body()!!.scheduleId
                 if (fetchedScheduleId <= 0) {
-                    Log.e(TAG, "Fetched scheduleId is invalid (<=0): $fetchedScheduleId. Parsed DTO: $scheduleIdResponseBody")
+                    Log.e(TAG, "Fetched scheduleId is invalid (<=0): $fetchedScheduleId")
                     withContext(Dispatchers.Main) {
                         if (isAdded) {
                             Toast.makeText(requireContext(), "유효하지 않은 스케줄 ID 수신 ($fetchedScheduleId).", Toast.LENGTH_LONG).show()
@@ -257,39 +257,52 @@ class ExerciseEditFragment(
                 currentScheduleIdForEdit = fetchedScheduleId
                 Log.i(TAG, "Successfully fetched and validated scheduleId: $currentScheduleIdForEdit")
 
-                Log.d(TAG, "Attempting to fetch exercise info for scheduleId: $currentScheduleIdForEdit")
-                val exerciseInfoResponse = RetrofitClient.scheduleApi.getExerciseInfo(currentScheduleIdForEdit)
-                if (!exerciseInfoResponse.isSuccessful || exerciseInfoResponse.body() == null) {
-                    val errorBodyString = try { exerciseInfoResponse.errorBody()?.string() ?: "No error body" } catch (e: Exception) { "Error reading error body" }
-                    val responseCode = exerciseInfoResponse.code()
-                    Log.e(TAG, "운동 정보(즐겨찾기) 가져오기 API 실패: $responseCode - $errorBodyString for scheduleId: $currentScheduleIdForEdit")
+
+                // 2. 🔴 즐겨찾기 상태 가져오기 로직 변경 (404 오류 회피) 🔴
+                //    getExerciseInfo 대신 getAllExercises를 호출하여 현재 exerciseId의 상태를 찾습니다.
+                Log.d(TAG, "Attempting to fetch ALL exercise info to get current favorite status for exerciseId: $exerciseId")
+
+                val allExercisesResponse = RetrofitClient.exerciseApi.getAllExercises()
+
+                if (!allExercisesResponse.isSuccessful || allExercisesResponse.body() == null) {
+                    val responseCode = allExercisesResponse.code()
+                    Log.e(TAG, "전체 운동 목록 가져오기 실패: $responseCode")
                     withContext(Dispatchers.Main) {
                         if (isAdded) {
-                            Toast.makeText(requireContext(), "운동 상세 정보 로드 실패 (코드: $responseCode)", Toast.LENGTH_LONG).show()
+                            // scheduleId는 가져왔으므로, 다른 버튼은 활성화하고 즐겨찾기만 비활성화합니다.
+                            enableInteractionButtonsButFavorite()
                         }
                     }
-                    withContext(Dispatchers.Main) { if(isAdded) { updateFavoriteUI(); enableInteractionButtonsButFavorite(); } }
                     return@launch
                 }
 
-                val exerciseDto = exerciseInfoResponse.body()!!
-                currentIsFavorite = exerciseDto.isFavorite
-                if (exerciseDto.id != exerciseId) {
-                    Log.w(TAG, "Mismatch: exerciseId from constructor ($exerciseId) vs exerciseId from getExerciseInfo DTO (${exerciseDto.id}) for scheduleId $currentScheduleIdForEdit")
+                val targetExercise = allExercisesResponse.body()!!.find { it.id == exerciseId }
+
+                if (targetExercise == null) {
+                    Log.e(TAG, "getAllExercises 결과에서 exerciseId:$exerciseId 를 찾을 수 없습니다.")
+                    withContext(Dispatchers.Main) {
+                        if (isAdded) {
+                            enableInteractionButtonsButFavorite()
+                        }
+                    }
+                    return@launch
                 }
-                Log.i(TAG, "Successfully fetched exercise info. isFavorite: $currentIsFavorite for exerciseId from DTO: ${exerciseDto.id}")
+
+                // 즐겨찾기 상태 업데이트
+                currentIsFavorite = targetExercise.isFavorite ?: false
+                Log.i(TAG, "Successfully fetched favorite status via getAllExercises. isFavorite: $currentIsFavorite")
 
                 withContext(Dispatchers.Main) {
                     if (isAdded) {
                         updateFavoriteUI()
-                        enableInteractionButtons()
+                        enableInteractionButtons() // 모든 정보 로드 성공 후 전체 활성화
                     }
                 }
 
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     if (isAdded) {
-                        Log.e(TAG, "즐겨찾기 또는 스케줄 ID 상태 불러오기 중 예외 발생", e)
+                        Log.e(TAG, "초기 상태 불러오기 중 예외 발생", e)
                         Toast.makeText(requireContext(), "초기 정보 로드 중 오류: ${e.message}", Toast.LENGTH_LONG).show()
                         disableInteractionButtons()
                     }

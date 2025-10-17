@@ -190,9 +190,13 @@ class ExerciseFragment : Fragment() {
     private fun setupClickListeners() {
         binding.startExerciseButton.setOnClickListener {
             Log.d(TAG, "Start exercise button clicked")
-            if (currentScheduleList.isNotEmpty() && currentScheduleList.all { it.is_completed }) {
-                checkAndNavigateToPhotoUploadIfNeeded(true)
+            val allCompleted = currentScheduleList.isNotEmpty() && currentScheduleList.all { it.is_completed }
+
+            if (allCompleted) {
+                // 버튼이 "사진 인증하기"일 때의 동작
+                checkAndNavigateToPhotoUploadIfNeeded(true) // true: 사용자 클릭이므로 항상 이동
             } else {
+                // 버튼이 "운동 시작하기"일 때의 동작
                 navigateToFirstIncompleteExercise()
             }
         }
@@ -247,86 +251,6 @@ class ExerciseFragment : Fragment() {
         }
     }
 
-//    private fun loadTodayPlanFromServer() {
-//        if (!isAdded || _binding == null) {
-//            Log.w(TAG, "loadTodayPlanFromServer: Fragment not added or binding is null. Aborting.")
-//            return
-//        }
-//        Log.d(TAG, "loadTodayPlanFromServer: Fetching today's plan...")
-//
-//        serverJob?.cancel()
-//        serverJob = viewLifecycleOwner.lifecycleScope.launch {
-//            try {
-//                val userId = UserPreference(requireContext()).getUserId()
-//                if (userId == -1) {
-//                    if (isActive) Toast.makeText(
-//                        requireContext(),
-//                        "로그인이 필요합니다.",
-//                        Toast.LENGTH_SHORT
-//                    ).show()
-//                    return@launch
-//                }
-//
-//                val response =
-//                    withContext(Dispatchers.IO) { RetrofitClient.scheduleApi.getTodayPlan(userId) }
-//
-//                if (!isActive) return@launch
-//
-//                if (response.isSuccessful) {
-//                    val data = response.body()
-//                    planId = data?.plan?.id?.toLong() ?: -1L
-//
-//                    val validSchedules =
-//                        data?.schedules?.filter { it.exercise_id != 0 } ?: emptyList()
-//                    val enrichedSchedules = withContext(Dispatchers.Default) {
-//                        validSchedules.map { schedule ->
-//                            val localExercise =
-//                                db.exerciseDao().getExerciseById(schedule.exercise_id.toLong())
-//                            schedule.copy(
-//                                exercise_name = schedule.exercise_name.ifBlank {
-//                                    localExercise?.name ?: "운동 이름 없음"
-//                                },
-//                                image_path = if (schedule.image_path.isNullOrBlank()) localExercise?.imagePath else schedule.image_path,
-//                                equip = schedule.equip.ifBlank { localExercise?.equip ?: "정보 없음" },
-//                                part = schedule.part.ifBlank { localExercise?.part ?: "부위 없음" }
-//                            )
-//                        }.sortedBy { it.exercise_order }
-//                    }
-//
-//                    if (!isActive) return@launch
-//
-//                    currentScheduleList = enrichedSchedules
-//                    serverAdapter.submitList(currentScheduleList.toList())
-//                    checkAndShowInProgressHeader()
-//                    updateStartButtonState()
-//                    checkAndNavigateToPhotoUploadIfNeeded()
-//
-//                } else {
-//                    val errorCode = response.code()
-//                    currentScheduleList = emptyList()
-//                    serverAdapter.submitList(emptyList())
-//                    checkAndShowInProgressHeader()
-//                    updateStartButtonState()
-//                    val displayMessage =
-//                        if (errorCode == 404) "오늘 진행할 운동 계획이 없습니다." else "운동 계획 로드 실패 (코드: $errorCode)"
-//                    if (isActive) Toast.makeText(
-//                        requireContext(),
-//                        displayMessage,
-//                        Toast.LENGTH_LONG
-//                    ).show()
-//                }
-//            } catch (e: Exception) {
-//                if (isActive) {
-//                    Log.e(TAG, "loadTodayPlanFromServer: Exception.", e)
-//                    currentScheduleList = emptyList()
-//                    serverAdapter.submitList(emptyList())
-//                    checkAndShowInProgressHeader()
-//                    updateStartButtonState()
-//                    Toast.makeText(requireContext(), "네트워크 오류가 발생했습니다.", Toast.LENGTH_SHORT).show()
-//                }
-//            }
-//        }
-//    }
 private fun loadTodayPlanFromServer() {
     if (!isAdded || _binding == null) {
         Log.w(TAG, "loadTodayPlanFromServer: Fragment not added or binding is null. Aborting.")
@@ -339,33 +263,23 @@ private fun loadTodayPlanFromServer() {
         try {
             val userId = UserPreference(requireContext()).getUserId()
             if (userId == -1) {
-                if (isActive) Toast.makeText(
-                    requireContext(),
-                    "로그인이 필요합니다.",
-                    Toast.LENGTH_SHORT
-                ).show()
+                if (isActive) Toast.makeText(requireContext(), "로그인이 필요합니다.", Toast.LENGTH_SHORT).show()
                 return@launch
             }
 
-            val response = withContext(Dispatchers.IO) {
-                RetrofitClient.scheduleApi.getTodayPlan(userId)
-            }
+            val response = withContext(Dispatchers.IO) { RetrofitClient.scheduleApi.getTodayPlan(userId) }
 
             if (!isActive) return@launch
 
             if (response.isSuccessful) {
                 val data = response.body()
                 planId = data?.plan?.id?.toLong() ?: -1L
-
                 val validSchedules = data?.schedules?.filter { it.exercise_id != 0 } ?: emptyList()
                 val enrichedSchedules = withContext(Dispatchers.Default) {
                     validSchedules.map { schedule ->
-                        val localExercise =
-                            db.exerciseDao().getExerciseById(schedule.exercise_id.toLong())
+                        val localExercise = db.exerciseDao().getExerciseById(schedule.exercise_id.toLong())
                         schedule.copy(
-                            exercise_name = schedule.exercise_name.ifBlank {
-                                localExercise?.name ?: "운동 이름 없음"
-                            },
+                            exercise_name = schedule.exercise_name.ifBlank { localExercise?.name ?: "운동 이름 없음" },
                             image_path = if (schedule.image_path.isNullOrBlank()) localExercise?.imagePath else schedule.image_path,
                             equip = schedule.equip.ifBlank { localExercise?.equip ?: "정보 없음" },
                             part = schedule.part.ifBlank { localExercise?.part ?: "부위 없음" }
@@ -378,40 +292,18 @@ private fun loadTodayPlanFromServer() {
                 currentScheduleList = enrichedSchedules
                 serverAdapter.submitList(currentScheduleList.toList())
 
+                // UI 상태 업데이트는 항상 수행
                 checkAndShowInProgressHeader()
                 updateStartButtonState()
 
+                // ★★★ 가장 확실한 최종 로직 ★★★
+                val isAllCompletedNow = currentScheduleList.isNotEmpty() && currentScheduleList.all { it.is_completed }
 
-//                // ✅ 모든 운동 완료 + 오늘 인증 안 했을 때만 서버에 완료 카운트 요청
-//                if (
-//                    currentScheduleList.isNotEmpty() &&
-//                    currentScheduleList.all { it.is_completed } &&
-//                    !hasPhotoUploadBeenCompletedToday()
-//                ) {
-//                    Log.d(TAG, "운동 완료 API 호출 시도")
-//                    try {
-//                        val countResponse = withContext(Dispatchers.IO) {
-//                            RetrofitClient.challengeApi.markExerciseDone(userId)
-//                        }
-//                        if (countResponse.isSuccessful) {
-//                            Log.i(TAG, "✅ 운동 완료 1회 기록 성공")
-//                        } else {
-//                            Log.w(TAG, "⚠️ 운동 완료 기록 실패: ${countResponse.code()} ${countResponse.message()}")
-//                            Log.d(TAG, "운동 완료 조건 불충족: " +
-//                                    "currentScheduleList.size=${currentScheduleList.size}, " +
-//                                    "allCompleted=${currentScheduleList.all { it.is_completed }}, " +
-//                                    "photoUploaded=${hasPhotoUploadBeenCompletedToday()}")
-//                        }
-//                    } catch (e: Exception) {
-//                        Log.e(TAG, "🚨 운동 완료 기록 중 예외 발생", e)
-//                    }
-//                }
-                // ✅ 모든 운동 완료 시 서버에 완료 카운트 요청 (사진 인증 여부와 무관)
-                if (
-                    currentScheduleList.isNotEmpty() &&
-                    currentScheduleList.all { it.is_completed }
-                ) {
-                    Log.d(TAG, "운동 완료 API 호출 시도")
+                // 조건: (1) 모든 운동이 완료되었고, (2) '오늘 사진 인증을 아직 안 한' 경우
+                if (isAllCompletedNow && !hasPhotoUploadBeenCompletedToday()) {
+                    Log.d(TAG, "오늘의 첫 운동 완료 감지! 후속 처리를 시작합니다.")
+
+                    // 1. 챌린지 카운트 API 호출 (하루에 한 번만 실행됨)
                     try {
                         val countResponse = withContext(Dispatchers.IO) {
                             RetrofitClient.challengeApi.markExerciseDone(userId)
@@ -420,17 +312,14 @@ private fun loadTodayPlanFromServer() {
                             Log.i(TAG, "✅ 운동 완료 1회 기록 성공")
                         } else {
                             Log.w(TAG, "⚠️ 운동 완료 기록 실패: ${countResponse.code()} ${countResponse.message()}")
-                            Log.d(TAG, "운동 완료 조건 불충족: " +
-                                    "currentScheduleList.size=${currentScheduleList.size}, " +
-                                    "allCompleted=${currentScheduleList.all { it.is_completed }}")
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "🚨 운동 완료 기록 중 예외 발생", e)
                     }
+
+                    // 2. 사진 인증 화면으로 자동 이동 (하루에 한 번만 실행됨)
+                    checkAndNavigateToPhotoUploadIfNeeded(false)
                 }
-
-                checkAndNavigateToPhotoUploadIfNeeded()
-
             } else {
                 val errorCode = response.code()
                 currentScheduleList = emptyList()
@@ -465,26 +354,20 @@ private fun loadTodayPlanFromServer() {
             binding.startExerciseButton.visibility = View.GONE
         } else {
             binding.startExerciseButton.visibility = View.VISIBLE
+
             if (currentScheduleList.any { !it.is_completed }) {
                 binding.startExerciseButton.text = "운동 시작하기"
                 binding.startExerciseButton.isEnabled = true
-            } else if (currentScheduleList.isNotEmpty()) { // 모든 운동 완료
-                if (hasPhotoUploadBeenCompletedToday()) { // ★ 오늘 이미 사진 인증 완료했으면
-                    binding.startExerciseButton.text = "오늘 운동 완료" // 또는 다른 적절한 텍스트
-                    binding.startExerciseButton.isEnabled = false // 비활성화
-                } else {
-                    binding.startExerciseButton.text = "사진 인증하기"
-                    binding.startExerciseButton.isEnabled = true
-                }
-            } else { // 운동 목록 없음
-                binding.startExerciseButton.text = "운동 추가하기"
-                binding.startExerciseButton.isEnabled = planId != -1L
+            } else if (currentScheduleList.isNotEmpty()) {
+                // 모든 운동 완료 시, 항상 "사진 인증하기" 버튼을 표시하여 재인증 가능하게 함
+                binding.startExerciseButton.text = "사진 인증하기"
+                binding.startExerciseButton.isEnabled = true
+            } else {
+                binding.startExerciseButton.text = "운동을 추가해주세요"
+                binding.startExerciseButton.isEnabled = false
             }
         }
-        Log.d(
-            TAG,
-            "updateStartButtonState: Text='${binding.startExerciseButton.text}', Enabled=${binding.startExerciseButton.isEnabled}"
-        )
+        Log.d(TAG, "updateStartButtonState: Text='${binding.startExerciseButton.text}', Enabled=${binding.startExerciseButton.isEnabled}")
     }
 
     private fun checkAndShowInProgressHeader() {
@@ -681,11 +564,14 @@ private fun loadTodayPlanFromServer() {
             if (savedScheduleId != -1L) {
                 lifecycleScope.launch(Dispatchers.IO) {
                     try {
+                        // 1. ViewModel 또는 SharedPreferences에서 현재까지 누적된 총 운동 시간을 가져옵니다.
                         val finalElapsedTime =
                             stopwatchViewModel.elapsedTime.value ?: prefs.getLong(
                                 KEY_ELAPSED_TIME,
                                 0L
                             )
+
+                        // 2. 🔥 가져온 최종 시간을 SharedPreferences에 "KEY_ELAPSED_TIME" 키로 저장합니다. (핵심)
                         withContext(Dispatchers.Main) {
                             prefs.edit().putLong(KEY_ELAPSED_TIME, finalElapsedTime).apply()
                             Log.d(
@@ -694,8 +580,11 @@ private fun loadTodayPlanFromServer() {
                             )
                         }
 
+                        // 3. 서버에 현재 운동을 완료했다고 알립니다.
                         val response =
                             RetrofitClient.scheduleApi.markScheduleAsComplete(savedScheduleId)
+
+                        // 4. 서버 응답 성공 시 UI와 내부 상태를 정리합니다.
                         withContext(Dispatchers.Main) {
                             if (!isAdded) return@withContext
                             if (response.isSuccessful) {
@@ -703,18 +592,22 @@ private fun loadTodayPlanFromServer() {
                                     TAG,
                                     "Exercise (scheduleId: $savedScheduleId) marked as complete via header."
                                 )
-                                clearInProgressState() // 진행 중 상태 헤더 제거
+                                // '진행 중 헤더'를 화면에서 숨깁니다.
+                                clearInProgressState()
 
+                                // 전체 운동 스톱워치를 멈추고 리셋합니다.
                                 stopwatchViewModel.stopStopwatch()
                                 Log.i(
                                     TAG,
                                     "Stopwatch explicitly reset after completing exercise via header completeButton."
                                 )
 
-                                loadTodayPlanFromServer() // 목록 새로고침
+                                // 운동 목록을 새로고침하여 완료 상태(체크 표시)를 반영합니다.
+                                loadTodayPlanFromServer()
                                 Toast.makeText(requireContext(), "운동을 완료했습니다!", Toast.LENGTH_SHORT)
                                     .show()
                             } else {
+                                // 서버 응답 실패 시 사용자에게 알립니다.
                                 Log.e(
                                     TAG,
                                     "Failed to mark exercise as complete via header: ${response.code()} ${response.message()}"
@@ -727,6 +620,7 @@ private fun loadTodayPlanFromServer() {
                             }
                         }
                     } catch (e: Exception) {
+                        // 네트워크 오류 등 예외 발생 시 사용자에게 알립니다.
                         withContext(Dispatchers.Main) {
                             if (!isAdded) return@withContext
                             Log.e(TAG, "Exception marking exercise as complete via header.", e)
@@ -784,63 +678,38 @@ private fun loadTodayPlanFromServer() {
     private fun checkAndNavigateToPhotoUploadIfNeeded(forceNavigationCheck: Boolean = false) {
         if (!isAdded || _binding == null) return
 
-        // ★ 조건 추가: 오늘 이미 사진 인증을 완료했는지 확인
-        if (hasPhotoUploadBeenCompletedToday()) {
-            Log.i(TAG, "Photo upload has already been completed today. Skipping navigation.")
-            // 필요하다면 버튼 상태 등을 "오늘 운동 모두 완료" 등으로 업데이트
-            if (currentScheduleList.isNotEmpty() && currentScheduleList.all { it.is_completed }) {
-                updateStartButtonState() // 버튼 텍스트 등을 "오늘 운동 완료"로 업데이트
-            }
+        if (!forceNavigationCheck && hasPhotoUploadBeenCompletedToday()) {
+            Log.i(TAG, "자동 화면 이동 방지: 오늘 이미 사진 인증을 완료했습니다.")
             return
         }
 
         if (currentScheduleList.isNotEmpty() && currentScheduleList.all { it.is_completed }) {
-            Log.i(
-                TAG,
-                "All exercises are marked as complete AND photo upload not yet done today. Preparing to navigate to photo upload."
-            )
+            Log.i(TAG, "모든 운동 완료. 사진 인증 화면으로 이동 준비.")
 
             val completionTimeMillis = System.currentTimeMillis()
-            val totalDurationMillis =
-                prefs.getLong(KEY_ELAPSED_TIME, 0L) // ExerciseDoingFragment 또는 헤더 완료 버튼에서 저장한 값
+            val totalDurationMillis = prefs.getLong(KEY_ELAPSED_TIME, 0L)
 
-            Log.d(
-                TAG,
-                "Photo Upload Nav: CompletionTime=$completionTimeMillis, TotalDuration=$totalDurationMillis (from prefs)"
-            )
-
-            stopwatchViewModel.stopStopwatch() // ViewModel의 스톱워치는 리셋 (전체 세션 종료)
-            // clearInProgressState()는 헤더를 숨기고 관련 prefs를 정리. KEY_ELAPSED_TIME은 남겨둠.
-            // KEY_ELAPSED_TIME은 다음 날 새 운동 시작 시 0으로 리셋되거나,
-            // navigateToExerciseDoingFragment에서 !isContinuing일 때 0으로 리셋됨.
-            prefs.edit().putBoolean(KEY_IN_PROGRESS, false).apply() // 헤더만 숨김
+            stopwatchViewModel.stopStopwatch()
+            prefs.edit().putBoolean(KEY_IN_PROGRESS, false).apply()
 
             val args = Bundle().apply {
                 putLong("completion_time_millis", completionTimeMillis)
                 putLong("total_duration_millis", totalDurationMillis)
             }
             try {
-                // TODO: 네비게이션 그래프에 action_exercise_to_challengeUpload ID 확인 및 정의
-                val actionId = R.id.action_exercise_to_challengeUpload // 실제 정의된 액션 ID로 변경!
+                val actionId = R.id.action_exercise_to_challengeUpload
                 findNavController().navigate(actionId, args)
-                Log.i(TAG, "Navigated to ChallengeUploadPhotoFragment.")
+                Log.i(TAG, "사진 인증 화면으로 이동했습니다.")
             } catch (e: Exception) {
-                Log.e(
-                    TAG,
-                    "Navigation to ChallengeUploadPhotoFragment failed. Action ID might be missing or incorrect.",
-                    e
-                )
-                Toast.makeText(requireContext(), "사진 인증 화면 이동 실패: ${e.message}", Toast.LENGTH_SHORT)
-                    .show()
+                Log.e(TAG, "사진 인증 화면 이동 실패.", e)
+                Toast.makeText(requireContext(), "사진 인증 화면 이동 실패: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         } else {
-            if (forceNavigationCheck) Log.d(
-                TAG,
-                "checkAndNavigateToPhotoUploadIfNeeded: Not all exercises completed, list empty, or photo already uploaded today."
-            )
+            if (forceNavigationCheck) {
+                Log.d(TAG, "사진 인증 화면으로 이동하지 않음: 아직 완료되지 않은 운동이 있습니다.")
+            }
         }
     }
-
 
     private fun navigateToExerciseDoingFragment(
         index: Int,
@@ -862,7 +731,6 @@ private fun loadTodayPlanFromServer() {
             ).show(); return
         }
 
-        val targetSchedule = currentScheduleList[index] // 이 부분은 schedule 파라미터를 직접 사용해도 됨
         val args = Bundle().apply {
             putLong("planId", planId)
             putInt("initialExerciseIndex", index)
@@ -883,25 +751,24 @@ private fun loadTodayPlanFromServer() {
         editor.putString(KEY_SAVED_IMAGE_PATH, schedule.image_path)
         editor.putString(KEY_SAVED_EQUIP, schedule.equip)
 
-        if (!isContinuing) {
-            editor.putLong(KEY_ELAPSED_TIME, 0L) // 새 운동 시작 시 SharedPreferences의 누적 시간 0으로.
-            stopwatchViewModel.stopStopwatch() // ★ ViewModel 스톱워치 리셋 (시간도 0으로)
-            Log.d(
-                TAG,
-                "Navigating to new exercise: ${schedule.exercise_name}. Resetting stopwatch and elapsed time in ViewModel. KEY_ELAPSED_TIME set to 0."
-            )
+        if (!isContinuing) { // '이어하기'가 아닌 '새로 시작' 또는 '추가 운동 시작'의 경우
+            stopwatchViewModel.stopStopwatch() // ViewModel의 개별 운동 타이머는 항상 리셋
+
+            // '다시 운동하기' (오늘 이미 사진 인증을 한 경우) 시나리오에서는
+            // 기존 누적 시간을 초기화하지 않고 보존합니다.
+            if (hasPhotoUploadBeenCompletedToday()) {
+                Log.d(TAG, "추가 운동 시작. 기존 누적 운동 시간을 보존합니다.")
+            } else {
+                // '오늘의 첫 운동 세션'인 경우에만 총 누적 시간을 0으로 초기화합니다.
+                editor.putLong(KEY_ELAPSED_TIME, 0L)
+                Log.d(TAG, "새 운동 세션 시작. 총 누적 운동 시간을 0으로 초기화합니다.")
+            }
         } else {
-            // 이어하기 시에는 prefs에 저장된 KEY_ELAPSED_TIME (총 누적 시간)을 사용.
-            // ExerciseDoingFragment가 이 값을 읽어 ViewModel의 시간을 설정할 것임.
+            // '이어하기'의 경우 기존 로직과 동일
             val elapsedTimeForContinuing = prefs.getLong(KEY_ELAPSED_TIME, 0L)
-            // editor.putLong(KEY_ELAPSED_TIME, elapsedTimeForContinuing) // 이미 prefs에 있으므로 다시 쓸 필요는 없음.
-            // 만약 ExerciseDoingFragment가 시작 시 ViewModel을 prefs 값으로 항상 덮어쓴다면 이 줄은 불필요.
-            // 여기서는 KEY_ELAPSED_TIME은 ExerciseDoingFragment에서 관리하는 총 시간을 나타낸다고 가정.
-            Log.d(
-                TAG,
-                "Navigating to continue exercise: ${schedule.exercise_name}. Current KEY_ELAPSED_TIME in prefs for DoingFragment: $elapsedTimeForContinuing."
-            )
+            Log.d(TAG, "운동 이어하기. 현재까지 누적된 시간: $elapsedTimeForContinuing")
         }
+
         editor.apply()
         findNavController().navigate(R.id.action_exercise_to_exerciseDoing, args)
     }

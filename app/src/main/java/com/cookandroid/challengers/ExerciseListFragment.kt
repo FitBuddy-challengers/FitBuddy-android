@@ -7,6 +7,8 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.os.Parcelable
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
 import android.view.ContextThemeWrapper
 import android.view.LayoutInflater
@@ -54,6 +56,7 @@ class ExerciseListFragment : Fragment() {
 
     // 서버에서 받아온 전체 운동 목록 (필터링 전 원본, isFavorite 및 isHidden 상태 포함)
     private var allExercisesFromServer = listOf<Exercise>()
+    private var searchQuery: String = "" // 검색어 저장을 위한 변수 추가
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentExerciseListBinding.inflate(inflater, container, false)
@@ -78,15 +81,18 @@ class ExerciseListFragment : Fragment() {
         observeExercisesFromServer() // ★ 서버에서 데이터 로드
         setupChipGroups()
         setupButtonClickListeners()
+        setupSearchListener()
 
         loadTodayPlannedExercisesFromServer() // ★ 오늘 계획된 운동 ID도 서버에서 가져오도록 변경 필요
+
+        parentFragmentManager.setFragmentResultListener("favorite_status_updated", viewLifecycleOwner) { _, bundle ->
+            val changedExerciseId = bundle.getLong("exerciseId")
+            val newIsFavorite = bundle.getBoolean("isFavorite")
+            updateExerciseInList(changedExerciseId, newIsFavorite = newIsFavorite, newIsHidden = null)
+        }
     }
 
     private fun loadTodayPlannedExercisesFromServer() {
-        // TODO: 이 함수는 서버에서 오늘 계획된 운동 ID 목록을 가져오도록 수정해야 합니다.
-        // 현재는 로컬 DB를 사용하고 있으므로, 서버 연동 시 이 부분의 재설계가 필요합니다.
-        Log.w("ExerciseListFragment", "loadTodayPlannedExercisesFromServer: 서버 연동 로직 구현 필요")
-        // 임시로 기존 로컬 DB 접근 유지 (서버 연동 시 이 부분 반드시 수정 필요)
         val tempDb = AppDatabase.getDatabase(requireContext(), lifecycleScope)
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             try {
@@ -114,8 +120,9 @@ class ExerciseListFragment : Fragment() {
     private fun setupAdapter() {
         adapter = ExerciseListAdapter(
             onItemClicked = { exercise ->
+                Log.d("ID_CHECK", "1. [클릭 시점] 운동 이름: ${exercise.name}, ID: ${exercise.id}")
                 recyclerViewState = binding.exerciseListRecyclerView.layoutManager?.onSaveInstanceState()
-                navigateToDetail(exercise.id)
+                navigateToDetail(exercise) // exercise.id 대신 exercise 객체 전체를 전달
             },
             onFavoriteClicked = { exerciseToToggle -> // ★ 서버 API 호출로 변경
                 val newFavoriteState = !(exerciseToToggle.isFavorite ?: false)
@@ -160,9 +167,9 @@ class ExerciseListFragment : Fragment() {
         )
     }
 
-    private fun navigateToDetail(exerciseId: Long) {
+    private fun navigateToDetail(exercise: Exercise) {
         val bundle = Bundle().apply {
-            putLong("exerciseId", exerciseId)
+            putParcelable("exerciseObject", exercise)
         }
         findNavController().navigate(R.id.action_global_exerciseDetailFragment, bundle)
     }
@@ -252,44 +259,47 @@ class ExerciseListFragment : Fragment() {
             .show()
     }
 
-    private fun observeExercisesFromServer() { // ★ 서버에서 데이터 로드 및 Room으로 이름/이미지 보완
+    private fun observeExercisesFromServer() {
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val response = RetrofitClient.exerciseApi.getAllExercises()
                 if (response.isSuccessful) {
                     val dtoList = response.body() ?: emptyList()
-// ExerciseDto를 앱 내부 Exercise 모델로 변환하면서 Room DB 정보로 보완
-                    val localDb = AppDatabase.getDatabase(requireContext(), lifecycleScope) // Room DB 접근
-
-                    val enrichedList = dtoList.map { dto -> // dto는 ExerciseDto 타입
-                        val localExercise = localDb.exerciseDao().getExerciseById(dto.id) // Room에서 해당 ID의 운동 정보 가져오기
-                        Log.d("ExerciseListFragment", "🧪 exerciseId: ${dto.id} → 서버 DTO: $dto")
-                        Log.d("ExerciseListFragment", "🧪 exerciseId: ${dto.id} → Room에서 찾은 운동: $localExercise")
-
-                        Exercise( // 앱 내부 Exercise 모델 객체 생성
+                    val localDb = AppDatabase.getDatabase(requireContext(), lifecycleScope)
+                    val enrichedList = dtoList.map { dto ->
+                        val localExercise = localDb.exerciseDao().getExerciseById(dto.id)
+                        if (dto.id == 19L) { // '윗몸 일으키기' ID가 19라고 가정
+                            Log.d("DATA_CHECK", "ID 19 서버 데이터 -> 이름: ${dto.name}, 이미지: ${dto.image_path ?: ""}")
+                            Log.d("DATA_CHECK", "ID 19 로컬 DB 데이터 -> 이름: ${localExercise?.name}, 이미지: ${localExercise?.imagePath}")
+                        }
+                        // 서버값 사용
+                        val exercise = Exercise(
                             id = dto.id,
-                            name = dto.name.ifBlank { localExercise?.name ?: "이름 없음" }, // 서버 이름이 비어있으면 로컬 이름, 그것도 없으면 기본값
 
-                            // 아래 필드들은 로컬 DB 값을 우선적으로 사용하고, 없으면 서버 DTO 값, 그것도 없으면 기본값 사용
-                            part = localExercise?.part?.ifBlank { dto.part } ?: dto.part ?: "부위 정보 없음",
-                            equip = localExercise?.equip?.ifBlank { dto.equip } ?: dto.equip ?: "장비 정보 없음",
-                            imagePath = localExercise?.imagePath?.ifBlank { dto.image_path } ?: dto.image_path ?: "", // 로컬 우선, 다음 서버, 다음 기본값
+                            name = dto.name ?: "이름 없음",
+                            part = dto.part ?: "부위 정보 없음",
+                            equip = dto.equip ?: "장비 정보 없음",
+                            imagePath = dto.image_path ?: "",
 
-                            // 상세 정보 필드들: 로컬 DB 값이 있으면 사용, 없으면 서버 DTO 값 사용
-                            startPosition = localExercise?.startPosition ?: dto.start_position,
-                            exerciseMotion = localExercise?.exerciseMotion ?: dto.exercise_motion,
-                            breathing = localExercise?.breathing ?: dto.breathing,
-                            caution = localExercise?.caution ?: dto.caution,
+                            startPosition = dto.start_position,
+                            exerciseMotion = dto.exercise_motion,
+                            breathing = dto.breathing,
+                            caution = dto.caution,
+                            mets = dto.mets ?: 0.0,
 
-                            mets = dto.mets, // 서버 값 사용 (또는 localExercise?.mets ?: dto.mets 로 보완 가능)
-
-                            // 상태 플래그들은 서버 값을 우선적으로 사용
                             isFavorite = dto.isFavorite ?: false,
-                            isTimeType = dto.isTimeType,
-                            isHidden = dto.isHidden ?: false
+                            isTimeType = dto.isTimeType ?: false,
+                            isHidden = dto.isHidden ?: false,
+                            isNoise = dto.is_noise ?: false
                         )
+
+                        if (exercise.id == 19L) {
+                            Log.d("DATA_CHECK", "ID 19 최종 생성된 객체 -> 이름: ${exercise.name}, 이미지: ${exercise.imagePath}")
+                        }
+
+                        exercise
                     }
-                    allExercisesFromServer = enrichedList // 보완된 리스트를 멤버 변수에 저장
+                    allExercisesFromServer = enrichedList
                     withContext(Dispatchers.Main) {
                         if (_binding != null) {
                             applyFilters()
@@ -308,6 +318,17 @@ class ExerciseListFragment : Fragment() {
                 }
             }
         }
+    }
+
+    private fun setupSearchListener() { // ★ 새로운 검색 리스너 함수
+        binding.searchText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                searchQuery = s.toString().trim()
+                applyFilters()
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
     }
 
     private fun setupSwipeToHide() {
@@ -454,6 +475,8 @@ class ExerciseListFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             if (_binding == null) return@launch
 
+            val currentSearchQuery = searchQuery.lowercase() // 소문자로 변환하여 검색
+
             val favFilter = binding.myChipGroup.checkedChipIds.any {
                 binding.myChipGroup.findViewById<Chip>(it)?.text == "즐겨찾기"
             }
@@ -464,17 +487,22 @@ class ExerciseListFragment : Fragment() {
                 binding.equipmentChipGroup.findViewById<Chip>(it)?.text?.toString()
             }
 
-            val filtered = allExercisesFromServer // ★ DB 대신 멤버 변수 사용
-                .filter { exercise -> !(exercise.isHidden ?: false) } // ★ 숨김 처리된 운동 제외
+            val filtered = allExercisesFromServer
+                .filter { exercise -> !(exercise.isHidden ?: false) } // 숨김 처리된 운동 제외
                 .filter { e ->
-                    (!favFilter || (e.isFavorite ?: false)) &&
+                    // 1. 검색어 필터링
+                    (currentSearchQuery.isBlank() || e.name.lowercase().contains(currentSearchQuery)) &&
+                            // 2. 즐겨찾기 필터링
+                            (!favFilter || (e.isFavorite ?: false)) &&
+                            // 3. 부위 필터링
                             (parts.isEmpty() || parts.any { e.part.contains(it, ignoreCase = true) }) &&
+                            // 4. 장비 필터링
                             (equips.isEmpty() || equips.any { e.equip.contains(it, ignoreCase = true) })
                 }
 
-            adapter.submitList(filtered) { // submitList의 완료 콜백 사용
+            adapter.submitList(filtered) {
                 recyclerViewState?.let {
-                    if (_binding != null) { // 한 번 더 체크
+                    if (_binding != null) {
                         binding.exerciseListRecyclerView.layoutManager?.onRestoreInstanceState(it)
                     }
                     recyclerViewState = null

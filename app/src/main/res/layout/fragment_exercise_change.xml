@@ -73,12 +73,14 @@
 
 
                 <EditText
+                    android:id="@+id/searchText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
                     android:background="@android:color/transparent"
                     android:fontFamily="@font/pretendard_regular"
                     android:hint="운동 이름을 검색해보세요"
+                    android:textColorHint="@color/black"
                     android:textColor="@color/black"
                     android:textSize="16sp" />
             </LinearLayout>

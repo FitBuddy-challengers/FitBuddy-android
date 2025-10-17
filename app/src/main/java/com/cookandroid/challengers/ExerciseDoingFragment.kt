@@ -856,7 +856,7 @@ class ExerciseDoingFragment : Fragment() {
             passedImagePath = nextScheduleDto.image_path
             passedEquip = nextScheduleDto.equip
 
-            // ★★★ 다음 운동을 위해 세트 관련 변수 초기화 ★★★
+            // 다음 운동을 위해 세트 관련 변수 초기화
             currentSetIndex = 0
             currentSetStartTime = 0L
             accumulatedSetDurationMillis = 0L // 세트 시간 누적 변수도 초기화
@@ -864,7 +864,7 @@ class ExerciseDoingFragment : Fragment() {
 
             // isWorkoutSessionActive는 true를 유지 (전체 운동 세션은 계속됨)
 
-            // ★★★ 전체 스톱워치는 리셋하지 않고 계속 진행 ★★★
+            // 전체 스톱워치는 리셋하지 않고 계속 진행
             // 만약 스톱워치가 일시정지 상태였다면(이전 운동의 마지막 세트 완료 후), 다시 시작합니다.
             if (stopwatchViewModel.isRunning.value == false && isWorkoutSessionActive) {
                 val timeToResumeFrom = stopwatchViewModel.elapsedTime.value ?: sharedHeaderPrefs.getLong(KEY_SHARED_ELAPSED_TIME, 0L)
@@ -874,27 +874,22 @@ class ExerciseDoingFragment : Fragment() {
                 Log.i(TAG, "Stopwatch continues for next exercise. Current total elapsed: ${stopwatchViewModel.elapsedTime.value}")
             }
 
-            // ★★★ UI 업데이트 및 다음 운동의 세트 목록 로드 ★★★
+            // UI 업데이트 및 다음 운동의 세트 목록 로드
             updateExerciseInfoUI()
             fetchSetsForCurrentExercise()
 
         } else {
-            // 2. ★★★ 모든 운동을 완료한 경우 ★★★
+            // 2. 모든 운동을 완료한 경우
             Log.i(TAG, "All exercises in plan completed. Cleaning up and navigating.")
-            isWorkoutSessionActive = false // 전체 운동 세션 종료
+            isWorkoutSessionActive = false
 
             val completionTimestamp = System.currentTimeMillis()
-            val totalWorkoutDuration = stopwatchViewModel.elapsedTime.value ?: 0L // 최종 전체 운동 시간
+            val totalWorkoutDuration = stopwatchViewModel.elapsedTime.value ?: 0L
 
-            // ★★★ 모든 운동 완료 시 스톱워치 정지 및 시간 0으로 리셋 ★★★
-//            stopwatchViewModel.stopStopwatch()
-            Log.i(TAG, "All exercises finished. Final total workout time: ${stopwatchViewModel.formatElapsedTime(totalWorkoutDuration)}. Stopwatch reset.")
-
-            // ★★★ SharedPreferences 정리 ★★★
-            // ChallengeUploadPhotoFragment로 전달할 최종 운동 시간(KEY_SHARED_ELAPSED_TIME)은 남겨둡니다.
+            //최종 시간을 SharedPreferences에 저장
             sharedHeaderPrefs.edit()
                 .putBoolean(KEY_SHARED_IS_IN_PROGRESS_HEADER, false) // 헤더 숨김
-                .putLong(KEY_SHARED_ELAPSED_TIME, totalWorkoutDuration) // 최종 운동 시간 저장
+                .putLong(KEY_SHARED_ELAPSED_TIME, totalWorkoutDuration) // <<--- 이 줄이 핵심입니다!
                 .remove(KEY_SHARED_EXERCISE_ORDER_INDEX)
                 .remove(KEY_SHARED_SCHEDULE_ID)
                 .remove(KEY_SHARED_EXERCISE_ID)
@@ -903,15 +898,16 @@ class ExerciseDoingFragment : Fragment() {
                 .remove(KEY_SHARED_IMAGE_PATH)
                 .remove(KEY_SHARED_EQUIP)
                 .apply()
-            // 이 프래그먼트 내부 상태도 모두 초기화
+
+            // 프래그먼트 내부 상태 모두 초기화
             internalPrefs.edit().clear().apply()
 
-            // ★★★ 쿨다운 스트레칭 화면으로 이동 ★★★
+            // 쿨다운 스트레칭 화면으로 이동
             try {
                 if (findNavController().currentDestination?.id == R.id.exerciseDoingFragment) {
                     val args = Bundle().apply {
                         putLong("completion_time_millis", completionTimestamp)
-                        putLong("total_duration_millis", totalWorkoutDuration)
+                        putLong("total_duration_millis", totalWorkoutDuration) // 이제 이 값이 올바르게 전달됩니다.
                     }
                     val actionId = R.id.action_exerciseDoing_to_coolDownStretch
                     findNavController().navigate(actionId, args)

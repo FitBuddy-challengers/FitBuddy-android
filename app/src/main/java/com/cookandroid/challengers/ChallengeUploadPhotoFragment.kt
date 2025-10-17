@@ -1,4 +1,4 @@
-package com.cookandroid.challengers // 실제 패키지명으로 변경해주세요
+package com.cookandroid.challengers
 
 import android.Manifest
 import android.app.Activity
@@ -51,10 +51,27 @@ class ChallengeUploadPhotoFragment : Fragment() {
     private var galleryImageUri: Uri? = null
     private var finalSelectedImageUri: Uri? = null
 
+    private val prefs by lazy {
+        requireContext().getSharedPreferences(PREFS_PROGRESS, Context.MODE_PRIVATE)
+    }
+
+    private fun getTodayDateString(): String {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        return dateFormat.format(Date())
+    }
+
+    private fun markPhotoUploadAsCompletedForToday() {
+        val key = KEY_PHOTO_UPLOAD_COMPLETED_TODAY_PREFIX + getTodayDateString()
+        prefs.edit().putBoolean(key, true).apply()
+        Log.i(TAG, "Photo upload marked as completed for today: $key")
+    }
+
     companion object {
         private const val TAG = "UploadPhotoFragment"
         private const val ARG_COMPLETION_TIME_MILLIS = "completion_time_millis"
         private const val ARG_TOTAL_DURATION_MILLIS = "total_duration_millis"
+        private const val PREFS_PROGRESS = "exercise_progress"
+        private const val KEY_PHOTO_UPLOAD_COMPLETED_TODAY_PREFIX = "photo_upload_completed_for_date_"
 
         // Constants for Fragment Result API
         const val REQUEST_KEY_UPLOAD_PHOTO = "upload_photo_request_key"
@@ -326,6 +343,7 @@ class ChallengeUploadPhotoFragment : Fragment() {
                 val response = RetrofitClient.challengeApi.uploadPhoto(photoPart, userIdPart, datePart)
 
                 if (response.isSuccessful && response.body()?.success == true) {
+                    markPhotoUploadAsCompletedForToday()
                     navigateToChallengeScreen()
                 } else {
                     val errorMsg = response.body()?.message ?: "업로드 실패: ${response.code()}"
