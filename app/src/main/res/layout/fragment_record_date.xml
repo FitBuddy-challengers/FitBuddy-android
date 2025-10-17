@@ -211,7 +211,7 @@
                         android:id="@+id/tvAiComment"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="AI를 통해 운동 기록을 분석합니다...\n(현재 기능 개발 중)" />
+                        android:text="AI를 통해 운동 기록을 분석 중입니다..." />
                 </LinearLayout>
 
 
@@ -224,26 +224,26 @@
 
             </LinearLayout>
 
-<!--            <LinearLayout-->
-<!--                android:layout_width="match_parent"-->
-<!--                android:layout_height="wrap_content"-->
-<!--                android:layout_marginTop="16dp"-->
-<!--                android:orientation="vertical">-->
+            <!--            <LinearLayout-->
+            <!--                android:layout_width="match_parent"-->
+            <!--                android:layout_height="wrap_content"-->
+            <!--                android:layout_marginTop="16dp"-->
+            <!--                android:orientation="vertical">-->
 
-<!--                <TextView-->
-<!--                    android:layout_width="wrap_content"-->
-<!--                    android:layout_height="wrap_content"-->
-<!--                    android:text="부위별 운동량 추이를 확인하세요!"-->
-<!--                    android:textSize="18sp"-->
-<!--                    android:textStyle="bold" />-->
+            <!--                <TextView-->
+            <!--                    android:layout_width="wrap_content"-->
+            <!--                    android:layout_height="wrap_content"-->
+            <!--                    android:text="부위별 운동량 추이를 확인하세요!"-->
+            <!--                    android:textSize="18sp"-->
+            <!--                    android:textStyle="bold" />-->
 
-<!--                <ImageView-->
-<!--                    android:layout_width="match_parent"-->
-<!--                    android:layout_height="150dp"-->
-<!--                    android:layout_marginTop="8dp"-->
-<!--                    android:background="@android:color/darker_gray"-->
-<!--                    android:contentDescription="부위별 운동량 추이 그래프" />-->
-<!--            </LinearLayout>-->
+            <!--                <ImageView-->
+            <!--                    android:layout_width="match_parent"-->
+            <!--                    android:layout_height="150dp"-->
+            <!--                    android:layout_marginTop="8dp"-->
+            <!--                    android:background="@android:color/darker_gray"-->
+            <!--                    android:contentDescription="부위별 운동량 추이 그래프" />-->
+            <!--            </LinearLayout>-->
         </LinearLayout>
     </ScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>
