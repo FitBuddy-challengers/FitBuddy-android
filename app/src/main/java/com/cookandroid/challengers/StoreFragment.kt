@@ -78,19 +78,22 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
         })
     }
 
+    // 유선 10.18 상점 토끼캐릭터 위치
     private fun updateCharacterDisplay(equippedItems: Map<String, ProductItem?>) {
         if (!isAdded || _binding == null) return
 
         val baseCharacterItem = equippedItems["character"]
-        val offsetY = when (baseCharacterItem?.id) {
-            2 -> -44f // 토끼 캐릭터의 ID가 2
-            else -> 0f
+        val characterOffsetY = when (baseCharacterItem?.id) {
+            2 -> -44f // 토끼 캐릭터(ID: 2)일 경우 44f만큼 위로 이동
+            else -> 0f // 그 외에는 이동 없음
         }
 
+        // 2. 기본 캐릭터 이미지에만 계산된 오프셋을 적용합니다.
         binding.baseCharacterImageView.setImageResource(baseCharacterItem?.imageResId ?: R.drawable.char_graycat)
         binding.baseCharacterImageView.elevation = ELEVATION_CHARACTER
-        binding.baseCharacterImageView.translationY = offsetY
+        binding.baseCharacterImageView.translationY = characterOffsetY
 
+        // 아이템들을 가져옵니다.
         val costumeItem = equippedItems["costume"]
         val onepieceItem = equippedItems["onepiece"]
         val topItem = equippedItems["top"]
@@ -99,11 +102,12 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
         val hairAccItem = equippedItems["hairAcc"]
         val glassesItem = equippedItems["glasses"]
 
+        // 3. 착용한 모든 아이템 이미지의 위치는 항상 0f로 고정합니다.
         if (costumeItem != null) {
             binding.costumeItemImageView.setImageResource(costumeItem.imageResId)
             binding.costumeItemImageView.visibility = View.VISIBLE
             binding.costumeItemImageView.elevation = ELEVATION_COSTUME
-            binding.costumeItemImageView.translationY = offsetY // ★★★ 오프셋 적용
+            binding.costumeItemImageView.translationY = 0f // 아이템 위치 고정
             binding.topItemImageView.visibility = View.GONE
             binding.pantsItemImageView.visibility = View.GONE
             binding.onepieceItemImageView.visibility = View.GONE
@@ -113,7 +117,7 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
                 binding.onepieceItemImageView.setImageResource(onepieceItem.imageResId)
                 binding.onepieceItemImageView.visibility = View.VISIBLE
                 binding.onepieceItemImageView.elevation = ELEVATION_ONEPIECE
-                binding.onepieceItemImageView.translationY = offsetY // ★★★ 오프셋 적용
+                binding.onepieceItemImageView.translationY = 0f // 아이템 위치 고정
                 binding.topItemImageView.visibility = View.GONE
                 binding.pantsItemImageView.visibility = View.GONE
             } else {
@@ -121,13 +125,13 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
                 binding.topItemImageView.visibility = if (topItem != null) {
                     binding.topItemImageView.setImageResource(topItem.imageResId)
                     binding.topItemImageView.elevation = ELEVATION_CLOTHING_TOP
-                    binding.topItemImageView.translationY = offsetY // ★★★ 오프셋 적용
+                    binding.topItemImageView.translationY = 0f // 아이템 위치 고정
                     View.VISIBLE
                 } else View.GONE
                 binding.pantsItemImageView.visibility = if (pantsItem != null) {
                     binding.pantsItemImageView.setImageResource(pantsItem.imageResId)
                     binding.pantsItemImageView.elevation = ELEVATION_CLOTHING_BOTTOM
-                    binding.pantsItemImageView.translationY = offsetY
+                    binding.pantsItemImageView.translationY = 0f // 아이템 위치 고정
                     View.VISIBLE
                 } else View.GONE
             }
@@ -136,21 +140,21 @@ class StoreFragment : Fragment(), StoreOpenFragment.StoreBottomSheetDismissListe
         binding.accItemImageView.visibility = if (accItem != null) {
             binding.accItemImageView.setImageResource(accItem.imageResId)
             binding.accItemImageView.elevation = if (accItem.id == 1) ELEVATION_BEHIND_CHARACTER else ELEVATION_ACCESSORY_FRONT
-            binding.accItemImageView.translationY = offsetY
+            binding.accItemImageView.translationY = 0f // 아이템 위치 고정
             View.VISIBLE
         } else View.GONE
 
         binding.hairAccItemImageView.visibility = if (hairAccItem != null) {
             binding.hairAccItemImageView.setImageResource(hairAccItem.imageResId)
             binding.hairAccItemImageView.elevation = ELEVATION_HAIR_ACC
-            binding.hairAccItemImageView.translationY = offsetY
+            binding.hairAccItemImageView.translationY = 0f // 아이템 위치 고정
             View.VISIBLE
         } else View.GONE
 
         binding.glassesItemImageView.visibility = if (glassesItem != null) {
             binding.glassesItemImageView.setImageResource(glassesItem.imageResId)
             binding.glassesItemImageView.elevation = ELEVATION_GLASSES
-            binding.glassesItemImageView.translationY = offsetY
+            binding.glassesItemImageView.translationY = 0f // 아이템 위치 고정
             View.VISIBLE
         } else View.GONE
 
