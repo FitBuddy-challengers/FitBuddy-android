@@ -202,10 +202,42 @@ class CoolDownStretchFragment : Fragment() {
         updateNextText()
     }
 
+    // 유선 10.18 수정: 마지막 스트레칭에서 '다음 스트레칭' 안 보이게
     private fun updateNextText() {
         if (!isAdded || _binding == null) return
-        val nextStretchName = stretchList.getOrNull(currentIndex + 1)?.name
-        binding.nextStretchName.text = nextStretchName ?: "마지막 스트레칭"
+
+        // 현재 스트레칭이 마지막 항목인지 확인
+        if (currentIndex >= stretchList.size - 1) {
+            binding.nextStretch.visibility = View.GONE
+        } else {
+            binding.nextStretch.visibility = View.VISIBLE
+
+            // 다음 스트레칭 객체를 가져옵니다.
+            val nextStretch = stretchList.getOrNull(currentIndex + 1)
+            if (nextStretch == null) {
+                // 예외 처리: 다음 스트레칭이 없는 경우 숨김
+                binding.nextStretch.visibility = View.GONE
+                return
+            }
+
+            // 1. 다음 스트레칭 이름 설정
+            binding.nextStretchName.text = nextStretch.name
+
+            // 2. 다음 스트레칭 이미지 설정
+            nextStretch.imagePath?.let { path ->
+                val resId = try {
+                    resources.getIdentifier(path, "drawable", requireContext().packageName)
+                } catch (e: Exception) { 0 }
+
+                Glide.with(requireContext())
+                    .load(if (resId != 0) resId else R.drawable.ic_fitbuddy_logo) // 이미지가 없으면 기본 로고 표시
+                    .into(binding.nextStretchImageView) // 새로 추가한 ID 사용
+
+            } ?: run {
+                // 이미지 경로가 null인 경우 기본 로고 표시
+                binding.nextStretchImageView.setImageResource(R.drawable.ic_fitbuddy_logo)
+            }
+        }
     }
 
     private fun goTo(index: Int) {
