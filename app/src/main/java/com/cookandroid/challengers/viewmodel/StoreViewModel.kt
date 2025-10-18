@@ -133,7 +133,7 @@ class StoreViewModel(application: Application) : AndroidViewModel(application) {
 
 
     // 사용자 레벨과 코인 정보를 직접 설정할 때 사용
-    fun setUserLevelAndCoin(level: Int, coin: Int) {
+    fun setUserLevelAndCoin(level: Int?, coin: Int?) {
         if (_userLevel.value != level) {
             _userLevel.value = level
         }

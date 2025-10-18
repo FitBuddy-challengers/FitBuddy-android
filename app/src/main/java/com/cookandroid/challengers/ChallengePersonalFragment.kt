@@ -55,6 +55,7 @@ class ChallengePersonalFragment : Fragment() {
         if (userId != -1) {
             loadUserChallengeProgress(userId)
         }
+        setupChallengeUpdateListener(userId)
     }
 
     // 새로 추가된 부분 → 탭 재진입 시 항상 최신 정보로 갱신
@@ -63,6 +64,17 @@ class ChallengePersonalFragment : Fragment() {
         val userId = UserPreference(requireContext()).getUserId()
         if (userId != -1) {
             loadUserChallengeProgress(userId)
+        }
+    }
+
+    private fun setupChallengeUpdateListener(userId: Int) {
+        // '운동 완료 프래그먼트' 등에서 챌린지 상태 갱신이 필요하다고 알리는 결과를 수신합니다.
+        parentFragmentManager.setFragmentResultListener("CHALLENGE_STATUS_UPDATED", viewLifecycleOwner) { _, bundle ->
+            val needsRefresh = bundle.getBoolean("NEEDS_REFRESH", false)
+            if (needsRefresh && userId != -1) {
+                Log.d("ChallengeFragment", "🔄 운동 완료 이벤트 수신. 챌린지 데이터 갱신 시작.")
+                loadUserChallengeProgress(userId)
+            }
         }
     }
 
@@ -93,33 +105,51 @@ class ChallengePersonalFragment : Fragment() {
         lifecycleScope.launch {
             try {
                 Log.d("ChallengeFragment", "📡 요청 보냄 → /api/user-challenge-progress/$userId")
-                val response = RetrofitClient.challengeApi.getUserChallengeProgress(userId)
 
-                // 👤 사용자 정보 표시
-                binding.userNameTextView.text = response.nickname
-                binding.userLevelTextView.text = "Lv.${response.level}"
-                binding.userCoinTextView.text = response.coin.toString()
+                // 1. 현재 챌린지 진행 상태 로드
+                val progressResponse = RetrofitClient.challengeApi.getUserChallengeProgress(userId)
+
+                // API 호출 실패 또는 본문 null 처리 (Null-Safe 코드는 그대로 유지)
+                // (Retrofit Response<T> 타입 대신 DTO를 직접 반환한다고 가정하고 코드를 수정합니다.)
+                val response = progressResponse // DTO 자체라고 가정
+                val currentLevel = response.level ?: 1 // 현재 레벨 획득
+
+                // 2. 🚨 우회 로직: 전체 레벨 목록을 로드하여 현재 레벨의 보상 정보를 찾음
+                val levelDataList = RetrofitClient.challengeApi.getAllLevels()
+                val currentLevelRewards = levelDataList.find { it.level == currentLevel }
+
+                // 3. UI 바인딩 및 데이터 모델 생성
+                binding.userNameTextView.text = response.nickname ?: "사용자"
+                binding.userLevelTextView.text = "Lv.${currentLevel}"
+                binding.userCoinTextView.text = response.coin?.toString() ?: "0"
+
+                // 획득한 보상 금액을 사용하거나, 찾지 못하면 0을 사용 (Null-Safe)
+                // DTO 필드명은 ChallengeLevelDto에 정의된 대로 사용합니다.
+                val rewardAtt = currentLevelRewards?.rewardAttendance ?: 0
+                val rewardExe = currentLevelRewards?.rewardExercise ?: 0
+                val rewardPho = currentLevelRewards?.rewardPhoto ?: 0
+
+                // DTO 필드명 매핑에 따라 'rewardAttendance' 필드를 사용한다고 가정
+                // (ChallengeLevelDto의 필드가 rewardAttendance, rewardExercise, rewardPhoto 라고 가정)
+
 
                 val challengeList = listOf(
                     RetrofitClient.ChallengeItemUiModel(
-                        // ▼▼▼ null일 경우를 대비해 ?. 와 ?: 0 추가 ▼▼▼
                         title = "출석 ${response.current?.attendance ?: 0}회 / ${response.required?.attendance ?: 0}회",
                         progressPercent = calculatePercent(response.current?.attendance ?: 0, response.required?.attendance ?: 0),
-                        reward = response.reward?.attendance ?: 0,
+                        reward = rewardAtt, // ★ 획득한 보상 금액 사용
                         type = "attendance"
                     ),
                     RetrofitClient.ChallengeItemUiModel(
-                        // ▼▼▼ null일 경우를 대비해 ?. 와 ?: 0 추가 ▼▼▼
                         title = "운동 횟수 ${response.current?.exercise ?: 0}회 / ${response.required?.exercise ?: 0}회",
                         progressPercent = calculatePercent(response.current?.exercise ?: 0, response.required?.exercise ?: 0),
-                        reward = response.reward?.exercise ?: 0,
+                        reward = rewardExe, // ★ 획득한 보상 금액 사용
                         type = "exercise"
                     ),
                     RetrofitClient.ChallengeItemUiModel(
-                        // ▼▼▼ null일 경우를 대비해 ?. 와 ?: 0 추가 ▼▼▼
                         title = "사진 인증 ${response.current?.photo ?: 0}회 / ${response.required?.photo ?: 0}회",
                         progressPercent = calculatePercent(response.current?.photo ?: 0, response.required?.photo ?: 0),
-                        reward = response.reward?.photo ?: 0,
+                        reward = rewardPho, // ★ 획득한 보상 금액 사용
                         type = "photo"
                     )
                 )
@@ -127,12 +157,26 @@ class ChallengePersonalFragment : Fragment() {
 
                 Log.d("ChallengeFragment", "✅ API 응답 nickname=${response.nickname}, level=${response.level}, coin=${response.coin}")
             } catch (e: Exception) {
-                Log.e("ChallengeFragment", "❌ 챌린지 데이터 로드 실패: ${e.message}")
+                // 네트워크 오류, HTTP 오류 등 예외 발생 시 처리
+                Log.e("ChallengeFragment", "❌ 챌린지 데이터 로드 실패: ${e.message}", e)
                 if (isAdded) {
                     Toast.makeText(requireContext(), "데이터 로드에 실패했습니다.", Toast.LENGTH_SHORT).show()
                 }
+                // 실패 시 UI를 기본값으로 설정하는 보조 함수 호출
+                updateUiOnFailure()
             }
         }
+    }
+
+    private fun updateUiOnFailure() {
+        if (!isAdded || _binding == null) return
+        // 데이터 로드 실패 시 UI를 기본값으로 설정하여 오류를 방지합니다.
+        binding.userNameTextView.text = "사용자"
+        binding.userLevelTextView.text = "Lv.1"
+        binding.userCoinTextView.text = "0"
+
+        // 챌린지 리스트를 빈 목록으로 업데이트하여 RecyclerView 오류 방지
+        challengeAdapter.submitList(emptyList())
     }
 
 //    private fun loadUserChallengeProgress(userId: Int) {

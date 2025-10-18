@@ -284,20 +284,33 @@ object RetrofitClient {
     )
 
 // 챌린지
-    data class ChallengeLevelDto(
-        val level: Int,
-        val requiredAttendance: Int,
-        val requiredPhoto: Int,
-        val requiredExercise: Int
-    )
+data class ChallengeLevelDto(
+    val level: Int,
+    @SerializedName("required_attendance")
+    val requiredAttendance: Int,
+    @SerializedName("required_photo")
+    val requiredPhoto: Int,
+    @SerializedName("required_exercise")
+    val requiredExercise: Int,
+
+    // 🚨 보상 필드 추가 및 매핑
+    @SerializedName("reward_attendance")
+    val rewardAttendance: Int,
+    @SerializedName("reward_photo")
+    val rewardPhoto: Int,
+    @SerializedName("reward_exercise")
+    val rewardExercise: Int
+)
 
     data class ChallengeProgressResponse(
-        val level: Int,
-        val coin: Int,
-        val nickname: String,
-        val profileImage: String,
+        val level: Int?,
+        val coin: Int?,
+        val nickname: String?,
+        val profileImage: String?,
         val required: Requirement?,
+        @SerializedName("counts")
         val current: Requirement?,
+        @SerializedName("progress_percent")
         val progress: Progress?,
         val reward: Reward?
     )
@@ -323,8 +336,11 @@ object RetrofitClient {
     )
 
     data class Reward(
+        @SerializedName("reward_attendance")
         val attendance: Int,
+        @SerializedName("reward_photo")
         val photo: Int,
+        @SerializedName("reward_exercise")
         val exercise: Int
     )
 

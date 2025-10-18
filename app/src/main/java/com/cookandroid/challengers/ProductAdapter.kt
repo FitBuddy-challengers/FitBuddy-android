@@ -1,6 +1,5 @@
 package com.cookandroid.challengers
 
-import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Parcelable
 import android.view.LayoutInflater
@@ -112,9 +111,11 @@ class ProductAdapter(
         holder.bind(getItem(position))
     }
 
-    fun updateUserLevel(newUserLevel: Int) {
+    fun updateUserLevel(newUserLevel: Int?) {
         if (userLevel != newUserLevel) {
-            userLevel = newUserLevel
+            if (newUserLevel != null) {
+                userLevel = newUserLevel
+            }
             // 레벨이 변경되면 모든 아이템의 잠금 상태가 바뀔 수 있으므로 전체 목록을 다시 그림
             notifyDataSetChanged()
         }
