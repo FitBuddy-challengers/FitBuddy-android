@@ -23,6 +23,9 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 import com.cookandroid.challengers.model.ChatMessage
+import android.view.WindowManager
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 
 class HomeAichatFragment : Fragment() {
 
@@ -59,6 +62,38 @@ class HomeAichatFragment : Fragment() {
         setupDateHeader()
         setupClickListeners()
         observeViewModel()
+
+//        //  키보드 올라올 때 chatInput 자동으로 위로 이동하도록 설정 -> 채윤지. 10.20 추가.
+//        requireActivity().window.setSoftInputMode(
+//            WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING
+//        )
+
+        // 채팅 입력창에 포커스 갈 때 자동 스크롤 (추가) -> 자연스러움. 채윤지 추가함.
+        binding.etMessage.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                // 약간의 지연을 줘야 키보드가 완전히 올라온 뒤 스크롤이 동작함
+                binding.rvChat.postDelayed({
+                    binding.rvChat.scrollToPosition(adapter.itemCount - 1)
+                }, 200)
+            }
+        }
+
+        // 키보드 높이만큼 chatInput padding 조정 (핵심)
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+            val imeHeight = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+            val navHeight = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
+
+            // 키보드가 올라와 있을 때는 약간 띄워주기 (20dp 정도 여유)
+            val extraSpacePx = (12 * resources.displayMetrics.density).toInt()
+            val bottomPadding = if (imeHeight > 0) imeHeight + extraSpacePx else navHeight
+
+            // 입력창과 리사이클러뷰 둘 다 반영
+            binding.chatInput.setPadding(0, 0, 0, bottomPadding)
+            binding.rvChat.setPadding(0, 0, 0, bottomPadding)
+
+            insets
+        }
+
 
         observeMessages() //  메시지 옵저빙 함수 호출
 

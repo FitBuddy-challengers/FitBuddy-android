@@ -8,6 +8,8 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.lifecycleScope
@@ -213,6 +215,28 @@ class MainActivity : AppCompatActivity() {
             )
         } else {
             Log.d("MainActivity", "알림 예약 생략")
+        }
+
+        // 키보드 올라올 때 BottomNavigationView 자동 숨기기 (채팅화면 예외 처리 포함)
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.mainContainer)) { _, insets ->
+            val imeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
+
+            // 현재 보여지는 프래그먼트 찾기
+            val currentFragment =
+                supportFragmentManager.findFragmentById(R.id.fragment_container_view)
+                    ?.childFragmentManager
+                    ?.fragments
+                    ?.firstOrNull()
+
+            // ✅ HomeAichatFragment일 때는 무조건 숨김
+            if (currentFragment is HomeAichatFragment) {
+                binding.mainBnv.visibility = View.GONE
+            } else {
+                // 그 외에는 키보드가 올라올 때만 숨기고, 내려가면 다시 보이게
+                binding.mainBnv.visibility = if (imeVisible) View.GONE else View.VISIBLE
+            }
+
+            insets
         }
     }
 

@@ -144,14 +144,17 @@ class AiChatViewModel(
     fun showResultMessage(planText: String, isSecondTry: Boolean) {
         if (!hasShownResult) {
             val time = getCurrentTime()
+
             addMessage(ChatMessage.FromBot("${getUserName()}님을 위한 운동 스케줄이 준비되었어요!", time))
 
+            //  ‘•’ 제거한 포맷
             val formatted = planText.lines()
                 .filter { it.isNotBlank() }
-                .joinToString("\n") { "• $it" }
+                .joinToString("\n") { it.trim() }
 
             addMessage(ChatMessage.FromBot(formatted, time))
             addMessage(ChatMessage.FromBot("이대로 할게요 / 다시 추천해 주세요", time))
+
             hasShownResult = true
         }
     }
@@ -170,10 +173,30 @@ class AiChatViewModel(
         _state.value = AichatState.AskDays
     }
 
-    fun onDaysSelected(days: List<String>) {
-        scheduleInfo.days_of_week = days
-        _state.value = AichatState.AskFocusArea
+//    fun onDaysSelected(days: List<String>) {
+//        scheduleInfo.days_of_week = days
+//        _state.value = AichatState.AskFocusArea //문제! 바로 다음 상태로 넘어감.
+//
+//    }
+    fun onDaysSelected(daysInput: List<String>) {
+        val normalizedDays = daysInput.map { normalizeDayInput(it) }
+        scheduleInfo.days_of_week = normalizedDays
+
+//        val dayText = normalizedDays.joinToString(", ")
+//        addMessage(
+//            ChatMessage.FromBot(
+//                "좋아요! ${dayText}에 운동 루틴을 잡을게요 💪",
+//                getCurrentTime()
+//            )
+//        )
+
+        // ✅ 1초 후 자연스럽게 다음 질문 표시 -> 바로 나오면 어색함.
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(2000L)
+            _state.value = AichatState.AskFocusArea
+        }
     }
+
 
     fun onFocusAreaEntered(area: String) {
         scheduleInfo.focus_area = area
@@ -314,12 +337,18 @@ class AiChatViewModel(
 //                addMessage(ChatMessage.FromBot("어떤 요일에 운동하실 건가요?\n예: 월 수 금", time))
 //            }
             is AichatState.AskDays -> {
-                // 이 상태에서는 '다음 질문'으로 바로 안 넘어가도록 유지
-                addMessage(ChatMessage.FromBot("어떤 요일에 운동하실 건가요?\n예: 월 수 금", time))
-                return  // 이 줄 추가 (다음 상태 자동 전환 방지)
+                // 자연스럽고 코치 톤으로 변경
+                addMessage(
+                    ChatMessage.FromBot(
+                        "💪 이번 주 운동 스케줄을 정해볼까요?\n운동할 요일을 지정해주세요!\n예: 월 수 금 또는 Mon Wed Fri",
+                        time
+                    )
+                )
+                return // 자동 전환 방지
             }
             is AichatState.AskFocusArea -> {
-                addMessage(ChatMessage.FromBot("특별히 강화하고 싶은 부위가 있나요?\n예: 하체 / 복근 / 가슴", time))
+                addMessage(ChatMessage.FromBot("이번엔 집중해서 단련하고 싶은 부위가 있을까요?\n" +
+                        "\uD83D\uDCAA 예: 하체 / 복근 / 가슴", time))
             }
             is AichatState.Generating -> {
                 addMessage(ChatMessage.FromBot("${getUserName()}님의 루틴을 생성하고 있어요. 잠시만 기다려 주세요...", time))
@@ -403,6 +432,19 @@ class AiChatViewModel(
             "금" -> Calendar.FRIDAY
             "토" -> Calendar.SATURDAY
             else -> throw IllegalArgumentException("Invalid day: $day")
+        }
+    }
+
+    private fun normalizeDayInput(input: String): String {
+        return when (input.trim().lowercase()) {
+            "월", "월요일", "mon", "monday" -> "월"
+            "화", "화요일", "tue", "tuesday" -> "화"
+            "수", "수요일", "wed", "wednesday" -> "수"
+            "목", "목요일", "thu", "thursday" -> "목"
+            "금", "금요일", "fri", "friday" -> "금"
+            "토", "토요일", "sat", "saturday" -> "토"
+            "일", "일요일", "sun", "sunday" -> "일"
+            else -> input
         }
     }
 

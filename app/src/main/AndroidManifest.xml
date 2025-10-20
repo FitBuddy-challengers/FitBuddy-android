@@ -40,7 +40,9 @@
             android:name=".MainActivity"
             android:exported="false"
             android:label="@string/app_name"
-            android:theme="@style/Theme.MaterialComponents.Light.NoActionBar" />
+            android:theme="@style/Theme.MaterialComponents.Light.NoActionBar"
+            android:windowSoftInputMode="adjustResize"
+            />
 
         <!-- 사진인증의 카메라 사용 위해 추가  -->
         <provider
