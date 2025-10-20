@@ -6,14 +6,17 @@ import androidx.lifecycle.viewModelScope
 import com.cookandroid.challengers.api.AiExercise
 import com.cookandroid.challengers.api.AiPlanRequest
 import com.cookandroid.challengers.api.ExerciseApi
+import com.cookandroid.challengers.api.RetrofitClient.aiRoutineApi
 import com.cookandroid.challengers.model.ChatMessage
 import com.cookandroid.challengers.model.UserInfo
 import com.cookandroid.challengers.model.ScheduleInfo
 import com.cookandroid.challengers.repository.AiWorkoutRepository
 import com.cookandroid.challengers.util.UserPreference
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -108,17 +111,35 @@ class AiChatViewModel(
 
 //    }
 // 상태별 메시지 표시
-fun showWelcomeMessage() {
-    if (hasWelcomed) return  // ✅ 중복 방지 플래그
+//fun showWelcomeMessage() {
+//    if (hasWelcomed) return  // ✅ 중복 방지 플래그
+//
+//    val userName = if (::userInfo.isInitialized) userInfo.name else "운동러"
+//    val time = getCurrentTime()
+//
+//    // ✅ 문자열 템플릿 + 접미사는 따로 문자열에 포함
+//    addMessage(ChatMessage.FromBot("안녕하세요, ${userName}님!\nAI Buddy와 함께 운동 루틴을 계획해 볼까요?", time))
+//
+//    hasWelcomed = true
+//}
 
-    val userName = if (::userInfo.isInitialized) userInfo.name else "운동러"
-    val time = getCurrentTime()
+    //api 연동으로 수정! 더 자연스럽고 힘내는 응원 멘트 생성
 
-    // ✅ 문자열 템플릿 + 접미사는 따로 문자열에 포함
-    addMessage(ChatMessage.FromBot("안녕하세요, ${userName}님!\nAI Buddy와 함께 운동 루틴을 계획해 볼까요?", time))
+    fun showWelcomeMessage() {
+        if (hasWelcomed) return // ✅ 중복 방지
 
-    hasWelcomed = true
-}
+        viewModelScope.launch {
+            val userName = if (::userInfo.isInitialized) userInfo.name else "운동러"
+            val time = getCurrentTime()
+
+            // ✅ 서버에서 인사 문구 요청
+            val message = workoutRepository.fetchWelcomeMessage(userName)
+                ?: "안녕하세요, ${userName}님! 오늘도 운동 화이팅🔥"
+
+            addMessage(ChatMessage.FromBot(message, time))
+            hasWelcomed = true
+        }
+    }
 
     fun showResultMessage(planText: String, isSecondTry: Boolean) {
         if (!hasShownResult) {
@@ -289,8 +310,13 @@ fun showWelcomeMessage() {
             is AichatState.AskDate -> {
                 addMessage(ChatMessage.FromBot("운동 시작일과 마감일을 지정해 주세요!", time))
             }
+//            is AichatState.AskDays -> {
+//                addMessage(ChatMessage.FromBot("어떤 요일에 운동하실 건가요?\n예: 월 수 금", time))
+//            }
             is AichatState.AskDays -> {
+                // 이 상태에서는 '다음 질문'으로 바로 안 넘어가도록 유지
                 addMessage(ChatMessage.FromBot("어떤 요일에 운동하실 건가요?\n예: 월 수 금", time))
+                return  // 이 줄 추가 (다음 상태 자동 전환 방지)
             }
             is AichatState.AskFocusArea -> {
                 addMessage(ChatMessage.FromBot("특별히 강화하고 싶은 부위가 있나요?\n예: 하체 / 복근 / 가슴", time))

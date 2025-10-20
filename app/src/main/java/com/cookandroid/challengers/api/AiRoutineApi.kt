@@ -22,6 +22,11 @@ interface AiRoutineApi {
     @POST("/api/plan/submit-ai")
     suspend fun submitAiPlan(@Body request: AiPlanRequest): Response<AiPlanResponse>
 
+    // ✅ 추가된 부분
+    @Headers("Content-Type: application/json")
+    @POST("api/chat/welcome")
+    suspend fun getWelcomeMessage(@Body body: Map<String, String>): Response<WelcomeResponse>
+
 }
 
 data class AiPlanRequest(
@@ -73,4 +78,8 @@ data class ExerciseTime(
     val is_completed: Boolean,
     val set_number: Int,
     val weight: Int
+)
+
+data class WelcomeResponse(
+    val message: String
 )

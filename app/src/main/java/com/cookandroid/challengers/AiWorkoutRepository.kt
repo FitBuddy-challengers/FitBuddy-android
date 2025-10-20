@@ -5,6 +5,7 @@ import com.cookandroid.challengers.api.AiPlanRequest
 import com.cookandroid.challengers.api.AiPlanResponse
 import com.cookandroid.challengers.api.AiRoutineApi
 import com.cookandroid.challengers.api.RetrofitClient
+import com.cookandroid.challengers.api.RetrofitClient.aiRoutineApi
 import com.cookandroid.challengers.api.ScheduleApi
 import com.cookandroid.challengers.model.AiRoutineRequest
 import com.cookandroid.challengers.model.UserInfo
@@ -144,4 +145,23 @@ class AiWorkoutRepository(
             return@withContext null
         }
     }
+    //인사 api 추가 및 연동
+    suspend fun fetchWelcomeMessage(userName: String): String? = withContext(Dispatchers.IO) {
+        try {
+            val response = RetrofitClient.aiRoutineApi.getWelcomeMessage(mapOf("name" to userName))
+            if (response.isSuccessful) {
+                val message = response.body()?.message
+                Log.d("AiRepo", "✅ 환영 메시지 수신: $message")
+                return@withContext message
+            } else {
+                Log.e("AiRepo", "❌ 환영 메시지 실패: ${response.code()} - ${response.errorBody()?.string()}")
+                return@withContext null
+            }
+        } catch (e: Exception) {
+            Log.e("AiRepo", "❌ 환영 메시지 예외: ${e.message}", e)
+            return@withContext null
+        }
+    }
+
 }
+
