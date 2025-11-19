@@ -179,7 +179,7 @@ class MainActivity : AppCompatActivity() {
                         is com.cookandroid.challengers.auth.signup.SignUpPasswordFragment,
                         is com.cookandroid.challengers.auth.signup.SignUpOtpFragment,
                         is com.cookandroid.challengers.auth.signup.SignUpDoneFragment,
-                        is HomeAichatFragment,
+                        //is HomeAichatFragment,
                         is HomeMypageFragment,
                         is MypageAccountSetFragment,
                         is MypageInfoSetFragment,
@@ -229,12 +229,12 @@ class MainActivity : AppCompatActivity() {
                     ?.firstOrNull()
 
             // ✅ HomeAichatFragment일 때는 무조건 숨김
-            if (currentFragment is HomeAichatFragment) {
-                binding.mainBnv.visibility = View.GONE
-            } else {
-                // 그 외에는 키보드가 올라올 때만 숨기고, 내려가면 다시 보이게
-                binding.mainBnv.visibility = if (imeVisible) View.GONE else View.VISIBLE
-            }
+//            if (currentFragment is HomeAichatFragment) {
+//                binding.mainBnv.visibility = View.GONE
+//            } else {
+//                // 그 외에는 키보드가 올라올 때만 숨기고, 내려가면 다시 보이게
+//                binding.mainBnv.visibility = if (imeVisible) View.GONE else View.VISIBLE
+//            }
 
             insets
         }

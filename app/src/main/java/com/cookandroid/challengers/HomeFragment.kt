@@ -2,6 +2,7 @@ package com.cookandroid.challengers
 
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -22,6 +23,7 @@ import java.time.DayOfWeek
 import java.time.format.DateTimeFormatter
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.cookandroid.challengers.data.StoreItemData
+import com.cookandroid.challengers.screen.AiChatActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -108,10 +110,15 @@ class HomeFragment : Fragment() {
         binding.btnStartWorkout.setOnClickListener {
             findNavController().navigate(R.id.action_home_to_exerciseFragment)
         }
-
+        //잭팻 컴포즈로 수정
         binding.btnAiChat.setOnClickListener {
-            findNavController().navigate(R.id.action_home_to_homeAichatFragment)
+            val intent = Intent(requireContext(), AiChatActivity::class.java)
+            startActivity(intent)
         }
+
+//        binding.btnAiChat.setOnClickListener {
+//            findNavController().navigate(R.id.action_home_to_homeAichatFragment)
+//        }
 
         binding.btnNoti.setOnClickListener {
             findNavController().navigate(R.id.action_home_to_mypageNotiSetFragment)

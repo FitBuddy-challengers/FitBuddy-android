@@ -78,6 +78,7 @@ interface ScheduleApi {
     suspend fun createSchedule(@Body request: RetrofitClient.CreateScheduleRequest): Response<RetrofitClient.CreateScheduleResponse>
 
 
+
     @POST("/api/schedule/{scheduleId}/change-exercise")
     suspend fun changeExercise(
         @Path("scheduleId") scheduleId: Long,
@@ -105,6 +106,13 @@ interface ScheduleApi {
 
     @POST("/api/schedule/set")
     fun insertSet(@Body set: ExerciseSetEntity): Call<Void>
+    //운동 스케줄 여부 알려주는 api
+    @GET("/api/plan/exists")
+    suspend fun checkExistingPlan(
+        @Query("user_id") userId: Int,
+        @Query("start_date") startDate: String,
+        @Query("end_date") endDate: String
+    ): Response<RetrofitClient.ExistingPlanResponse>
 
     @GET("api/plans/{planId}/schedules")
     suspend fun getSchedulesForPlan(
