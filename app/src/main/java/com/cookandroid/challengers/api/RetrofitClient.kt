@@ -456,4 +456,17 @@ data class ChallengeLevelDto(
         val recommendation: String
     )
 
+    data class ExistingPlanResponse(
+        val exists: Boolean,
+        val plan_id: Long?
+    )
+
+    data class RecommendRequest(
+        @SerializedName("userId") val userId: Int,
+        @SerializedName("startDate") val startDate: String,
+        @SerializedName("endDate") val endDate: String,
+        @SerializedName("days") val days: List<String>,
+        @SerializedName("focusArea") val focusArea: String
+    )
+
 }

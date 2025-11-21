@@ -1,12 +1,28 @@
 <resources>
 
-    <style name="Theme.Challengers" parent="Theme.AppCompat.Light.NoActionBar" >
+    <style name="Theme.Challengers" parent="Theme.MaterialComponents.DayNight.NoActionBar">
 
-        <!-- 전체 배경을 흰색으로 -->
+        <!-- 전체 배경 흰색 유지 -->
         <item name="android:windowBackground">@android:color/white</item>
         <item name="android:colorBackground">@android:color/white</item>
 
-    <item name="android:fontFamily">@font/pretendard_medium</item>
+        <!-- 폰트 유지 -->
+        <item name="android:fontFamily">@font/pretendard_medium</item>
+
+        <!-- MaterialComponent에서 필수로 요구하는 colorPrimary 등을 추가해야 더 안정적! -->
+        <item name="colorPrimary">@color/blue</item>
+        <item name="colorPrimaryVariant">@color/blue</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+
+        <!-- MaterialDatePicker가 레이아웃 깨지지 않도록 강제 추가 -->
+        <item name="materialCalendarStyle">@style/Widget.MaterialComponents.MaterialCalendar</item>
+
 
     </style>
+    <style name="Theme.AiChatCalendar" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="materialCalendarStyle">@style/Widget.MaterialComponents.MaterialCalendar</item>
+        <item name="materialCalendarTheme">@style/ThemeOverlay.MaterialComponents.MaterialCalendar</item>
+        <item name="materialCalendarFullscreenTheme">@style/ThemeOverlay.MaterialComponents.MaterialCalendar</item>
+    </style>
+
 </resources>

@@ -43,6 +43,10 @@
             android:theme="@style/Theme.MaterialComponents.Light.NoActionBar"
             android:windowSoftInputMode="adjustResize"
             />
+        <activity
+            android:name=".screen.AiChatActivity"
+            android:theme="@style/Theme.AiChatCalendar"
+            android:exported="false" />
 
         <!-- 사진인증의 카메라 사용 위해 추가  -->
         <provider

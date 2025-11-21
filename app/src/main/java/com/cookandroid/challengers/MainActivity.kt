@@ -68,65 +68,68 @@ class MainActivity : AppCompatActivity() {
         }
 
         val navHostFragment =
-            supportFragmentManager.findFragmentById(R.id.fragment_container_view) as NavHostFragment
+            supportFragmentManager.findFragmentById(R.id.nav_host_main) as NavHostFragment
         navController = navHostFragment.navController
-        navController.setGraph(R.navigation.nav_graph_main)
-        //binding.mainBnv.setupWithNavController(navController)
-        binding.mainBnv.setOnItemSelectedListener { item ->
-            val currentDest = navController.currentDestination?.id
-            when (item.itemId) {
-                R.id.homeFragment -> {
-                    if (currentDest != R.id.homeFragment) {
-                        navController.navigate(
-                            R.id.homeFragment,
-                            null,
-                            NavOptions.Builder()
-                                .setPopUpTo(R.id.nav_graph_main, false)
-                                .setLaunchSingleTop(true)
-                                .build()
-                        )
-                    }
-                    true
-                }
 
-                R.id.exerciseFragment -> {
-                    if (currentDest != R.id.exerciseFragment) {
-                        navController.navigate(
-                            R.id.exerciseFragment,
-                            null,
-                            NavOptions.Builder()
-                                .setPopUpTo(R.id.nav_graph_main, false)
-                                .setLaunchSingleTop(true)
-                                .build()
-                        )
-                    }
-                    true
-                }
-
-                R.id.challengeFragment -> {
-                    if (currentDest != R.id.challengeFragment) {
-                        navController.navigate(R.id.challengeFragment)
-                    }
-                    true
-                }
-
-                R.id.recordFragment -> {
-                    if (currentDest != R.id.recordFragment) {
-                        navController.navigate(R.id.recordFragment)
-                    }
-                    true
-                }
-
-                R.id.storeFragment -> {
-                    if (currentDest != R.id.storeFragment) {
-                        navController.navigate(R.id.storeFragment)
-                    }
-                    true
-                }
-
-                else -> false
-            }
+        if (savedInstanceState == null) {
+            navController.setGraph(R.navigation.nav_graph_main)
         }
+        binding.mainBnv.setupWithNavController(navController)
+//        binding.mainBnv.setOnItemSelectedListener { item ->
+//            val currentDest = navController.currentDestination?.id
+//            when (item.itemId) {
+//                R.id.homeFragment -> {
+//                    if (currentDest != R.id.homeFragment) {
+//                        navController.navigate(
+//                            R.id.homeFragment,
+//                            null,
+//                            NavOptions.Builder()
+//                                .setPopUpTo(R.id.nav_graph_main, false)
+//                                .setLaunchSingleTop(true)
+//                                .build()
+//                        )
+//                    }
+//                    true
+//                }
+//
+//                R.id.exerciseFragment -> {
+//                    if (currentDest != R.id.exerciseFragment) {
+//                        navController.navigate(
+//                            R.id.exerciseFragment,
+//                            null,
+//                            NavOptions.Builder()
+//                                .setPopUpTo(R.id.nav_graph_main, false)
+//                                .setLaunchSingleTop(true)
+//                                .build()
+//                        )
+//                    }
+//                    true
+//                }
+//
+//                R.id.challengeFragment -> {
+//                    if (currentDest != R.id.challengeFragment) {
+//                        navController.navigate(R.id.challengeFragment)
+//                    }
+//                    true
+//                }
+//
+//                R.id.recordFragment -> {
+//                    if (currentDest != R.id.recordFragment) {
+//                        navController.navigate(R.id.recordFragment)
+//                    }
+//                    true
+//                }
+//
+//                R.id.storeFragment -> {
+//                    if (currentDest != R.id.storeFragment) {
+//                        navController.navigate(R.id.storeFragment)
+//                    }
+//                    true
+//                }
+//
+//                else -> false
+//            }
+//        }
 
         // 1. Intent에서 userId를 먼저 확인 (LoginActivity에서 직접 로그인 성공 시 전달)
         val userIdFromIntent = intent.getIntExtra("userId", -1)
@@ -179,7 +182,7 @@ class MainActivity : AppCompatActivity() {
                         is com.cookandroid.challengers.auth.signup.SignUpPasswordFragment,
                         is com.cookandroid.challengers.auth.signup.SignUpOtpFragment,
                         is com.cookandroid.challengers.auth.signup.SignUpDoneFragment,
-                        is HomeAichatFragment,
+                        //is HomeAichatFragment,
                         is HomeMypageFragment,
                         is MypageAccountSetFragment,
                         is MypageInfoSetFragment,
@@ -223,18 +226,18 @@ class MainActivity : AppCompatActivity() {
 
             // 현재 보여지는 프래그먼트 찾기
             val currentFragment =
-                supportFragmentManager.findFragmentById(R.id.fragment_container_view)
+                supportFragmentManager.findFragmentById(R.id.nav_host_main)
                     ?.childFragmentManager
                     ?.fragments
                     ?.firstOrNull()
 
             // ✅ HomeAichatFragment일 때는 무조건 숨김
-            if (currentFragment is HomeAichatFragment) {
-                binding.mainBnv.visibility = View.GONE
-            } else {
-                // 그 외에는 키보드가 올라올 때만 숨기고, 내려가면 다시 보이게
-                binding.mainBnv.visibility = if (imeVisible) View.GONE else View.VISIBLE
-            }
+//            if (currentFragment is HomeAichatFragment) {
+//                binding.mainBnv.visibility = View.GONE
+//            } else {
+//                // 그 외에는 키보드가 올라올 때만 숨기고, 내려가면 다시 보이게
+//                binding.mainBnv.visibility = if (imeVisible) View.GONE else View.VISIBLE
+//            }
 
             insets
         }

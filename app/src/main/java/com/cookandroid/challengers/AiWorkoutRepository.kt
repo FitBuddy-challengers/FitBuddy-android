@@ -4,9 +4,12 @@ import android.util.Log
 import com.cookandroid.challengers.api.AiPlanRequest
 import com.cookandroid.challengers.api.AiPlanResponse
 import com.cookandroid.challengers.api.AiRoutineApi
+import com.cookandroid.challengers.api.AiRoutineResponse
 import com.cookandroid.challengers.api.RetrofitClient
 import com.cookandroid.challengers.api.RetrofitClient.aiRoutineApi
 import com.cookandroid.challengers.api.ScheduleApi
+import com.cookandroid.challengers.api.SubmitAiRequest
+import com.cookandroid.challengers.api.SubmitAiResponse
 import com.cookandroid.challengers.model.AiRoutineRequest
 import com.cookandroid.challengers.model.UserInfo
 import com.cookandroid.challengers.model.ScheduleInfo
@@ -22,18 +25,18 @@ class AiWorkoutRepository(
     suspend fun getRoutineFromServer(
         userInfo: UserInfo,
         scheduleInfo: ScheduleInfo
-    ): String? = withContext(Dispatchers.IO) {
+    ): AiRoutineResponse? = withContext(Dispatchers.IO) {
         Log.d("ChatDebug", "✅ aiRoutineApi 준비 완료, generateRoutine 호출 전")
         try {
             Log.d("ChatDebug", "📤 Sending AI request with: $userInfo, $scheduleInfo")
             val response = aiRoutineApi.generateRoutine(
                 AiRoutineRequest(user_info = userInfo, schedule_info = scheduleInfo)
-            ).execute()
+            )
 
             if (response.isSuccessful) {
-                val planText = response.body()?.plan_text  // ✅ 변수 선언
-                Log.d("ChatDebug", "✅ AI 응답 성공: ${planText ?: "null"}")
-                return@withContext planText
+                val body = response.body()
+                Log.d("ChatDebug", "✅ AI 응답 성공(JSON): $body")
+                return@withContext body //여기 json을 통채로 반환할 수 있도록 수정함.
 
             } else {
                 Log.e("ChatDebug", "❌ AI 응답 실패: ${response.code()} - ${response.errorBody()?.string()}")
@@ -45,6 +48,22 @@ class AiWorkoutRepository(
             Log.e("ChatDebug", "❌ 예외 발생: ${e.message}", e)
             e.printStackTrace() // 🔧 실제 예외 스택 추적을 로그로 보기 위해 추가
             return@withContext null
+        }
+    }
+    //운동 계획 기존 존재 여부 확인. 및 사용자에게 재수정 가능하게 설정함.
+    suspend fun checkExistingPlan(
+        userId: Int,
+        startDate: String,
+        endDate: String
+    ): RetrofitClient.ExistingPlanResponse? = withContext(Dispatchers.IO) {
+        try {
+            val response = scheduleApi.checkExistingPlan(userId, startDate, endDate)
+            if (response.isSuccessful) {
+                response.body()
+            } else null
+        } catch (e: Exception) {
+            Log.e("AiRepo", "❌ checkExistingPlan error: ${e.message}")
+            null
         }
     }
 
@@ -129,22 +148,22 @@ class AiWorkoutRepository(
 //            return@withContext false
 //        }
 //    }
-    suspend fun submitAiPlan(request: AiPlanRequest): AiPlanResponse? = withContext(Dispatchers.IO) {
-        try {
-            val response = aiRoutineApi.submitAiPlan(request)
-            if (response.isSuccessful) {
-                val body = response.body()
-                Log.d("AiRepo", "✅ 루틴 저장 성공: ${body?.plan_id}")
-                return@withContext body
-            } else {
-                Log.e("AiRepo", "❌ 실패: ${response.code()} - ${response.errorBody()?.string()}")
+    suspend fun submitAiPlan(request: SubmitAiRequest): SubmitAiResponse? =
+        withContext(Dispatchers.IO) {
+            try {
+                val response = aiRoutineApi.submitAi(request)
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    return@withContext body
+                } else {
+                    Log.e("AiRepo", "❌ 실패: ${response.code()} - ${response.errorBody()?.string()}")
+                    return@withContext null
+                }
+            } catch (e: Exception) {
+                Log.e("AiRepo", "❌ 예외 발생: ${e.message}", e)
                 return@withContext null
             }
-        } catch (e: Exception) {
-            Log.e("AiRepo", "❌ 예외 발생: ${e.message}", e)
-            return@withContext null
         }
-    }
     //인사 api 추가 및 연동
     suspend fun fetchWelcomeMessage(userName: String): String? = withContext(Dispatchers.IO) {
         try {
