@@ -20,10 +20,10 @@
             android:id="@+id/action_home_to_homeMypageFragment"
             app:destination="@id/homeMypageFragment" />
 
-        <!-- AI 채팅 -->
-        <action
-            android:id="@+id/action_home_to_homeAichatFragment"
-            app:destination="@id/homeAichatFragment" />
+        <!-- AI 채팅 이건 이제 사용하지 않암. AiChatScreen 으로 대체함. -->
+<!--        <action-->
+<!--            android:id="@+id/action_home_to_homeAichatFragment"-->
+<!--            app:destination="@id/homeAichatFragment" />-->
 
         <!-- 운동 추가 -->
         <action
@@ -59,15 +59,15 @@
         android:label="MypageNotiSetFragment"
         tools:layout="@layout/fragment_mypage_noti_set" />
 
-    <fragment
-        android:id="@+id/homeAichatFragment"
-        android:name="com.cookandroid.challengers.HomeAichatFragment"
-        android:label="AI 채팅" >
+<!--    <fragment-->
+<!--        android:id="@+id/homeAichatFragment"-->
+<!--        android:name="com.cookandroid.challengers.HomeAichatFragment"-->
+<!--        android:label="AI 채팅" >-->
 
-        <action
-            android:id="@+id/action_homeAichatFragment_to_homeFragment"
-            app:destination="@id/homeFragment" />
-    </fragment>
+<!--        <action-->
+<!--            android:id="@+id/action_homeAichatFragment_to_homeFragment"-->
+<!--            app:destination="@id/homeFragment" />-->
+<!--    </fragment>-->
 
     <fragment
         android:id="@+id/mypageInfoSetFragment"

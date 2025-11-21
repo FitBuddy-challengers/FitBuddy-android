@@ -154,7 +154,6 @@ class AiWorkoutRepository(
                 val response = aiRoutineApi.submitAi(request)
                 if (response.isSuccessful) {
                     val body = response.body()
-                    Log.d("AiRepo", "✅ 루틴 저장 성공: ${body?.plan_id}")
                     return@withContext body
                 } else {
                     Log.e("AiRepo", "❌ 실패: ${response.code()} - ${response.errorBody()?.string()}")

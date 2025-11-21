@@ -4,8 +4,10 @@ import com.cookandroid.challengers.api.dto.ConsultResponse
 import retrofit2.Call
 import com.cookandroid.challengers.model.AiRoutineRequest
 import com.cookandroid.challengers.model.UserInfo
+import com.google.gson.annotations.SerializedName
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Headers
 import retrofit2.http.POST
@@ -28,7 +30,9 @@ interface AiRoutineApi {
     * 잡아보았습니다:) -윤지-
     * */
     @POST("api/plan/submit-ai")
-    suspend fun submitAi(@Body request: SubmitAiRequest): Response<SubmitAiResponse>
+    suspend fun submitAi(
+        @Body request: SubmitAiRequest
+    ): Response<SubmitAiResponse>
 
     //운동 상담 api 추가
     @Headers("Content-Type: application/json")
@@ -40,18 +44,21 @@ interface AiRoutineApi {
 //    data class ConsultResponse(
 //        val answer: String
 //    )
-    @POST("api/recommend")
+    @Headers("Content-Type: application/json")
+    @POST("api/recommend-exercise")
     suspend fun recommend(
         @Body request: RetrofitClient.RecommendRequest
-    ): Response<RetrofitClient.RecommendExerciseResponse>
-
-    @Headers("Content-Type: application/json")
-    @POST("api/chat/recommend")
-    suspend fun recommend(
-        @Body body: Map<String, Any>
     ): Response<RecommendResponse>
+
+//    @Headers("Content-Type: application/json")
+//    @POST("api/chat/recommend")
+//    suspend fun recommend(
+//        @Body body: Map<String, Any>
+//    ): Response<RecommendResponse>
+
     data class RecommendResponse(
-        val recommendation: String
+        val routine_text: String,
+        val exercises: List<AiExercise>
     )
 
     // ✅ 추가된 부분
@@ -59,12 +66,30 @@ interface AiRoutineApi {
     @POST("api/chat/welcome")
     suspend fun getWelcomeMessage(@Body body: Map<String, String>): Response<WelcomeResponse>
 
-    @GET("api/plan/exists")
+    @GET("api/check-plan")
     suspend fun checkExistingPlan(
         @Query("user_id") userId: Int,
-        @Query("start_date") startDate: String,
-        @Query("end_date") endDate: String
-    ): Response<ExistingPlanResponse>
+        @Query("date") date: String
+    ): Response<CheckPlanResponse>
+
+    data class CheckPlanResponse(
+        val exists: Boolean,
+        val plan_id: Long? = null
+    )
+
+
+    @DELETE("api/dummy-plan")
+    suspend fun deleteDummyPlan(
+        @Query("user_id") userId: Int
+    ): Response<DeleteDummyResponse>
+
+    data class DeleteDummyResponse(
+        val success: Boolean
+    )
+
+
+
+
 
     data class ExistingPlanResponse(
         val exists: Boolean,
@@ -129,14 +154,41 @@ data class WelcomeResponse(
 )
 
 data class SubmitAiRequest(
-    val user_id: Long,
-    val start_date: String,
-    val end_date: String,
-    val exercises: List<ExerciseItem>   // 아까 만든 AiRoutineResponse의 ExerciseItem 재사용!
+    @SerializedName("user_id") val userId: Int,
+    val plans: List<PlanData>   // or 너희가 서버에서 요구하는 필드
+)
+
+data class PlanData(
+    @SerializedName("start_date") val startDate: String,
+    @SerializedName("end_date") val endDate: String,
+    @SerializedName("days") val days: List<String>,
+    @SerializedName("focus_area") val focusArea: String,
+    @SerializedName("exercises") val exercises: List<AiExercise>
 )
 
 data class SubmitAiResponse(
-    val plan_id: Long,
-    val schedules: List<ExerciseSchedule>
+    val routine_text: String,
+    val saved_plan_id: Long,
+    val schedules: List<ScheduleResponse>,
+    val reps_sets: List<RepsSetResponse>,
+    val time_sets: List<TimeSetResponse>
 )
 
+data class ScheduleResponse(
+    @SerializedName("id") val scheduleId: Long,
+    @SerializedName("exercise_id") val exerciseId: Long,
+    @SerializedName("exercise_order") val exerciseOrder: Int
+)
+
+data class RepsSetResponse(
+    val schedule_id: Long,
+    val set_number: Int,
+    val reps: Int,
+    val weight: Int?
+)
+
+data class TimeSetResponse(
+    val schedule_id: Long,
+    val set_number: Int,
+    val elapsed_time_millis: Long
+)

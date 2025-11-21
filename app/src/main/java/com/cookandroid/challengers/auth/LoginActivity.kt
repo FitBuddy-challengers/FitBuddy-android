@@ -35,8 +35,8 @@ class LoginActivity : AppCompatActivity() {
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val navHostFragment = supportFragmentManager
-            .findFragmentById(R.id.fragment_container_view) as NavHostFragment
+        val navHostFragment =
+            supportFragmentManager.findFragmentById(R.id.nav_host_login) as NavHostFragment
         navController = navHostFragment.navController
         // NavGraph는 XML에서 설정되어 있다면 여기서 setGraph 불필요
     }

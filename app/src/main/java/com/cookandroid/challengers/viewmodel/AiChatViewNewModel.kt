@@ -1,10 +1,21 @@
 package com.cookandroid.challengers.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cookandroid.challengers.api.AiExercise
 import com.cookandroid.challengers.screen.ChatUiMessage
 import com.cookandroid.challengers.api.AiRoutineApi
+import com.cookandroid.challengers.api.PlanData
 import com.cookandroid.challengers.api.RetrofitClient
+import com.cookandroid.challengers.api.SubmitAiRequest
+import com.cookandroid.challengers.api.SubmitAiResponse
+import com.cookandroid.challengers.data.ExercisePlan
+import com.cookandroid.challengers.data.ExercisePlanDao
+import com.cookandroid.challengers.data.ExerciseSet
+import com.cookandroid.challengers.data.ExerciseSetDao
+import com.cookandroid.challengers.data.PlanDetail
+import com.cookandroid.challengers.data.PlanDetailDao
 import com.cookandroid.challengers.model.ScheduleInfo
 import com.cookandroid.challengers.model.UserInfo
 import kotlinx.coroutines.delay
@@ -16,6 +27,10 @@ import java.util.*
 
 class AiChatViewNewModel (
     private val api: AiRoutineApi,
+    private val userId: Int,
+    private val exercisePlanDao: ExercisePlanDao,
+    private val planDetailDao: PlanDetailDao,
+    private val exerciseSetDao: ExerciseSetDao
 
 ) : ViewModel() {
 
@@ -24,6 +39,9 @@ class AiChatViewNewModel (
 
     private val _state = MutableStateFlow(AiChatState.WELCOME)
     val state: StateFlow<AiChatState> = _state
+
+    //추천 운동 배열
+    private var recommendedExercises: List<AiExercise> = emptyList()
 
     // 임시 저장값(날짜, 요일 등)
     var startDate: String = ""
@@ -35,8 +53,6 @@ class AiChatViewNewModel (
     private var consultCount = 0
     private var isConsultingActive = false
 
-    // user id (임시로 1번)
-    private val userId = 1
 
     // 시간 포맷
     private fun nowTime(): String =
@@ -88,7 +104,10 @@ class AiChatViewNewModel (
             AiChatState.SHOW_RECOMMENDED -> {
                 when {
                     text.contains("다시") -> recommendExercise()
-                    text.contains("종료") -> _state.value = AiChatState.EXIT
+                    text.contains("종료") -> {
+                        submitPlan()
+                        _state.value = AiChatState.EXIT
+                    }
                     else -> addBotMessage("‘다시 생성하기’ 또는 ‘상담을 종료할게요’를 눌러주세요!")
                 }
             }
@@ -125,31 +144,46 @@ class AiChatViewNewModel (
         viewModelScope.launch {
             addBotMessage("운동 스케줄을 확인 중이에요…🔥")
 
-            val today = "2025-01-01"  // 임시
-            val nextWeek = "2025-01-07"
-
+            val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            android.util.Log.d("AiChat", "checkExistingPlan() called. userId=$userId, today=$today")
             try {
                 val response = api.checkExistingPlan(
-                    userId,
-                    today,
-                    nextWeek
+                    userId = userId,
+                    date = today
                 )
+
+                android.util.Log.d("AiChat", "Response code = ${response.code()}")
+                android.util.Log.d("AiChat", "Response raw = ${response.raw()}")
+                android.util.Log.d("AiChat", "Response body = ${response.body()}")
 
                 if (response.isSuccessful) {
                     val exists = response.body()?.exists ?: false
+                    val planId = response.body()?.plan_id
+
+                    android.util.Log.d("AiChat", " exists=$exists, planId=$planId")
 
                     if (exists) {
                         addBotMessage(
-                            "기존 운동 루틴이 저장되어 있어요.\n새로 만들까요, 그대로 사용할까요?",
+                            "오늘 운동 루틴이 저장되어 있어요!\n새로 만들까요, 그대로 사용할까요?",
                             options = listOf("새롭게 생성할게요", "기존 루틴 사용할게요")
                         )
                         _state.value = AiChatState.ASK_OVERWRITE
+
                     } else {
-                        goAskDate()
+
+                        android.util.Log.d("AiChat", "No existing plan → delete dummy → goAskDate()")
+
+                        deleteDummyPlan {
+                            goAskDate()
+                        }
                     }
+                } else {
+                    android.util.Log.e("AiChat", " checkExistingPlan 실패: ${response.errorBody()?.string()}")
+                    addBotMessage("스케줄 확인 중 오류가 발생했어요!")
                 }
 
             } catch (e: Exception) {
+                android.util.Log.e("AiChat", " checkExistingPlan Exception", e)
                 addBotMessage("스케줄 확인 중 오류가 발생했어요!")
             }
         }
@@ -170,8 +204,13 @@ class AiChatViewNewModel (
             }
         }
     }
+
+    private var isGenerating = false
     //부위 선택 -> 추천 api 호출로 변경
     private fun recommendExercise() {
+        if (isGenerating) return
+        isGenerating = true
+
         viewModelScope.launch {
             addBotMessage("추천 운동을 생성하는 중이에요…🔥")
 
@@ -184,18 +223,56 @@ class AiChatViewNewModel (
                     focusArea = focusArea
                 )
 
+                android.util.Log.d("AiChat", "[REQ recommend] $request")
+
                 val response = api.recommend(request)
 
-                if (response.isSuccessful) {
-                    val text = response.body()?.recommendation ?: "추천을 불러오지 못했어요!"
+                android.util.Log.d("AiChat", "[RES recommend] code=${response.code()}")
+                android.util.Log.d("AiChat", "[RES recommend] raw=${response.raw()}")
+                android.util.Log.d("AiChat", "[RES recommend] body=${response.body()}")
 
-                    addBotMessage(text)
+                if (response.isSuccessful) {
+                    val body = response.body()
+
+                    if (body == null) {
+                        addBotMessage("추천을 불러오지 못했어요! (empty body)")
+                        isGenerating = false
+                        return@launch
+                    }
+
+                    recommendedExercises = body.exercises ?: emptyList()
+
+                    // 1) routine_text 출력
+                    addBotMessage(body.routine_text)
+
+                    // ⭐ 2) 운동 리스트 UI 출력 추가 — 이게 핵심!!
+                    val exerciseText = buildString {
+                        append("📋 오늘의 추천 운동 리스트\n\n")
+                        body.exercises.forEachIndexed { idx, ex ->
+                            append("${idx + 1}. ${ex.name}")
+
+                            when {
+                                ex.seconds != null ->
+                                    append(" - ${ex.seconds}초\n")
+
+                                ex.sets != null && ex.reps != null ->
+                                    append(" - ${ex.sets}세트 × ${ex.reps}회\n")
+
+                                else -> append("\n")
+                            }
+                        }
+                    }
+
+                    addBotMessage(exerciseText)
+
+                    // 3) 버튼 출력
                     addBotMessage(
                         "이 추천이 마음에 드시나요?",
-                        options = listOf("다시 생성하기", "상담을 종료할게요")
+                        options = listOf("다시 생성하기", "저장하고 종료하기")
                     )
 
                     _state.value = AiChatState.SHOW_RECOMMENDED
+
                 } else {
                     addBotMessage("추천 운동을 가져오는 중 오류가 발생했어요!")
                 }
@@ -203,6 +280,8 @@ class AiChatViewNewModel (
             } catch (e: Exception) {
                 addBotMessage("서버와 연결할 수 없어요. 다시 시도해주세요 😢")
             }
+
+            isGenerating = false
         }
     }
 
@@ -374,6 +453,190 @@ class AiChatViewNewModel (
             _state.value = AiChatState.ASK_DATE
         }
     }
+
+    private fun deleteDummyPlan(onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = api.deleteDummyPlan(userId)
+
+                if (response.isSuccessful && response.body()?.success == true) {
+                    android.util.Log.d("AiChat", "deleteDummyPlan() success!")
+                    onSuccess()
+                } else {
+                    addBotMessage("이전 더미 기록 삭제 중 오류가 발생했어요!")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("AiChat", "deleteDummyPlan() Exception", e)
+                addBotMessage("서버와 연결할 수 없어요 😢")
+            }
+        }
+    }
+
+    private fun submitPlan() {
+        viewModelScope.launch {
+            try {
+                addBotMessage("운동 루틴을 저장하고 있어요…💾")
+
+                val request = SubmitAiRequest(
+                    userId = userId,
+                    plans = listOf(
+                        PlanData(
+                            startDate = startDate,
+                            endDate = endDate,
+                            days = selectedDays,
+                            focusArea = focusArea,
+                            exercises = recommendedExercises
+                        )
+                    )
+                )
+
+                android.util.Log.d("AiChat-DEBUG", "▶ submitAi() Request = $request")
+
+                val response = api.submitAi(request)
+
+                android.util.Log.d("AiChat-DEBUG", "▶ Response Code = ${response.code()}")
+                android.util.Log.d("AiChat-DEBUG", "▶ Response Body = ${response.body()}")
+                android.util.Log.d("AiChat-DEBUG", "▶ Response Error = ${response.errorBody()?.string()}")
+
+                if (response.isSuccessful && response.body() != null) {
+
+                    val data = response.body()!!
+
+                    android.util.Log.d("AiChat-DEBUG", "🔥 서버 저장 성공 — Room 저장 시작")
+
+                    saveFullRoutineToLocalDB(data)
+
+                    addBotMessage("운동 루틴이 성공적으로 저장되었어요! 🎉\n홈 화면에서 확인할 수 있어요😊")
+
+                    _state.value = AiChatState.EXIT
+
+                } else {
+                    addBotMessage("루틴 저장 중 오류가 발생했어요 😢")
+                }
+
+            } catch (e: Exception) {
+                Log.e("AiChat-DEBUG", "❌ submitPlan Exception", e)
+                addBotMessage("서버 연결 실패 😢\n네트워크 상태를 확인해주세요!")
+            }
+        }
+    }
+
+    private fun savePlanToLocalDB() {
+        viewModelScope.launch {
+            try {
+                // 날짜 → millis 변환
+                val format = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                val millis = format.parse(startDate)?.time ?: return@launch
+
+                // Room DB에 insert
+                val plan = ExercisePlan(plannedDate = millis)
+
+                exercisePlanDao.insert(plan)
+
+                android.util.Log.d("AiChat", "📌 Local DB 저장 완료: $millis")
+
+            } catch (e: Exception) {
+                android.util.Log.e("AiChat", "❌ Local DB 저장 실패", e)
+            }
+        }
+    }
+
+    private fun saveFullRoutineToLocalDB(data: SubmitAiResponse) {
+        viewModelScope.launch {
+            try {
+                android.util.Log.d("AiChat-DEBUG", "▶ saveFullRoutineToLocalDB() called")
+
+                val millis = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    .parse(startDate)?.time ?: run {
+                    android.util.Log.e("AiChat-DEBUG", "❌ 날짜 변환 실패: $startDate")
+                    return@launch
+                }
+
+                android.util.Log.d("AiChat-DEBUG", "▶ parsed millis = $millis")
+
+                // ===== 1) EXERCISE PLAN 저장 =====
+                val planIdLocal = exercisePlanDao.insert(
+                    ExercisePlan(plannedDate = millis)
+                )
+                android.util.Log.d("AiChat-DEBUG", "🔥 Room ExercisePlan inserted (id=$planIdLocal)")
+
+
+                // 서버 scheduleId → exerciseId 매핑
+                val scheduleToExerciseId = data.schedules.associate { it.scheduleId to it.exerciseId }
+
+                android.util.Log.d("AiChat-DEBUG", "▶ scheduleToExerciseId Map = $scheduleToExerciseId")
+
+                // ===== 2) PlanDetail 저장 =====
+                data.schedules.forEach { sch ->
+                    android.util.Log.d("AiChat-DEBUG", "▶ Insert PlanDetail for exerciseId=${sch.exerciseId}")
+
+                    planDetailDao.insert(
+                        PlanDetail(
+                            exercisePlanId = planIdLocal,
+                            exerciseId = sch.exerciseId,
+                            exOrder = sch.exerciseOrder,
+                            isCompleted = false
+                        )
+                    )
+                }
+
+                // ===== 3) reps 저장 =====
+                data.reps_sets.forEach { set ->
+                    val realExId = scheduleToExerciseId[set.schedule_id]
+                    android.util.Log.d("AiChat-DEBUG", "▶ repsSet: scheduleId=${set.schedule_id}, realEx=$realExId")
+
+                    if (realExId == null) {
+                        android.util.Log.e("AiChat-DEBUG", "❌ 매핑 실패: schedule_id=${set.schedule_id}")
+                        return@forEach
+                    }
+
+                    exerciseSetDao.insert(
+                        ExerciseSet(
+                            exercisePlanId = planIdLocal,
+                            exerciseId = realExId,
+                            setNumber = set.set_number,
+                            reps = set.reps,
+                            weight = set.weight,
+                            elapsedTimeMillis = 0L,
+                            isCompleted = false
+                        )
+                    )
+                }
+
+                // ===== 4) time 저장 =====
+                data.time_sets.forEach { set ->
+                    val realExId = scheduleToExerciseId[set.schedule_id]
+
+                    android.util.Log.d("AiChat-DEBUG", "▶ timeSet: scheduleId=${set.schedule_id}, realEx=$realExId")
+
+                    if (realExId == null) {
+                        android.util.Log.e("AiChat-DEBUG", "❌ 매핑 실패: schedule_id=${set.schedule_id}")
+                        return@forEach
+                    }
+
+                    exerciseSetDao.insert(
+                        ExerciseSet(
+                            exercisePlanId = planIdLocal,
+                            exerciseId = realExId,
+                            setNumber = set.set_number,
+                            reps = 0,
+                            weight = null,
+                            times = set.elapsed_time_millis,
+                            elapsedTimeMillis = 0L,
+                            isCompleted = false
+                        )
+                    )
+                }
+
+                android.util.Log.d("AiChat-DEBUG", "🎉 Room 저장 전체 완료!")
+
+            } catch (e: Exception) {
+                android.util.Log.e("AiChat-DEBUG", "❌ saveFullRoutineToLocalDB Exception", e)
+            }
+        }
+    }
+
+
 }
 
 enum class AiChatState {
