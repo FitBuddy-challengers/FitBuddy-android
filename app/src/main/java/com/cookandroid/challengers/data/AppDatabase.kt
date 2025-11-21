@@ -1366,6 +1366,7 @@ abstract class AppDatabase : RoomDatabase() {
                     breathing = listOf("숨을 깊게 들이마시고 천천히 내쉰다."),
                     caution = listOf("등이 굽지 않도록 몸이 일직선을 유지하며 복부에 힘을 주고 버틴다."),
                     mets = 4.0,
+                    isTimeType = true
                 )
             )
             val ptDrillId = exerciseDao.insert(
@@ -1374,7 +1375,7 @@ abstract class AppDatabase : RoomDatabase() {
                     name = "PT체조",
                     part = "유산소",
                     equip = "맨몸",
-                    imagePath = "pt_drill",
+                    imagePath = "jumping_jack",
                     startPosition = listOf("정렬자세로 선다."),
                     exerciseMotion = listOf("팔벌려뛰기·런지·스쿼트 등 체조 동작을 구령에 맞춰 연속 수행."),
                     breathing = listOf("구령에 맞춰 호흡."),
@@ -1922,7 +1923,7 @@ abstract class AppDatabase : RoomDatabase() {
             val backLungeStepperId = exerciseDao.insert(
                 Exercise(
                     id = 132,
-                    name = "백런지 스텝퍼",
+                    name = "백런지 스텝박스",
                     part = "하체",
                     equip = "스텝박스",
                     imagePath = "back_lunge_stepper",

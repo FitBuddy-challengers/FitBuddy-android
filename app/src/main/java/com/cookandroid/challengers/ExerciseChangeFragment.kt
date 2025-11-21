@@ -13,6 +13,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.fragment.app.setFragmentResult
 import androidx.lifecycle.lifecycleScope
@@ -69,6 +70,7 @@ class ExerciseChangeFragment : BottomSheetDialogFragment() {
     private var currentScheduleId: Long = -1L
     private var selectedExercise: Exercise? = null
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.let {
@@ -81,11 +83,14 @@ class ExerciseChangeFragment : BottomSheetDialogFragment() {
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = BottomSheetDialog(requireContext(), R.style.BottomSheetDialogTheme)
+
         dialog.setOnShowListener { dialogInterface ->
             val bottomSheet = (dialogInterface as BottomSheetDialog)
                 .findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+
             bottomSheet?.let {
-                it.setBackgroundColor(Color.WHITE)
+                it.background = ContextCompat.getDrawable(requireContext(), R.drawable.bottom_sheet_background)
+
                 val behavior = BottomSheetBehavior.from(it)
                 behavior.state = BottomSheetBehavior.STATE_EXPANDED
                 behavior.skipCollapsed = true

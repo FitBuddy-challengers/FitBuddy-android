@@ -1,12 +1,14 @@
 package com.cookandroid.challengers
 
 
+import android.app.Dialog
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -15,6 +17,8 @@ import com.cookandroid.challengers.databinding.FragmentExerciseEditSetBinding
 import com.cookandroid.challengers.api.RetrofitClient.TimeSetDto
 import com.cookandroid.challengers.api.RetrofitClient.TimeSetUiModel
 import com.cookandroid.challengers.databinding.FragmentExerciseEditTimeBinding
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import retrofit2.Call
@@ -29,6 +33,22 @@ class TimeSetEditDialogFragment : BottomSheetDialogFragment() {
     private var scheduleId: Long = -1L
     private lateinit var adapter: TimeSetAdapter
 
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        val dialog = BottomSheetDialog(requireContext(), R.style.BottomSheetDialogTheme)
+        dialog.setOnShowListener { dialogInterface ->
+            val bottomSheet = (dialogInterface as BottomSheetDialog)
+                .findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+
+            bottomSheet?.let {
+                it.background = ContextCompat.getDrawable(requireContext(), R.drawable.bottom_sheet_background)
+
+                val behavior = BottomSheetBehavior.from(it)
+                behavior.state = BottomSheetBehavior.STATE_EXPANDED
+                behavior.skipCollapsed = true
+            }
+        }
+        return dialog
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.let {

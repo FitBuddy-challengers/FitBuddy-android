@@ -58,13 +58,20 @@ class ExerciseDetailFragment : Fragment() {
 
         // 전달받은 currentExercise 객체가 초기화되었는지 확인
         if (::currentExercise.isInitialized) {
-            // DB 조회나 네트워크 통신 없이 바로 UI에 데이터를 바인딩합니다.
+            // 1. 객체를 직접 전달받은 경우 (기존 로직)
             bindExerciseData(currentExercise)
         } else {
-            // 객체를 받지 못한 경우의 예외 처리
-            Toast.makeText(requireContext(), "운동 정보를 불러오는 데 실패했습니다.", Toast.LENGTH_SHORT).show()
-            findNavController().popBackStack()
-            return
+            // 2. ID만 전달받은 경우 (Edit 화면에서 넘어올 때)
+            val exerciseId = arguments?.getLong("exerciseId", -1L) ?: -1L
+
+            if (exerciseId != -1L) {
+                fetchExerciseData(exerciseId) // 서버 통신 함수 호출
+            } else {
+                // 3. 둘 다 없는 경우 예외 처리
+                Toast.makeText(requireContext(), "운동 정보를 불러오는 데 실패했습니다.", Toast.LENGTH_SHORT).show()
+                findNavController().popBackStack()
+                return
+            }
         }
 
         binding.backButton.setOnClickListener {
@@ -73,6 +80,63 @@ class ExerciseDetailFragment : Fragment() {
 
         binding.favoriteButton.setOnClickListener {
             toggleFavorite()
+        }
+    }
+    private fun fetchExerciseData(targetId: Long) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                // 서버에서 전체 운동 목록 가져오기
+                val response = RetrofitClient.exerciseApi.getAllExercises()
+
+                if (response.isSuccessful && response.body() != null) {
+                    // ID로 해당 운동 찾기
+                    val foundDto = response.body()!!.find { it.id == targetId }
+
+                    withContext(Dispatchers.Main) {
+                        if (_binding == null) return@withContext
+
+                        if (foundDto != null) {
+                            // DTO -> Exercise 객체로 변환 (ChangeFragment와 동일한 로직)
+                            currentExercise = Exercise(
+                                id = foundDto.id,
+                                name = foundDto.name ?: "",
+                                part = foundDto.part ?: "",
+                                equip = foundDto.equip ?: "",
+                                imagePath = foundDto.image_path,
+                                startPosition = foundDto.start_position,
+                                exerciseMotion = foundDto.exercise_motion,
+                                breathing = foundDto.breathing,
+                                caution = foundDto.caution,
+                                mets = foundDto.mets ?: 0.0,
+                                isFavorite = foundDto.isFavorite ?: false,
+                                isTimeType = foundDto.isTimeType ?: false,
+                                isHidden = foundDto.isHidden ?: false,
+                                isNoise = foundDto.is_noise ?: false
+                            )
+                            // 화면에 데이터 표시
+                            bindExerciseData(currentExercise)
+                        } else {
+                            Toast.makeText(requireContext(), "해당 운동을 찾을 수 없습니다.", Toast.LENGTH_SHORT).show()
+                            findNavController().popBackStack()
+                        }
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        if (_binding != null) {
+                            Toast.makeText(requireContext(), "서버 통신 오류: ${response.code()}", Toast.LENGTH_SHORT).show()
+                            findNavController().popBackStack()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("ExerciseDetail", "데이터 로드 실패", e)
+                withContext(Dispatchers.Main) {
+                    if (_binding != null) {
+                        Toast.makeText(requireContext(), "오류 발생: ${e.message}", Toast.LENGTH_SHORT).show()
+                        findNavController().popBackStack()
+                    }
+                }
+            }
         }
     }
 

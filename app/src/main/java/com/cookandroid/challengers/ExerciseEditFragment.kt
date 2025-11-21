@@ -40,6 +40,8 @@ class ExerciseEditFragment(
     private var currentIsFavorite: Boolean = false
     private var currentScheduleIdForEdit: Long = -1L // API를 통해 가져온, 현재 운동의 실제 schedule_id
 
+    private var isTimeType: Boolean = false
+
     companion object {
         private const val TAG = "ExerciseEditFragment"
         // 부모 Fragment와 결과 교환을 위한 키 (삭제 외 다른 업데이트 알림용)
@@ -114,36 +116,18 @@ class ExerciseEditFragment(
     private fun setupClickListeners() {
         binding.layoutSetEdit.setOnClickListener {
             if (currentScheduleIdForEdit <= 0) {
-                Toast.makeText(requireContext(), "세트 정보를 불러올 수 없습니다 (스케줄 ID 오류).", Toast.LENGTH_SHORT).show()
-                Log.e(TAG, "layoutSetEdit: currentScheduleIdForEdit is invalid: $currentScheduleIdForEdit")
+                Toast.makeText(requireContext(), "세트 정보를 불러올 수 없습니다.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            lifecycleScope.launch(Dispatchers.IO) {
-                try {
-                    val exerciseInfoRes = RetrofitClient.scheduleApi.getExerciseInfo(currentScheduleIdForEdit)
-                    if (!exerciseInfoRes.isSuccessful || exerciseInfoRes.body() == null) {
-                        throw IllegalStateException("운동 타입 정보 조회 실패: ${exerciseInfoRes.code()}")
-                    }
-                    val isTimeType = exerciseInfoRes.body()!!.isTimeType
-                    withContext(Dispatchers.Main) {
-                        if (!isAdded) return@withContext
-                        val sheet: BottomSheetDialogFragment = if (isTimeType) {
-                            TimeSetEditDialogFragment.newInstance(currentScheduleIdForEdit)
-                        } else {
-                            RepsSetEditDialogFragment.newInstance(currentScheduleIdForEdit)
-                        }
-                        sheet.show(parentFragmentManager, if (isTimeType) TimeSetEditDialogFragment.TAG else RepsSetEditDialogFragment.TAG)
-                        Log.d(TAG, "Showing ${if (isTimeType) "TimeSetEditDialogFragment" else "RepsSetEditDialogFragment"} for scheduleId: $currentScheduleIdForEdit")
-                    }
-                } catch (e: Exception) {
-                    withContext(Dispatchers.Main) {
-                        if (isAdded) {
-                            Log.e(TAG, "세트 수정 화면 로드 실패", e)
-                            Toast.makeText(requireContext(), "세트 수정 화면 로드 실패: ${e.message}", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                }
+            val sheet: BottomSheetDialogFragment = if (isTimeType) {
+                // 시간 운동
+                TimeSetEditDialogFragment.newInstance(currentScheduleIdForEdit)
+            } else {
+                // 횟수 운동
+                ExerciseEditSetFragment.newInstance(currentScheduleIdForEdit)
             }
+            // 다이얼로그 띄우기
+            sheet.show(parentFragmentManager, "SetEditDialog")
         }
 
         binding.layoutExerciseChange.setOnClickListener {
@@ -290,6 +274,7 @@ class ExerciseEditFragment(
 
                 // 즐겨찾기 상태 업데이트
                 currentIsFavorite = targetExercise.isFavorite ?: false
+                isTimeType = targetExercise.isTimeType ?: false
                 Log.i(TAG, "Successfully fetched favorite status via getAllExercises. isFavorite: $currentIsFavorite")
 
                 withContext(Dispatchers.Main) {
