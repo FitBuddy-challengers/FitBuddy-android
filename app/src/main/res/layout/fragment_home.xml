@@ -37,8 +37,8 @@
         <ProgressBar
             android:id="@+id/uiGauge"
             style="@style/Widget.AppCompat.ProgressBar.Horizontal"
-            android:layout_width="240dp"
-            android:layout_height="240dp"
+            android:layout_width="300dp"
+            android:layout_height="300dp"
             android:indeterminate="false"
             android:max="100"
             android:progressBackgroundTint="#D9D9D9"
@@ -52,7 +52,8 @@
         <FrameLayout
             android:id="@+id/characterContainer"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
+            android:layout_height="250dp"
+            android:padding="0dp"
             app:layout_constraintBottom_toBottomOf="@+id/uiGauge"
             app:layout_constraintEnd_toEndOf="@+id/uiGauge"
             app:layout_constraintStart_toStartOf="@+id/uiGauge"
@@ -129,27 +130,23 @@
             android:id="@+id/btnAiChat"
             android:layout_width="142dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="260dp"
             android:background="@drawable/btn_home_aichat"
             android:gravity="center"
             android:text="AI 채팅"
             android:textColor="@color/white"
             android:textSize="20dp"
-            android:fontFamily="@font/pretendard_bold"
             android:paddingTop="12dp"
             android:paddingBottom="12dp"
-            android:tint="@null"
-            android:backgroundTint="@null"
-            app:layout_constraintTop_toTopOf="@+id/uiGauge"
+            app:layout_constraintTop_toBottomOf="@id/uiGauge"
+            android:layout_marginTop="-38dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
-
         <!-- 요일 텍스트 -->
         <LinearLayout
             android:id="@+id/layoutWeek"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
+            android:layout_marginTop="16dp"
             android:orientation="horizontal"
             android:gravity="center"
             android:weightSum="7"
@@ -169,11 +166,16 @@
             android:id="@+id/rvDate"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="3dp"
             android:layout_marginBottom="36dp"
             android:orientation="horizontal"
             android:overScrollMode="never"
-            app:layout_constraintTop_toBottomOf="@+id/layoutWeek" />
+            android:paddingStart="3dp"
+            app:layout_constraintTop_toBottomOf="@+id/layoutWeek"
+            app:layout_constraintBottom_toTopOf="@+id/WorkoutItem"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            />
 
         <!-- 운동 아이템 묶음 -->
         <LinearLayout
@@ -183,8 +185,10 @@
             android:orientation="vertical"
             android:background="@drawable/view_home_list_background"
             android:padding="16dp"
-            android:layout_marginTop="36dp"
-            app:layout_constraintTop_toBottomOf="@+id/rvDate">
+            android:layout_marginTop="16dp"
+            android:descendantFocusability="blocksDescendants"
+            app:layout_constraintTop_toBottomOf="@+id/rvDate"
+            >
 <!--            app:layout_constraintBottom_toBottomOf="parent">-->
 
             <!-- 날짜 표시 + 추가 버튼 -->
@@ -201,7 +205,7 @@
                 <TextView
                     android:id="@+id/tvDay"
                     android:layout_width="wrap_content"
-                    android:layout_height="20dp"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:fontFamily="@font/pretendard_medium"
                     android:text="2025년 n월 n일"
@@ -227,12 +231,14 @@
             <!-- 운동 리스트 -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvWorkout"
+                android:layout_marginTop="6dp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="64dp"
+                android:minHeight="100dp"
+                android:nestedScrollingEnabled="false"
                 android:overScrollMode="never"
-                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"/>
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                />
         </LinearLayout>
 
 

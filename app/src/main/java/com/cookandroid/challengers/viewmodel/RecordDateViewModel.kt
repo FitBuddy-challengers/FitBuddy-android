@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.cookandroid.challengers.api.AdviceRequest
 import com.cookandroid.challengers.api.RetrofitClient
 import com.cookandroid.challengers.util.UserPreference
 import kotlinx.coroutines.Dispatchers
@@ -125,20 +126,27 @@ class RecordDateViewModel(application: Application) : AndroidViewModel(applicati
 
         viewModelScope.launch {
             try {
-                val response = RetrofitClient.recommendApi.getExerciseRecommendation(
-                    RetrofitClient.RecommendExerciseRequest(userId)
-                )
+                Log.d("AdviceAPI", " 요청 전송 → userId=$userId")
+
+                val request = AdviceRequest(userId)
+                Log.d("AdviceAPI", " Request Body = $request")
+
+                val response = RetrofitClient.adviceApi.getExerciseAdvice(request)
+
+                Log.d("AdviceAPI", " 응답 도착 → code=${response.code()} body=${response.body()} error=${response.errorBody()?.string()}")
 
                 if (response.isSuccessful) {
-                    val result = response.body()?.recommendation ?: "추천이 비어있습니다."
-                    _recommendationText.value = result
+                    val text = response.body()?.advice ?: "분석 결과가 없습니다."
+                    Log.d("AdviceAPI", " 성공! advice=$text")
+                    _recommendationText.value = text
                 } else {
-                    Log.e("ViewModel", "추천 실패: ${response.code()}")
-                    _recommendationText.value = "추천을 가져오지 못했습니다."
+                    Log.e("AdviceAPI", " 실패! code=${response.code()} message=${response.message()} error=${response.errorBody()?.string()}")
+                    _recommendationText.value = "운동 분석을 가져오지 못했습니다."
                 }
+
             } catch (e: Exception) {
-                Log.e("ViewModel", "추천 호출 오류", e)
-                _recommendationText.value = "AI 추천 실패: 네트워크 오류"
+                Log.e("AdviceAPI", " 예외 발생!", e)
+                _recommendationText.value = "AI 운동 분석 실패: 네트워크 오류"
             }
         }
     }

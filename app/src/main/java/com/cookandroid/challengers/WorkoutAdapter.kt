@@ -32,10 +32,27 @@ class WorkoutAdapter(
 
     override fun onBindViewHolder(holder: WorkoutViewHolder, position: Int) {
         val item = getItem(position)
+
+        // 디버그 로그 추가
+        android.util.Log.d(
+            "WorkoutAdapter",
+            " 바인딩 → id=${item.scheduleId}, name=${item.name}, reps=${item.reps}, seconds=${item.seconds}, sets=${item.sets}, done=${item.isCompleted}"
+        )
+
+
         holder.binding.apply {
             tvWorkoutName.text = item.name
-            tvWorkoutDetail1.text = "${item.reps}회"
-            tvWorkoutDetail2.text = "${item.sets}세트"
+
+            // 시간 운동인지 / 반복 운동인지 구분해서 표시
+            if (item.seconds != null) {
+                // 시간 운동 → "00:01:00"
+                tvWorkoutDetail1.text = formatSeconds(item.seconds)
+                tvWorkoutDetail2.text = "${item.sets}세트"
+            } else {
+                // 반복 운동 → "15회"
+                tvWorkoutDetail1.text = "${item.reps}회"
+                tvWorkoutDetail2.text = "${item.sets}세트"
+            }
 
             // 체크박스 임시
             checkWorkout.setOnCheckedChangeListener(null)
@@ -57,4 +74,10 @@ class WorkoutAdapter(
             return oldItem == newItem
         }
     }
+}
+
+private fun formatSeconds(seconds: Int): String {
+    val m = seconds / 60
+    val s = seconds % 60
+    return "%02d:%02d".format(m, s)
 }

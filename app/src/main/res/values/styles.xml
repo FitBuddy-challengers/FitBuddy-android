@@ -208,9 +208,27 @@
     </style>
 
     <!-- 달력 테마 추가 -->
+<!--    <style name="CustomCalendarTheme" parent="ThemeOverlay.MaterialComponents.MaterialCalendar">-->
+<!--        <item name="materialCalendarTheme">@style/ThemeOverlay.MaterialComponents.MaterialCalendar</item>-->
+<!--        <item name="materialCalendarStyle">@style/Widget.MaterialComponents.MaterialCalendar</item>-->
+<!--        <item name="materialCalendarFullscreenTheme">@style/ThemeOverlay.MaterialComponents.MaterialCalendar</item>-->
+<!--    </style>-->
+
     <style name="CustomCalendarTheme" parent="ThemeOverlay.MaterialComponents.MaterialCalendar">
-        <item name="materialCalendarTheme">@style/ThemeOverlay.MaterialComponents.MaterialCalendar</item>
-        <item name="materialCalendarStyle">@style/Widget.MaterialComponents.MaterialCalendar</item>
-        <item name="materialCalendarFullscreenTheme">@style/ThemeOverlay.MaterialComponents.MaterialCalendar</item>
+        <!-- Confirm 버튼 색만 바꾸기 -->
+        <item name="materialCalendarHeaderConfirmButton">@style/CalendarConfirmButton</item>
+
+        <!-- Toggle tint -->
+        <item name="materialCalendarHeaderToggleButton">@style/CalendarToggle</item>
     </style>
+
+    <style name="CalendarConfirmButton">
+        <item name="android:textColor">@color/blue_primary</item>
+        <item name="fontFamily">@font/pretendard_bold</item>
+    </style>
+
+    <style name="CalendarToggle">
+        <item name="android:tint">@color/blue_primary</item>
+    </style>
+
 </resources>

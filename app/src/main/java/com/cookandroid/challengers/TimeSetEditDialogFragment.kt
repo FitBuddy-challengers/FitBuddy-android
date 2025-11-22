@@ -131,7 +131,8 @@ class TimeSetEditDialogFragment : BottomSheetDialogFragment() {
                 TimeSetDto(
                     setNumber = uiModel.setNumber, // 또는 index + 1, 서버 DTO의 요구사항에 따라 결정
                     seconds = totalSecondsForServer,
-                    weight = uiModel.weight
+                    weight = uiModel.weight,
+                    isCompleted = false
                 )
             }
 
