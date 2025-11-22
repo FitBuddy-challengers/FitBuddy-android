@@ -75,6 +75,10 @@ class MainActivity : AppCompatActivity() {
             navController.setGraph(R.navigation.nav_graph_main)
         }
         binding.mainBnv.setupWithNavController(navController)
+
+        binding.mainBnv.itemIconTintList = null
+        binding.mainBnv.itemRippleColor = null
+
 //        binding.mainBnv.setOnItemSelectedListener { item ->
 //            val currentDest = navController.currentDestination?.id
 //            when (item.itemId) {
