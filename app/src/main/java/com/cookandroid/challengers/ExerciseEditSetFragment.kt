@@ -1,5 +1,6 @@
 package com.cookandroid.challengers
 
+import android.app.Dialog
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -8,6 +9,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.setFragmentResult
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
@@ -17,6 +19,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.cookandroid.challengers.api.RetrofitClient
 import com.cookandroid.challengers.databinding.FragmentExerciseEditSetBinding
 import com.cookandroid.challengers.databinding.ItemEditSetBinding
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -49,6 +53,24 @@ class ExerciseEditSetFragment : BottomSheetDialogFragment() {
                 }
             }
         }
+    }
+
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        val dialog = BottomSheetDialog(requireContext(), R.style.BottomSheetDialogTheme)
+
+        dialog.setOnShowListener { dialogInterface ->
+            val bottomSheet = (dialogInterface as BottomSheetDialog)
+                .findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+
+            bottomSheet?.let {
+                it.background = ContextCompat.getDrawable(requireContext(), R.drawable.bottom_sheet_background)
+
+                val behavior = BottomSheetBehavior.from(it)
+                behavior.state = BottomSheetBehavior.STATE_EXPANDED
+                behavior.skipCollapsed = true
+            }
+        }
+        return dialog
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
