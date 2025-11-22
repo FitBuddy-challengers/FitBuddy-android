@@ -68,6 +68,15 @@ class RecordDateFragment : Fragment() {
             override fun onTabUnselected(tab: TabLayout.Tab?) {}
             override fun onTabReselected(tab: TabLayout.Tab?) {}
         })
+
+        binding.btnAiComment.setOnClickListener {
+            // bottomSheetText 가져옴
+            val detailContent = recordDateViewModel.bottomSheetText.value ?: "잠시만 기다려주세요...\n데이터를 불러오고 있습니다."
+
+            // 상세 내용을 담아 바텀 시트 열기
+            val bottomSheet = AiRecommendationBottomSheet.newInstance(detailContent)
+            bottomSheet.show(parentFragmentManager, AiRecommendationBottomSheet.TAG)
+        }
     }
 
     private fun observeViewModel() {
