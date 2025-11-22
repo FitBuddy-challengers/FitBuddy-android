@@ -52,7 +52,13 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+
+
         binding.rvWorkout.layoutManager = LinearLayoutManager(requireContext())
+
+        //달력 ui 추가
+        binding.rvDate.layoutManager =
+            LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
 
         // Adapter 최초 1번만 생성
         workoutAdapter = WorkoutAdapter { _, _ -> }
