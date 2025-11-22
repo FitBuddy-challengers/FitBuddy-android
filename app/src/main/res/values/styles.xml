@@ -231,4 +231,14 @@
         <item name="android:tint">@color/blue_primary</item>
     </style>
 
+    <style name="BottomNavTextRegular">
+        <item name="android:fontFamily">@font/pretendard_regular</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <style name="BottomNavTextBold">
+        <item name="android:fontFamily">@font/pretendard_bold</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
 </resources>
