@@ -26,6 +26,8 @@ class RecordDateViewModel(application: Application) : AndroidViewModel(applicati
     private val _recommendationText = MutableLiveData<String>()
     val recommendationText: LiveData<String> = _recommendationText
 
+    private val _bottomSheetText = MutableLiveData<String>()
+    val bottomSheetText: LiveData<String> = _bottomSheetText
 
     init {
         loadMonthlySummary() // ViewModel 생성 시 요약 정보 로드
@@ -136,9 +138,22 @@ class RecordDateViewModel(application: Application) : AndroidViewModel(applicati
                 Log.d("AdviceAPI", " 응답 도착 → code=${response.code()} body=${response.body()} error=${response.errorBody()?.string()}")
 
                 if (response.isSuccessful) {
-                    val text = response.body()?.advice ?: "분석 결과가 없습니다."
-                    Log.d("AdviceAPI", " 성공! advice=$text")
-                    _recommendationText.value = text
+                    // 서버에서 받은 메인 멘트
+                    val resultText = response.body()?.advice ?: "분석 결과가 없습니다."
+
+                    // 메인 화면 업데이트 (서버 값 그대로)
+                    _recommendationText.value = resultText
+
+                    // 바텀 시트 텍스트 업데이트
+                    _bottomSheetText.value = """
+                        [AI 상세 분석 리포트]
+                        
+                        회원님의 운동 기록을 바탕으로 분석된 상세 내용입니다.
+                        이곳에는 서버에서 받아온 더 긴 텍스트나,
+                        구체적인 운동 추천 목록이 들어갈 예정입니다.
+                        
+                        현재 메인 화면에는 "$resultText" 라고 표시되고 있습니다.
+                    """.trimIndent()
                 } else {
                     Log.e("AdviceAPI", " 실패! code=${response.code()} message=${response.message()} error=${response.errorBody()?.string()}")
                     _recommendationText.value = "운동 분석을 가져오지 못했습니다."
