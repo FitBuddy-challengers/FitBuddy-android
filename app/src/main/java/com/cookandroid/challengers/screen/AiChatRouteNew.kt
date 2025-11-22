@@ -71,7 +71,8 @@ fun AiChatRouteNew(
             val activity = activity as FragmentActivity
             val picker = MaterialDatePicker.Builder.dateRangePicker()
                 //.setTheme(R.style.CustomCalendarTheme)
-                .setTitleText("운동 기간을 선택해주세요!")
+                .setTheme(R.style.CustomCalendarTheme)
+                .setTitleText("운동 기간 선택 ✨\n루틴을 만들 기간을 골라주세요!")
                 .build()
 
             picker.addOnPositiveButtonClickListener { selection ->

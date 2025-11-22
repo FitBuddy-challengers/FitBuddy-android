@@ -190,6 +190,8 @@ interface ScheduleApi {
     fun updateTimeSetCompletion(
         @Body body: RetrofitClient.TimeSetCompletionRequest
     ): Call<Void>
+
+
 }
 
 interface ChallengeApi {

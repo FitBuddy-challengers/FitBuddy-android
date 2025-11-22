@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -265,7 +266,6 @@ fun ChatInputBar(
         )
     }
 }
-
 @Composable
 fun QuickReplyButtons(
     options: List<String>,
@@ -284,29 +284,78 @@ fun QuickReplyButtons(
 
             val isSelected = selected == option
 
-            Button(
-                onClick = {
-                    selected = option
-                    onOptionSelected(option)
-                          },
-                shape = RoundedCornerShape(50),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White,
-                    contentColor = if (isSelected) Color(0xFF2777F0) else Color(0xFF4F4F4F)
-                ),
+            Surface(
+                shape = RoundedCornerShape(30.dp),
                 border = BorderStroke(
                     1.dp,
-                    if (isSelected) Color(0xFF2777F0) else Color(0xFFD6D6D6)),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                    if (isSelected) Color(0xFF2777F0) else Color(0xFFD6D6D6)
+                ),
+                color = Color.White,
                 modifier = Modifier
-                    .height(32.dp)
+                    .height(28.dp)
                     .wrapContentWidth()
+                    .clickable {
+                        selected = option
+                        onOptionSelected(option)
+                    }
             ) {
-                Text(option, fontSize = 14.sp)
+                Box(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = option,
+                        fontSize = 14.sp,
+                        fontFamily = Pretendard,
+                        color = if (isSelected) Color(0xFF2777F0) else Color(0xFF4F4F4F)
+                    )
+                }
             }
         }
     }
 }
+
+//@Composable
+//fun QuickReplyButtons(
+//    options: List<String>,
+//    onOptionSelected: (String) -> Unit
+//) {
+//    var selected by remember { mutableStateOf<String?>(null) }
+//
+//    Row(
+//        modifier = Modifier
+//            .wrapContentWidth()
+//            .padding(start = 0.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
+//        horizontalArrangement = Arrangement.spacedBy(8.dp),
+//        verticalAlignment = Alignment.CenterVertically
+//    ) {
+//        options.forEach { option ->
+//
+//            val isSelected = selected == option
+//
+//            Button(
+//                onClick = {
+//                    selected = option
+//                    onOptionSelected(option)
+//                          },
+//                shape = RoundedCornerShape(50),
+//                colors = ButtonDefaults.buttonColors(
+//                    containerColor = Color.White,
+//                    contentColor = if (isSelected) Color(0xFF2777F0) else Color(0xFF4F4F4F)
+//                ),
+//                border = BorderStroke(
+//                    1.dp,
+//                    if (isSelected) Color(0xFF2777F0) else Color(0xFFD6D6D6)),
+//                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+//                modifier = Modifier
+//                    .height(32.dp)
+//                    .wrapContentWidth()
+//            ) {
+//                Text(option, fontSize = 14.sp)
+//            }
+//        }
+//    }
+//}
 
 @Preview(showBackground = true)
 @Composable
@@ -328,6 +377,15 @@ fun AiChatScreenPreview() {
         onSend = {},
         onOptionClick = {},
         onBack = {}
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun QuickReplyButtonsPreview_Days() {
+    QuickReplyButtons(
+        options = listOf("월", "화", "수", "목", "금", "토", "일"),
+        onOptionSelected = {}
     )
 }
 

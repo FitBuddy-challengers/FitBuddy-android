@@ -61,6 +61,11 @@ object RetrofitClient {
         retrofit.create(RecordApi::class.java)
     }
 
+    //기록 조언 api 추가.
+    val adviceApi: ExerciseAdviceApi by lazy {
+        retrofit.create(ExerciseAdviceApi::class.java)
+    }
+
     // 상점 API 인터페이스
     val storeApi: StoreApi by lazy {
         retrofit.create(StoreApi::class.java)
@@ -203,11 +208,15 @@ object RetrofitClient {
 
 
     data class TimeSetDto(
-        @SerializedName("set_number") val setNumber: Int,
-        val seconds: Int,
-        val weight: Float,
-        @SerializedName("is_completed") val isCompleted: Boolean = false // ★ 추가
+        @SerializedName("set_number")
+        val setNumber: Int,
 
+        val seconds: Int,
+
+        val weight: Float,
+
+        @SerializedName("is_completed")
+        val isCompleted: Boolean
     )
 
     data class RepsSetUiModel(

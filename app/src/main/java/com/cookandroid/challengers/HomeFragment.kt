@@ -52,6 +52,11 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        binding.btnAiChat.setOnClickListener {
+            val intent = Intent(requireContext(), AiChatActivity::class.java)
+            startActivity(intent)
+        }
+
 
 
         binding.rvWorkout.layoutManager = LinearLayoutManager(requireContext())
@@ -60,8 +65,82 @@ class HomeFragment : Fragment() {
         binding.rvDate.layoutManager =
             LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
 
+
+        // 1) 날짜 리스트 생성
+        generateWeekDates()
+
+        // 2) 어댑터 생성
+        dateAdapter = DateAdapter(weekDates) { position ->
+            selectedPosition = position
+            dateAdapter.setSelectedPosition(position)
+
+            val selected = LocalDate.parse(weekDates[position].fullDate)
+            binding.tvDay.text =
+                "${selected.year}년 ${selected.monthValue}월 ${selected.dayOfMonth}일"
+        }
+
+        // 3) 리사이클러뷰에 적용
+        binding.rvDate.adapter = dateAdapter
+
         // Adapter 최초 1번만 생성
-        workoutAdapter = WorkoutAdapter { _, _ -> }
+        workoutAdapter = WorkoutAdapter { item, isChecked ->
+
+            // 체크박스 클릭 시 reps/time 구분해서 서버 반영
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+
+                    val request = RetrofitClient.SetCompletionRequest(
+                        scheduleId = item.scheduleId,
+                        setNumber = 1,
+                        isCompleted = isChecked
+                    )
+
+                    // 반복운동인지 시간운동인지 구분
+                    val response =
+                        if (item.reps != null) {
+                            // ✔ 반복 운동 완료 API
+                            val request = RetrofitClient.SetCompletionRequest(
+                                scheduleId = item.scheduleId,
+                                setNumber = 1,
+                                isCompleted = isChecked
+                            )
+                            RetrofitClient.scheduleApi.updateRepsSetCompletion(request).execute()
+                        } else {
+                            // ✔ 시간 운동 완료 API
+                            val request = RetrofitClient.TimeSetCompletionRequest(
+                                scheduleId = item.scheduleId,
+                                setNumber = 1,
+                                isCompleted = isChecked,
+                                elapsedTimeMillis = null    // 필요 없으면 null OK
+                            )
+                            RetrofitClient.scheduleApi.updateTimeSetCompletion(request).execute()
+                        }
+
+                    if (response.isSuccessful) {
+                        Log.d("HomeFragment", "✔ 운동 완료 상태 서버 반영 성공: ${item.name}")
+
+                        // UI 업데이트 (다시 그림)
+                        withContext(Dispatchers.Main) {
+                            val current = workoutAdapter.currentList.toMutableList()
+                            val index = current.indexOfFirst { it.scheduleId == item.scheduleId }
+
+                            if (index != -1) {
+                                current[index] = current[index].copy(isCompleted = isChecked)
+                                workoutAdapter.submitList(current)
+                                updateProgressGauge(current)
+                            }
+                        }
+
+                    } else {
+                        Log.e("HomeFragment", "❌ 서버 반영 실패: ${response.code()}")
+                    }
+
+                } catch (e: Exception) {
+                    Log.e("HomeFragment", "❌ 체크 처리 오류", e)
+                }
+            }
+        }
+
         binding.rvWorkout.adapter = workoutAdapter
 
         lifecycleScope.launchWhenStarted {
@@ -397,6 +476,30 @@ class HomeFragment : Fragment() {
         val today = LocalDate.now()
         val formatted = today.format(DateTimeFormatter.ofPattern("yyyy년 M월 d일"))
         binding.tvDay.text = formatted
+    }
+
+    private fun generateWeekDates() {
+        weekDates.clear()
+
+        val today = LocalDate.now()
+
+        // 이번 주 일요일 찾기
+        var sunday = today
+        while (sunday.dayOfWeek != DayOfWeek.SUNDAY) {
+            sunday = sunday.minusDays(1)
+        }
+
+        // 일요일 ~ 토요일 생성
+        for (i in 0 until 7) {
+            val day = sunday.plusDays(i.toLong())
+            weekDates.add(
+                WeekDate(
+                    date = day.dayOfMonth.toString(),
+                    fullDate = day.toString(),
+                    isToday = day == today
+                )
+            )
+        }
     }
 
 

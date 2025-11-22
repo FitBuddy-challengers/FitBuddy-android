@@ -27,4 +27,9 @@
 
     <color name="selected_icon_color">#FF000000</color>
     <color name="unselected_icon_color">#FFA6A6A6</color>
+
+    <color name="blue_primary">#2777F0</color>
+    <color name="blue_light">#E4EDFF</color>
+    <color name="blue_dark">#1859C8</color>
+
 </resources>
