@@ -3,6 +3,7 @@ package com.cookandroid.challengers.screen
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -31,6 +32,23 @@ sealed class ChatUiMessage {
     data class Bot(val text: String, val time: String, val options: List<String> = emptyList()) : ChatUiMessage()
     data class User(val text: String, val time: String) : ChatUiMessage()
 }
+
+//말풍선 ui
+@Composable
+fun BotBubbleShape() = RoundedCornerShape(
+    topStart = 0.dp,   // 직각
+    topEnd = 12.dp,
+    bottomStart = 12.dp,
+    bottomEnd = 12.dp
+)
+
+@Composable
+fun UserBubbleShape() = RoundedCornerShape(
+    topStart = 12.dp,
+    topEnd = 0.dp,     // 직각
+    bottomStart = 12.dp,
+    bottomEnd = 12.dp
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -153,7 +171,8 @@ fun ChatBubble(message: ChatUiMessage, onClickOption: (String) -> Unit = {}) {
 
                 Box(
                     modifier = Modifier
-                        .background(Color.White, RoundedCornerShape(12.dp))
+                        .border(1.dp, Color(0xFFD6D6D6), BotBubbleShape())
+                        .background(Color.White, BotBubbleShape())
                         .padding(16.dp)
                 ) {
                     Text(message.text, fontSize = 16.sp, color = Color(0xFF292929), fontFamily = Pretendard)
@@ -168,15 +187,29 @@ fun ChatBubble(message: ChatUiMessage, onClickOption: (String) -> Unit = {}) {
 
         is ChatUiMessage.User -> {
 
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.End
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
             ) {
 
-                // 사용자 말풍선
+                // 🔹 시간 — 말풍선 바로 위 오른쪽
+                Text(
+                    message.time,
+                    fontSize = 11.sp,
+                    color = Color(0xFF4F4F4F),
+                    fontFamily = Pretendard,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(end = 8.dp)
+                )
+
+                // 🔹 말풍선 — 시간과 겹치지 않도록 top padding 추가
                 Box(
                     modifier = Modifier
-                        .background(Color(0xFF4F80FF), RoundedCornerShape(12.dp))
+                        .align(Alignment.TopEnd)
+                        .padding(top = 16.dp)   // ← 시간과 말풍선 간격 확보!
+                        .background(Color(0xFF4F80FF), UserBubbleShape())
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     Text(
@@ -184,20 +217,6 @@ fun ChatBubble(message: ChatUiMessage, onClickOption: (String) -> Unit = {}) {
                         fontSize = 16.sp,
                         color = Color.White,
                         fontFamily = Pretendard
-                    )
-                }
-
-                // 말풍선 아래, 말풍선의 왼쪽 모서리에 붙이기
-                Row(
-                    modifier = Modifier
-                        .offset(x = (-142).dp, y = (-12).dp)
-                ) {
-                    Text(
-                        message.time,
-                        fontSize = 11.sp,
-                        color = Color(0xFF4F4F4F),
-                        fontFamily = Pretendard,
-                        modifier = Modifier.padding(start = 4.dp)
                     )
                 }
             }
@@ -252,25 +271,36 @@ fun QuickReplyButtons(
     options: List<String>,
     onOptionSelected: (String) -> Unit
 ) {
+    var selected by remember { mutableStateOf<String?>(null) }
+
     Row(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 0.dp, end = 16.dp, top = 4.dp, bottom = 4.dp), // ⭐ 채팅과 X좌표 정렬
-        horizontalArrangement = Arrangement.spacedBy(8.dp), // ⭐ 버튼 간 간격 8dp
+            .wrapContentWidth()
+            .padding(start = 0.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         options.forEach { option ->
+
+            val isSelected = selected == option
+
             Button(
-                onClick = { onOptionSelected(option) },
+                onClick = {
+                    selected = option
+                    onOptionSelected(option)
+                          },
                 shape = RoundedCornerShape(50),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.White,
-                    contentColor = Color(0xFF4F4F4F)
+                    contentColor = if (isSelected) Color(0xFF2777F0) else Color(0xFF4F4F4F)
                 ),
-                border = BorderStroke(1.dp, Color(0xFFD6D6D6)),
+                border = BorderStroke(
+                    1.dp,
+                    if (isSelected) Color(0xFF2777F0) else Color(0xFFD6D6D6)),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                 modifier = Modifier
-                    .height(32.dp)   // ⭐ 버튼 높이 직접 설정
+                    .height(32.dp)
+                    .wrapContentWidth()
             ) {
                 Text(option, fontSize = 14.sp)
             }

@@ -10,6 +10,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.cookandroid.challengers.databinding.FragmentHomeBinding
@@ -24,11 +25,14 @@ import java.time.format.DateTimeFormatter
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.cookandroid.challengers.data.StoreItemData
 import com.cookandroid.challengers.screen.AiChatActivity
+import com.cookandroid.challengers.viewmodel.HomeViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
 class HomeFragment : Fragment() {
+
+    private val homeViewModel: HomeViewModel by viewModels()
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
@@ -47,86 +51,35 @@ class HomeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
         binding.rvWorkout.layoutManager = LinearLayoutManager(requireContext())
 
-        val userId = UserPreference(requireContext()).getUserId()
-        Log.d("출석", "👉 현재 userId = $userId")
+        // Adapter 최초 1번만 생성
+        workoutAdapter = WorkoutAdapter { _, _ -> }
+        binding.rvWorkout.adapter = workoutAdapter
 
-        //  출석 인증 로직
-        if (userId != -1 && !AttendanceUtil.hasCheckedAttendanceToday(requireContext())) {
-            Log.d("출석", "🟡 출석 미기록 상태, markAttendance 실행")
-            markAttendance(userId)
-        } else {
-            Log.d("출석", "🔵 이미 출석 기록됨 또는 userId 무효")
+        lifecycleScope.launchWhenStarted {
+            homeViewModel.workouts.collect { items ->
+                Log.d("HomeFragment", " UI받은 리스트 size=${items.size}")
+                workoutAdapter.submitList(items)
+                updateProgressGauge(items)
+            }
         }
 
-        //  날짜 로직 수정 시작 ✨
-        val today = LocalDate.now()
-        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-        val displayFormatter = DateTimeFormatter.ofPattern("d")
-
-        val formattedDate = today.format(DateTimeFormatter.ofPattern("yyyy년 M월 d일"))
-        binding.tvDay.text = formattedDate
-
-        //  정확하게 이번 주 '일요일'부터 시작 (한국식)
-        val dayOfWeek = today.dayOfWeek.value // 월=1, ... 일=7
-        val daysFromSunday = if (dayOfWeek == 7) 0 else dayOfWeek
-        val startOfWeek = today.minusDays(daysFromSunday.toLong())
-
-        //  날짜 리스트 구성
-        weekDates.clear()
-        for (i in 0..6) {
-            val date = startOfWeek.plusDays(i.toLong())
-            weekDates.add(
-                WeekDate(
-                    date = date.format(displayFormatter),     // 예: "6"
-                    fullDate = date.format(formatter),        // 예: "2025-06-06"
-                    isToday = date == today                   //  오늘 강조됨
-                )
-            )
-        }
-        Log.d("HomeFragment", "📆 주간 날짜 수: ${weekDates.size}")
-
-//          리사이클러뷰에 레이아웃 매니저 반드시 설정!
-//        binding.rvDate.layoutManager =
-//            LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
-
-        // 기존 LinearLayoutManager를 GridLayoutManager로 변경
-        binding.rvDate.layoutManager =
-            androidx.recyclerview.widget.GridLayoutManager(requireContext(), 7)
-
-        //  어댑터 연결 및 날짜 클릭 이벤트 처리
-        dateAdapter = DateAdapter(weekDates) { selected ->
-            selectedPosition = selected
-
-            val selectedDate = LocalDate.parse(weekDates[selected].fullDate, formatter)
-            val displayText = "${selectedDate.year}년 ${selectedDate.monthValue}월 ${selectedDate.dayOfMonth}일"
-            binding.tvDay.text = displayText
-        }
-        binding.rvDate.adapter = dateAdapter
-
-        loadTodayWorkoutPlan()
-
-        binding.btnStartWorkout.setOnClickListener {
-            findNavController().navigate(R.id.action_home_to_exerciseFragment)
-        }
-        //잭팻 컴포즈로 수정
-        binding.btnAiChat.setOnClickListener {
-            val intent = Intent(requireContext(), AiChatActivity::class.java)
-            startActivity(intent)
+        // 기존 데이터 즉시 적용 (캐싱된 값)
+        lifecycleScope.launchWhenStarted {
+            homeViewModel.isLoading.collect { isLoading ->
+                if (homeViewModel.hasCache()) {
+                    // 캐시가 있으면 흐림 효과 제거
+                    binding.WorkoutItem.alpha = 1f
+                } else {
+                    // 캐시 없을 때만 로딩 흐림 효과
+                    binding.WorkoutItem.alpha = if (isLoading) 0.3f else 1f
+                }
+            }
         }
 
-//        binding.btnAiChat.setOnClickListener {
-//            findNavController().navigate(R.id.action_home_to_homeAichatFragment)
-//        }
 
-        binding.btnNoti.setOnClickListener {
-            findNavController().navigate(R.id.action_home_to_mypageNotiSetFragment)
-        }
-
-        binding.btnMypage.setOnClickListener {
-            findNavController().navigate(R.id.action_home_to_homeMypageFragment)
-        }
     }
 
     private fun markAttendance(userId: Int) {
@@ -155,7 +108,14 @@ class HomeFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        updateTodayDate()
+
         applyCharacterFromPreference()
+
+        val userId = UserPreference(requireContext()).getUserId()
+        if (userId != -1) {
+            homeViewModel.loadTodayWorkoutPlan(userId)
+        }
     }
 
     private fun loadTodayWorkoutPlan() {
@@ -179,32 +139,49 @@ class HomeFragment : Fragment() {
 
                     for (schedule in scheduleList) {
                         try {
-                            val call = RetrofitClient.scheduleApi.getRepsSets(schedule.schedule_id.toLong())
-                            val repsResponse = call.execute() // execute()는 IO 스레드 안에서 호출 중이므로 OK
+                            val repsCall = RetrofitClient.scheduleApi.getRepsSets(schedule.schedule_id.toLong())
+                            val repsResponse = repsCall.execute()
 
-                            if (repsResponse.isSuccessful) {
-                                val repsSets = repsResponse.body() ?: emptyList()
-                                if (repsSets.isNotEmpty()) {
-                                    val reps = repsSets.first().reps
-                                    val sets = repsSets.size
-                                    val name = schedule.exercise_name
-                                    val isCompleted = repsSets.all { it.isCompleted }
+                            val timeCall = RetrofitClient.scheduleApi.getTimeSets(schedule.schedule_id.toLong())
+                            val timeResponse = timeCall.execute()
 
-                                    workoutItems.add(
-                                        WorkoutUiModel(
-                                            scheduleId = schedule.schedule_id.toLong(),
-                                            name = name,
-                                            reps = reps,
-                                            sets = sets,
-                                            isCompleted = isCompleted
-                                        )
+                            val repsSets = repsResponse.body() ?: emptyList()
+                            val timeSets = timeResponse.body() ?: emptyList()
+
+                            if (repsSets.isNotEmpty()) {
+
+                                val reps = repsSets.first().reps
+                                val sets = repsSets.size
+
+                                workoutItems.add(
+                                    WorkoutUiModel(
+                                        scheduleId = schedule.schedule_id.toLong(),
+                                        name = schedule.exercise_name,
+                                        reps = reps,      // ✔ 반복 운동
+                                        seconds = null,
+                                        sets = sets,
+                                        isCompleted = repsSets.all { it.isCompleted }
                                     )
-                                }
-                            } else {
-                                Log.w("HomeFragment", "❗ reps 불러오기 실패: scheduleId=${schedule.schedule_id}")
+                                )
+
+                            } else if (timeSets.isNotEmpty()) {
+
+                                val seconds = timeSets.first().seconds
+                                val sets = timeSets.size
+
+                                workoutItems.add(
+                                    WorkoutUiModel(
+                                        scheduleId = schedule.schedule_id.toLong(),
+                                        name = schedule.exercise_name,
+                                        reps = null,
+                                        seconds = seconds,   // ✔ 시간 운동
+                                        sets = sets,
+                                        isCompleted = timeSets.all { it.isCompleted }
+                                    )
+                                )
                             }
                         } catch (e: Exception) {
-                            Log.e("HomeFragment", "🔥 reps 요청 중 예외 발생: scheduleId=${schedule.schedule_id}", e)
+                            Log.e("HomeFragment", "🔥 운동 데이터 로드 오류", e)
                         }
                     }
                     withContext(Dispatchers.Main) {
@@ -410,7 +387,17 @@ class HomeFragment : Fragment() {
         } else View.GONE
     }
 
+    private fun updateTodayDate() {
+        val today = LocalDate.now()
+        val formatted = today.format(DateTimeFormatter.ofPattern("yyyy년 M월 d일"))
+        binding.tvDay.text = formatted
+    }
+
+
+
 }
+
+
 
 // ✅ 하루에 한 번 출석 여부를 저장하고 확인하는 유틸
 object AttendanceUtil {
@@ -436,4 +423,9 @@ object AttendanceUtil {
     private fun getTodayDate(): String {
         return LocalDate.now().toString() // 예: "2025-06-03"
     }
+
+
+
+
 }
+

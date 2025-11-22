@@ -171,7 +171,7 @@
             android:id="@+id/rvDate"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="8dp"
             android:layout_marginBottom="8dp"
             android:orientation="horizontal"
             android:overScrollMode="never"
@@ -186,6 +186,7 @@
             android:background="@drawable/view_home_list_background"
             android:padding="16dp"
             android:layout_marginTop="8dp"
+            android:descendantFocusability="blocksDescendants"
             app:layout_constraintTop_toBottomOf="@+id/rvDate">
 <!--            app:layout_constraintBottom_toBottomOf="parent">-->
 
@@ -231,10 +232,11 @@
                 android:id="@+id/rvWorkout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="8dp"
+                android:minHeight="100dp"
+                android:nestedScrollingEnabled="false"
                 android:overScrollMode="never"
-                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"/>
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                />
         </LinearLayout>
 
 
