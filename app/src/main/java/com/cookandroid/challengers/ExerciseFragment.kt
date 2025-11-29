@@ -352,22 +352,35 @@ private fun loadTodayPlanFromServer() {
 
         if (binding.inProgressHeader.visibility == View.VISIBLE) {
             binding.startExerciseButton.visibility = View.GONE
-        } else {
-            binding.startExerciseButton.visibility = View.VISIBLE
+            return
+        }
 
-            if (currentScheduleList.any { !it.is_completed }) {
-                binding.startExerciseButton.text = "운동 시작하기"
-                binding.startExerciseButton.isEnabled = true
-            } else if (currentScheduleList.isNotEmpty()) {
-                // 모든 운동 완료 시, 항상 "사진 인증하기" 버튼을 표시하여 재인증 가능하게 함
+        binding.startExerciseButton.visibility = View.VISIBLE
+
+        val allCompleted = currentScheduleList.isNotEmpty() && currentScheduleList.all { it.is_completed }
+        val photoUploaded = hasPhotoUploadBeenCompletedToday()
+
+        if (!allCompleted) {
+            // 아직 운동이 남아 있으면 → 운동 시작하기
+            binding.startExerciseButton.text = "운동 시작하기"
+            binding.startExerciseButton.isEnabled = true
+        } else {
+            // 운동은 모두 완료됨
+            if (photoUploaded) {
+                // 사진 인증했으면 버튼 비활성화/변경
+                binding.startExerciseButton.text = "오늘 인증 완료"
+                binding.startExerciseButton.isEnabled = false
+            } else {
+                // 아직 인증 안했으면 → 인증 가능
                 binding.startExerciseButton.text = "사진 인증하기"
                 binding.startExerciseButton.isEnabled = true
-            } else {
-                binding.startExerciseButton.text = "운동을 추가해주세요"
-                binding.startExerciseButton.isEnabled = false
             }
         }
-        Log.d(TAG, "updateStartButtonState: Text='${binding.startExerciseButton.text}', Enabled=${binding.startExerciseButton.isEnabled}")
+
+        Log.d(
+            TAG,
+            "updateStartButtonState: Text='${binding.startExerciseButton.text}', Enabled=${binding.startExerciseButton.isEnabled}, photoUploaded=$photoUploaded"
+        )
     }
 
     private fun checkAndShowInProgressHeader() {

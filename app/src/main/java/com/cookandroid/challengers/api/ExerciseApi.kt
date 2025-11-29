@@ -274,13 +274,13 @@ interface RecordApi {
 }
 
 interface StoreApi {
-    @POST("/api/store/purchase")
+    @POST("api/store/purchase")
     suspend fun purchaseItem(
         @Body request: RetrofitClient.PurchaseRequest
     ): Response<RetrofitClient.PurchaseResponse>
 
     //  특정 사용자가 소유한 아이템 ID 목록을 가져오는 API
-    @GET("/api/store/owned-items")
+    @GET("api/store/owned-items")
     suspend fun getOwnedItemIds(
         @Query("userId") userId: Int
     ): Response<List<Int>> // 예시: [1, 101, 102, 401] 형태의 응답을 기대

@@ -87,8 +87,8 @@ class ChallengePhotoFragment : Fragment() {
     // ★★★ observeViewModel 수정
     private fun observeViewModel() {
         viewModel.weeklyPhotos.observe(viewLifecycleOwner) { photoListWithNulls ->
-            photoAdapter.submitList(photoListWithNulls)
-
+            //photoAdapter.submitList(photoListWithNulls) //최신이 오른쪽으로 가면 어색함.
+            photoAdapter.submitList(photoListWithNulls.reversed()) //최신이 왼쪽으로 가야 자연스러움.
             val completedList = photoListWithNulls.filterNotNull()
             stampGridAdapter.submitList(completedList)
         }
@@ -231,9 +231,9 @@ class ChallengePhotoFragment : Fragment() {
 
                 if (item != null) {
                     // ★ 해결 2: RetrofitClient.BASE_URL 대신 companion object에 정의된 BASE_URL 사용
-                    val fullUrl = BASE_URL.removeSuffix("/") + item.imageUrl
+                    //val fullUrl = BASE_URL.removeSuffix("/") + item.imageUrl
                     Glide.with(itemView.context)
-                        .load(fullUrl)
+                        .load(item.imageUrl)
                         .centerCrop()
                         .placeholder(R.drawable.ic_fitbuddy_logo) // 기본 이미지 리소스
                         .error(R.drawable.ic_fitbuddy_logo) // 에러 시 이미지 리소스

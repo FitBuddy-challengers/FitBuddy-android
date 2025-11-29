@@ -86,26 +86,31 @@ class StoreItemPopUpFragment : DialogFragment() {
         lifecycleScope.launch {
             try {
                 val request = PurchaseRequest(userId, item.id)
+                Log.d(TAG, "Sending Purchase Request: userId=$userId, itemId=${item.id}")
+
                 val response = RetrofitClient.storeApi.purchaseItem(request)
 
                 if (response.isSuccessful && response.body()?.success == true) {
                     val purchaseResponse = response.body()!!
-                    Toast.makeText(requireContext(), purchaseResponse.message, Toast.LENGTH_SHORT).show()
+
+                    val msg = purchaseResponse.message ?: "구매 완료"
+                    Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
 
                     storeViewModel.onItemPurchased(item, purchaseResponse.updatedCoin)
                     setFragmentResult(REQUEST_KEY_PURCHASE, bundleOf(RESULT_KEY_PURCHASE_SUCCESS to true))
 
                     dismiss()
                 } else {
-                    val errorMessage = response.body()?.message ?: "구매에 실패했습니다. (${response.code()})"
-                    Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
+                    val errorMsg = response.body()?.message ?: "구매 실패 (${response.code()})"
+                    Toast.makeText(requireContext(), errorMsg, Toast.LENGTH_LONG).show()
+
                     Log.e(TAG, "Purchase failed: ${response.code()} - ${response.errorBody()?.string()}")
-                    if(isAdded) binding.btnBuy.isEnabled = true
+                    if (isAdded) binding.btnBuy.isEnabled = true
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Purchase exception", e)
                 Toast.makeText(requireContext(), "구매 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show()
-                if(isAdded) binding.btnBuy.isEnabled = true
+                if (isAdded) binding.btnBuy.isEnabled = true
             }
         }
     }
