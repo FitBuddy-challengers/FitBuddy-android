@@ -32,12 +32,18 @@ class ChallengePhotoViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 // 이번 주 일요일 날짜 계산
+                Log.d("PHOTO_API", "📸 fetchWeeklyPhotos() CALL → userId=$userId")
                 val today = LocalDate.now()
                 val daysFromSunday = if (today.dayOfWeek == DayOfWeek.SUNDAY) 0 else today.dayOfWeek.value
                 val startDate = today.minusDays(daysFromSunday.toLong())
                 val startDateString = startDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
 
+                Log.d(
+                    "PHOTO_API",
+                    "➡REQUEST → GET /api/challenge/weekly-photos?userId=$userId&startDate=$startDateString"
+                )
                 val response = RetrofitClient.challengeApi.getWeeklyPhotos(userId, startDateString)
+                Log.d("PHOTO_API", "⬅ RESPONSE code=${response.code()}, body=${response.body()}")
                 if (response.isSuccessful) {
                     val photosFromServer = response.body() ?: emptyList()
 

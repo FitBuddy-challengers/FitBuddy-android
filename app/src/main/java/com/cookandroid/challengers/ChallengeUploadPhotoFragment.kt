@@ -340,7 +340,13 @@ class ChallengeUploadPhotoFragment : Fragment() {
 
         lifecycleScope.launch {
             try {
+                Log.d("UPLOAD_CHECK", "API CALL START")
+                Log.d(
+                    "UPLOAD_CHECK",
+                    "UPLOAD PARAMS → userId=$userId, date=$dateString, fileName=${imageFile.name}, fileSize=${imageFile.length()}"
+                )
                 val response = RetrofitClient.challengeApi.uploadPhoto(photoPart, userIdPart, datePart)
+                Log.d("UPLOAD_CHECK", "API RESPONSE: code=${response.code()}, success=${response.body()?.success}")
 
                 if (response.isSuccessful && response.body()?.success == true) {
                     markPhotoUploadAsCompletedForToday()

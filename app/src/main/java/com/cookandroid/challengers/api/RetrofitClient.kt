@@ -445,7 +445,10 @@ data class ChallengeLevelDto(
     // 상점
     // 서버로 보낼 요청 DTO
     data class PurchaseRequest(
+        @SerializedName("user_id")
         val userId: Int,
+
+        @SerializedName("item_id")
         val itemId: Int
     )
 
