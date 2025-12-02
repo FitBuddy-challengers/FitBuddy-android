@@ -3,56 +3,53 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="16dp"
+    android:layout_gravity="center"
     android:background="@drawable/btn_rectangle_round5_white"
     android:orientation="vertical"
-    android:paddingHorizontal="16dp"
-    android:paddingVertical="24dp">
+    android:paddingHorizontal="20dp"
+    android:paddingVertical="20dp">
 
     <TextView
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:fontFamily="@font/pretendard_semi_bold"
         android:text="아이템을 구매하시겠습니까?"
         android:textColor="@color/black"
-        android:textSize="24sp" />
+        android:textSize="18sp" />
 
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="12dp"
         android:background="@drawable/btn_rectangle_round30"
         android:backgroundTint="@color/light_gray2"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="16dp"
-        android:paddingVertical="8dp">
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="6dp">
 
         <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
             android:src="@drawable/ic_coin" />
 
         <TextView
             android:id="@+id/itemPriceTextView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="11dp"
+            android:layout_marginStart="6dp"
             android:text="2500"
             android:textColor="@color/black"
-            android:textSize="20sp" />
+            android:textSize="15sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="54dp"
+        android:layout_marginTop="24dp"
+        android:gravity="end"
         android:orientation="horizontal">
-
-        <View
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
 
         <TextView
             android:id="@+id/btnCancel"
@@ -60,20 +57,23 @@
             android:layout_height="wrap_content"
             android:clickable="true"
             android:focusable="true"
+            android:padding="8dp"
             android:text="취소"
             android:textColor="#A6A6A6"
-            android:textSize="20sp" />
+            android:textSize="14sp" />
 
         <TextView
             android:id="@+id/btnBuy"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="24dp"
+            android:layout_marginStart="8dp"
             android:clickable="true"
             android:focusable="true"
+            android:padding="8dp"
             android:text="구매하기"
             android:textColor="@color/blue"
-            android:textSize="20sp" />
+            android:textSize="14sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
 </LinearLayout>

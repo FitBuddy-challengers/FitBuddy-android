@@ -118,7 +118,7 @@ class StoreItemPopUpFragment : DialogFragment() {
     override fun onStart() {
         super.onStart()
         dialog?.window?.apply {
-            val desiredMarginDp = 16
+            val desiredMarginDp = 40
             val displayMetrics = requireContext().resources.displayMetrics
             val dialogWidth = displayMetrics.widthPixels - (2 * (desiredMarginDp * displayMetrics.density).toInt())
             setLayout(dialogWidth, ViewGroup.LayoutParams.WRAP_CONTENT)
