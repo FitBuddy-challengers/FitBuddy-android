@@ -385,25 +385,23 @@ class ChallengeUploadPhotoFragment : Fragment() {
     private fun navigateToChallengeScreen() {
         if (!isAdded) return
         try {
+            //  사진 탭으로 바로 들어가도록 인자 추가
             val args = Bundle().apply {
                 putString("initialTab", "photo")
             }
 
-            //  핵심: 기존 ChallengeFragment 를 전부 pop 하고 새로 이동
             val navOptions = NavOptions.Builder()
-                .setPopUpTo(R.id.challengeFragment, true) // 기존 ChallengeFragment 제거
-                .setLaunchSingleTop(true)
+                .setPopUpTo(R.id.nav_graph_main, false)
                 .build()
 
             findNavController().navigate(
-                R.id.challengeFragment,
-                args,
+                R.id.action_challengeUploadPhotoFragment_to_challengeFragment,
+                args,      // ← 여기만 추가됨
                 navOptions
             )
 
         } catch (e: Exception) {
-            Log.e(TAG, "Navigation to Challenge Screen failed.", e)
-            Toast.makeText(requireContext(), "화면 이동 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show()
+            Log.e(TAG, "Navigation error", e)
         }
     }
 
