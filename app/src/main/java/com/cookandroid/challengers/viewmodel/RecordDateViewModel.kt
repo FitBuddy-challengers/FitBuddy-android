@@ -56,10 +56,16 @@ class RecordDateViewModel(application: Application) : AndroidViewModel(applicati
 
                 // ★★★ 응답 처리 방식 변경 ★★★
                 // getUserChallengeProgress의 결과는 DTO 그 자체입니다.
-                val userProgress = userProgressDeferred.await()
+                val userProgressResponse = userProgressDeferred.await()
+
+                if (!userProgressResponse.isSuccessful || userProgressResponse.body() == null) {
+                    Log.e("RecordDateViewModel", "Failed to load user progress: ${userProgressResponse.code()}")
+                    _summaryText.value = "데이터를 불러오는 중 오류가 발생했습니다."
+                    return@launch
+                }
                 // getMonthlySummary의 결과는 Response 객체입니다.
                 val summaryResponse = summaryDeferred.await()
-
+                val userProgress = userProgressResponse.body()!!
                 // userProgress는 예외가 발생하지 않았다면 항상 유효한 객체입니다.
                 val userName = userProgress.nickname ?: "챌린저"
 

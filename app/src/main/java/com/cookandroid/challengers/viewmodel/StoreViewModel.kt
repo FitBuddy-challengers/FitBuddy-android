@@ -51,9 +51,21 @@ class StoreViewModel(application: Application) : AndroidViewModel(application) {
     fun loadUserData(userId: Int) {
         viewModelScope.launch {
             try {
-                val userData = RetrofitClient.challengeApi.getUserChallengeProgress(userId)
-                _userLevel.postValue(userData.level)
-                _userCoin.postValue(userData.coin)
+                val response = RetrofitClient.challengeApi.getUserChallengeProgress(userId)
+
+                // Response가 성공했는지 검사
+                if (response.isSuccessful && response.body() != null) {
+                    val userData = response.body()!!
+
+                    _userLevel.postValue(userData.level ?: 1)
+                    _userCoin.postValue(userData.coin ?: 0)
+
+                } else {
+                    Log.e("StoreViewModel",
+                        "Failed to load user data: ${response.code()} - ${response.message()}"
+                    )
+                }
+
             } catch (e: Exception) {
                 Log.e("StoreViewModel", "Exception while loading user data", e)
             }

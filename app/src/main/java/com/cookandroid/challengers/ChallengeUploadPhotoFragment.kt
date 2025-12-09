@@ -38,6 +38,8 @@ import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
+import androidx.navigation.NavOptions
+import androidx.navigation.fragment.findNavController
 
 class ChallengeUploadPhotoFragment : Fragment() {
 
@@ -383,19 +385,44 @@ class ChallengeUploadPhotoFragment : Fragment() {
     private fun navigateToChallengeScreen() {
         if (!isAdded) return
         try {
-            Toast.makeText(requireContext(), "인증 완료! 챌린지 화면으로 이동합니다.", Toast.LENGTH_SHORT).show()
-
             val args = Bundle().apply {
                 putString("initialTab", "photo")
             }
-            val actionId = R.id.action_challengeUploadPhotoFragment_to_challengeFragment
-            findNavController().navigate(actionId, args)
+
+            //  핵심: 기존 ChallengeFragment 를 전부 pop 하고 새로 이동
+            val navOptions = NavOptions.Builder()
+                .setPopUpTo(R.id.challengeFragment, true) // 기존 ChallengeFragment 제거
+                .setLaunchSingleTop(true)
+                .build()
+
+            findNavController().navigate(
+                R.id.challengeFragment,
+                args,
+                navOptions
+            )
 
         } catch (e: Exception) {
             Log.e(TAG, "Navigation to Challenge Screen failed.", e)
             Toast.makeText(requireContext(), "화면 이동 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show()
         }
     }
+
+//    private fun navigateToChallengeScreen() {
+//        if (!isAdded) return
+//        try {
+//            Toast.makeText(requireContext(), "인증 완료! 챌린지 화면으로 이동합니다.", Toast.LENGTH_SHORT).show()
+//
+//            val args = Bundle().apply {
+//                putString("initialTab", "photo")
+//            }
+//            val actionId = R.id.action_challengeUploadPhotoFragment_to_challengeFragment
+//            findNavController().navigate(actionId, args)
+//
+//        } catch (e: Exception) {
+//            Log.e(TAG, "Navigation to Challenge Screen failed.", e)
+//            Toast.makeText(requireContext(), "화면 이동 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show()
+//        }
+//    }
 
 
     override fun onDestroyView() {

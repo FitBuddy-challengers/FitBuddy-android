@@ -129,7 +129,8 @@ class StoreCategoryFragment : Fragment() {
                 val ownedItemsDeferred = async { RetrofitClient.storeApi.getOwnedItemIds(userId) }
 
                 // 2. await으로 API 응답 대기
-                val userData = userProgressDeferred.await()
+                val userDataResponse = userProgressDeferred.await()
+
                 val ownedItemsResponse = ownedItemsDeferred.await()
 
                 if (!ownedItemsResponse.isSuccessful) {
@@ -137,11 +138,20 @@ class StoreCategoryFragment : Fragment() {
                 }
                 val ownedItemIdsFromServer = ownedItemsResponse.body()?.toSet() ?: emptySet()
 
-                Log.d(TAG, "[$currentCategory] 2. API calls successful. User Level: ${userData.level}, Owned Items Count: ${ownedItemIdsFromServer.size}")
+                if (!userDataResponse.isSuccessful || userDataResponse.body() == null) {
+                    throw HttpException(userDataResponse)
+                }
+
+                val userData = userDataResponse.body()!!
+                val level = userData.level ?: 1
+                val coin = userData.coin ?: 0
+
+                Log.d(TAG, "User Level: $level, Owned Items Count: ${ownedItemIdsFromServer.size}")
 
                 // 3. ViewModel 및 어댑터에 데이터 반영
-                storeViewModel.setUserLevelAndCoin(userData.level, userData.coin)
-                productAdapter.updateUserLevel(userData.level)
+
+                storeViewModel.setUserLevelAndCoin(level, coin)
+                productAdapter.updateUserLevel(level)
 
                 // 4. 로컬에서 해당 카테고리의 모든 아이템 (정적 데이터) 목록을 가져옴
                 val allLocalItems = StoreItemData.getItemsForCategory(currentCategory)

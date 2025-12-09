@@ -190,196 +190,208 @@ class HomeFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
-
     override fun onResume() {
         super.onResume()
-        updateTodayDate()
-
-        applyCharacterFromPreference()
 
         val userId = UserPreference(requireContext()).getUserId()
         if (userId != -1) {
+            // ⭐ 먼저 서버에서 최신 데이터 가져오기
             homeViewModel.loadTodayWorkoutPlan(userId)
         }
+
+        updateTodayDate()
+        applyCharacterFromPreference()
     }
 
-    private fun loadTodayWorkoutPlan() {
-        val userId = UserPreference(requireContext()).getUserId()
-        if (userId == -1) {
-            Toast.makeText(requireContext(), "로그인이 필요합니다", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val response = RetrofitClient.scheduleApi.getTodayPlan(userId)
-                if (response.isSuccessful) {
-                    val data = response.body()
-                    planId = data?.plan?.id?.toLong() ?: -1L
-                    val scheduleList = data?.schedules ?: emptyList()
-
-                    Log.d("HomeFragment", "📦 planId: $planId, 스케줄 수: ${scheduleList.size}")
-
-                    val workoutItems = mutableListOf<WorkoutUiModel>()
-
-                    for (schedule in scheduleList) {
-                        try {
-                            val repsCall = RetrofitClient.scheduleApi.getRepsSets(schedule.schedule_id.toLong())
-                            val repsResponse = repsCall.execute()
-
-                            val timeCall = RetrofitClient.scheduleApi.getTimeSets(schedule.schedule_id.toLong())
-                            val timeResponse = timeCall.execute()
-
-                            val repsSets = repsResponse.body() ?: emptyList()
-                            val timeSets = timeResponse.body() ?: emptyList()
-
-                            if (repsSets.isNotEmpty()) {
-
-                                val reps = repsSets.first().reps
-                                val sets = repsSets.size
-
-                                workoutItems.add(
-                                    WorkoutUiModel(
-                                        scheduleId = schedule.schedule_id.toLong(),
-                                        name = schedule.exercise_name,
-                                        reps = reps,      // ✔ 반복 운동
-                                        seconds = null,
-                                        sets = sets,
-                                        isCompleted = repsSets.all { it.isCompleted }
-                                    )
-                                )
-
-                            } else if (timeSets.isNotEmpty()) {
-
-                                val seconds = timeSets.first().seconds
-                                val sets = timeSets.size
-
-                                workoutItems.add(
-                                    WorkoutUiModel(
-                                        scheduleId = schedule.schedule_id.toLong(),
-                                        name = schedule.exercise_name,
-                                        reps = null,
-                                        seconds = seconds,   // ✔ 시간 운동
-                                        sets = sets,
-                                        isCompleted = timeSets.all { it.isCompleted }
-                                    )
-                                )
-                            }
-                        } catch (e: Exception) {
-                            Log.e("HomeFragment", "🔥 운동 데이터 로드 오류", e)
-                        }
-                    }
-                    withContext(Dispatchers.Main) {
-                        _binding?.let { binding ->
-
-                            // ✅ 어댑터가 아직 초기화되지 않았을 때만 세팅 (중복 방지)
-                            if (!::workoutAdapter.isInitialized) {
-                                workoutAdapter = WorkoutAdapter { _, _ ->
-//                                    // 체크 상태 변경 시 서버 반영
-//                                    viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-//                                        try {
-//                                            val request = RetrofitClient.SetCompletionRequest(
-//                                                scheduleId = item.scheduleId,
-//                                                setNumber = 1,
-//                                                isCompleted = isChecked
-//                                            )
+//    override fun onResume() {
+//        super.onResume()
+//        updateTodayDate()
 //
-//                                            val updateResponse = RetrofitClient.scheduleApi
-//                                                .updateRepsSetCompletion(request)
-//                                                .execute()
+//        applyCharacterFromPreference()
 //
-//                                            if (updateResponse.isSuccessful) {
-//                                                Log.d(
-//                                                    "HomeFragment",
-//                                                    "✅ 체크 상태 서버 반영 완료: ${item.name} → $isChecked"
-//                                                )
-//
-//                                                val currentList = workoutAdapter.currentList.toMutableList()
-//                                                val index = currentList.indexOfFirst { it.scheduleId == item.scheduleId }
-//
-//                                                if (index != -1) {
-//                                                    currentList[index] = item.copy(isCompleted = isChecked)
-//
-//                                                    withContext(Dispatchers.Main) {
-//                                                        _binding?.let {
-//                                                            workoutAdapter.submitList(currentList.toList())
-//                                                            updateProgressGauge(currentList)
-//                                                        }
-//                                                    }
-//                                                }
-//                                            } else {
-//                                                Log.w("HomeFragment", "❗ 체크 서버 반영 실패: ${updateResponse.code()}")
-//                                            }
-//                                        } catch (e: Exception) {
-//                                            Log.e("HomeFragment", "❌ 체크 상태 반영 중 오류", e)
-//                                        }
-//                                    }
-                                }
+//        val userId = UserPreference(requireContext()).getUserId()
+//        if (userId != -1) {
+//            homeViewModel.loadTodayWorkoutPlan(userId)
+//        }
+//    }
 
-                                // ✅ 처음 한 번만 어댑터 연결
-                                binding.rvWorkout.adapter = workoutAdapter
-                            }
-
-                            // ✅ 새 workout 리스트 적용
-                            workoutAdapter.submitList(workoutItems.toList()) // 복사본 전달 (DiffUtil 안정화)
-                            updateProgressGauge(workoutItems)
-                        }
-                    }
-
-//                    withContext(Dispatchers.Main) {
-//                        // ✅ 운동 리스트 반영
-//                        workoutAdapter = WorkoutAdapter { item, isChecked ->
-//                            lifecycleScope.launch(Dispatchers.IO) {
-//                                try {
-//                                    val request = RetrofitClient.SetCompletionRequest(
-//                                        scheduleId = item.scheduleId,
-//                                        setNumber = 1,
-//                                        isCompleted = isChecked
+//    private fun loadTodayWorkoutPlan() {
+//        val userId = UserPreference(requireContext()).getUserId()
+//        if (userId == -1) {
+//            Toast.makeText(requireContext(), "로그인이 필요합니다", Toast.LENGTH_SHORT).show()
+//            return
+//        }
+//
+//        lifecycleScope.launch(Dispatchers.IO) {
+//            try {
+//                val response = RetrofitClient.scheduleApi.getTodayPlan(userId)
+//                if (response.isSuccessful) {
+//                    val data = response.body()
+//                    planId = data?.plan?.id?.toLong() ?: -1L
+//                    val scheduleList = data?.schedules ?: emptyList()
+//
+//                    Log.d("HomeFragment", "📦 planId: $planId, 스케줄 수: ${scheduleList.size}")
+//
+//                    val workoutItems = mutableListOf<WorkoutUiModel>()
+//
+//                    for (schedule in scheduleList) {
+//                        try {
+//                            val repsCall = RetrofitClient.scheduleApi.getRepsSets(schedule.schedule_id.toLong())
+//                            val repsResponse = repsCall.execute()
+//
+//                            val timeCall = RetrofitClient.scheduleApi.getTimeSets(schedule.schedule_id.toLong())
+//                            val timeResponse = timeCall.execute()
+//
+//                            val repsSets = repsResponse.body() ?: emptyList()
+//                            val timeSets = timeResponse.body() ?: emptyList()
+//
+//                            if (repsSets.isNotEmpty()) {
+//
+//                                val reps = repsSets.first().reps
+//                                val sets = repsSets.size
+//
+//                                workoutItems.add(
+//                                    WorkoutUiModel(
+//                                        scheduleId = schedule.schedule_id.toLong(),
+//                                        name = schedule.exercise_name,
+//                                        reps = reps,      // ✔ 반복 운동
+//                                        seconds = null,
+//                                        sets = sets,
+//                                        isCompleted = repsSets.all { it.isCompleted }
 //                                    )
+//                                )
 //
-//                                    val updateResponse = RetrofitClient.scheduleApi
-//                                        .updateRepsSetCompletion(request)
-//                                        .execute()
+//                            } else if (timeSets.isNotEmpty()) {
 //
-//                                    if (updateResponse.isSuccessful) {
-//                                        Log.d("HomeFragment", "✅ 체크 상태 서버 반영 완료: ${item.name} → $isChecked")
+//                                val seconds = timeSets.first().seconds
+//                                val sets = timeSets.size
 //
-//                                        val currentList = workoutAdapter.currentList.toMutableList()
-//                                        val index = currentList.indexOfFirst { it.scheduleId == item.scheduleId }
-//                                        if (index != -1) {
-//                                            currentList[index] = item.copy(isCompleted = isChecked)
-//                                            withContext(Dispatchers.Main) {
-//                                                workoutAdapter.submitList(currentList)
-//
-//                                                // ✅ 체크 변경 후에도 게이지 반영
-//                                                updateProgressGauge(currentList)
-//                                            }
-//                                        }
-//                                    } else {
-//                                        Log.w("HomeFragment", "❗ 체크 서버 반영 실패: ${updateResponse.code()}")
-//                                    }
-//
-//                                } catch (e: Exception) {
-//                                    Log.e("HomeFragment", "❌ 체크 상태 반영 중 오류", e)
-//                                }
+//                                workoutItems.add(
+//                                    WorkoutUiModel(
+//                                        scheduleId = schedule.schedule_id.toLong(),
+//                                        name = schedule.exercise_name,
+//                                        reps = null,
+//                                        seconds = seconds,   // ✔ 시간 운동
+//                                        sets = sets,
+//                                        isCompleted = timeSets.all { it.isCompleted }
+//                                    )
+//                                )
 //                            }
+//                        } catch (e: Exception) {
+//                            Log.e("HomeFragment", "🔥 운동 데이터 로드 오류", e)
 //                        }
-//
-//                        binding.rvWorkout.adapter = workoutAdapter
-//                        workoutAdapter.submitList(workoutItems)
-//
-//                        // ✅ 운동 달성률에 따른 게이지 설정
-//                        updateProgressGauge(workoutItems)
 //                    }
-
-                } else {
-                    Log.e("HomeFragment", "❌ 계획 불러오기 실패: ${response.code()}")
-                }
-            } catch (e: Exception) {
-                Log.e("HomeFragment", "🚨 네트워크 오류", e)
-            }
-        }
-    }
+//                    withContext(Dispatchers.Main) {
+//                        _binding?.let { binding ->
+//
+//                            // ✅ 어댑터가 아직 초기화되지 않았을 때만 세팅 (중복 방지)
+//                            if (!::workoutAdapter.isInitialized) {
+//                                workoutAdapter = WorkoutAdapter { _, _ ->
+////                                    // 체크 상태 변경 시 서버 반영
+////                                    viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+////                                        try {
+////                                            val request = RetrofitClient.SetCompletionRequest(
+////                                                scheduleId = item.scheduleId,
+////                                                setNumber = 1,
+////                                                isCompleted = isChecked
+////                                            )
+////
+////                                            val updateResponse = RetrofitClient.scheduleApi
+////                                                .updateRepsSetCompletion(request)
+////                                                .execute()
+////
+////                                            if (updateResponse.isSuccessful) {
+////                                                Log.d(
+////                                                    "HomeFragment",
+////                                                    "✅ 체크 상태 서버 반영 완료: ${item.name} → $isChecked"
+////                                                )
+////
+////                                                val currentList = workoutAdapter.currentList.toMutableList()
+////                                                val index = currentList.indexOfFirst { it.scheduleId == item.scheduleId }
+////
+////                                                if (index != -1) {
+////                                                    currentList[index] = item.copy(isCompleted = isChecked)
+////
+////                                                    withContext(Dispatchers.Main) {
+////                                                        _binding?.let {
+////                                                            workoutAdapter.submitList(currentList.toList())
+////                                                            updateProgressGauge(currentList)
+////                                                        }
+////                                                    }
+////                                                }
+////                                            } else {
+////                                                Log.w("HomeFragment", "❗ 체크 서버 반영 실패: ${updateResponse.code()}")
+////                                            }
+////                                        } catch (e: Exception) {
+////                                            Log.e("HomeFragment", "❌ 체크 상태 반영 중 오류", e)
+////                                        }
+////                                    }
+//                                }
+//
+//                                // ✅ 처음 한 번만 어댑터 연결
+//                                binding.rvWorkout.adapter = workoutAdapter
+//                            }
+//
+//                            // ✅ 새 workout 리스트 적용
+//                            workoutAdapter.submitList(workoutItems.toList()) // 복사본 전달 (DiffUtil 안정화)
+//                            updateProgressGauge(workoutItems)
+//                        }
+//                    }
+//
+////                    withContext(Dispatchers.Main) {
+////                        // ✅ 운동 리스트 반영
+////                        workoutAdapter = WorkoutAdapter { item, isChecked ->
+////                            lifecycleScope.launch(Dispatchers.IO) {
+////                                try {
+////                                    val request = RetrofitClient.SetCompletionRequest(
+////                                        scheduleId = item.scheduleId,
+////                                        setNumber = 1,
+////                                        isCompleted = isChecked
+////                                    )
+////
+////                                    val updateResponse = RetrofitClient.scheduleApi
+////                                        .updateRepsSetCompletion(request)
+////                                        .execute()
+////
+////                                    if (updateResponse.isSuccessful) {
+////                                        Log.d("HomeFragment", "✅ 체크 상태 서버 반영 완료: ${item.name} → $isChecked")
+////
+////                                        val currentList = workoutAdapter.currentList.toMutableList()
+////                                        val index = currentList.indexOfFirst { it.scheduleId == item.scheduleId }
+////                                        if (index != -1) {
+////                                            currentList[index] = item.copy(isCompleted = isChecked)
+////                                            withContext(Dispatchers.Main) {
+////                                                workoutAdapter.submitList(currentList)
+////
+////                                                // ✅ 체크 변경 후에도 게이지 반영
+////                                                updateProgressGauge(currentList)
+////                                            }
+////                                        }
+////                                    } else {
+////                                        Log.w("HomeFragment", "❗ 체크 서버 반영 실패: ${updateResponse.code()}")
+////                                    }
+////
+////                                } catch (e: Exception) {
+////                                    Log.e("HomeFragment", "❌ 체크 상태 반영 중 오류", e)
+////                                }
+////                            }
+////                        }
+////
+////                        binding.rvWorkout.adapter = workoutAdapter
+////                        workoutAdapter.submitList(workoutItems)
+////
+////                        // ✅ 운동 달성률에 따른 게이지 설정
+////                        updateProgressGauge(workoutItems)
+////                    }
+//
+//                } else {
+//                    Log.e("HomeFragment", "❌ 계획 불러오기 실패: ${response.code()}")
+//                }
+//            } catch (e: Exception) {
+//                Log.e("HomeFragment", "🚨 네트워크 오류", e)
+//            }
+//        }
+//    }
 
     private fun updateProgressGauge(items: List<WorkoutUiModel>) {
         val total = items.size
@@ -390,6 +402,8 @@ class HomeFragment : Fragment() {
         Log.d("HomeFragment", "📊 운동 진행률: $completed/$total ($progressPercent%)")
 
         binding.uiGauge.progress = progressPercent
+
+
     }
 
     private fun applyCharacterFromPreference() {

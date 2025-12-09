@@ -196,10 +196,12 @@ interface ScheduleApi {
 
 interface ChallengeApi {
     @GET("/api/challenge-levels")
-    suspend fun getAllLevels(): List<RetrofitClient.ChallengeLevelDto>
+    suspend fun getAllLevels(): Response<List<RetrofitClient.ChallengeLevelDto>>
 
     @GET("/api/user-challenge-progress/{userId}")
-    suspend fun getUserChallengeProgress(@Path("userId") userId: Int): RetrofitClient.ChallengeProgressResponse
+    suspend fun getUserChallengeProgress(
+        @Path("userId") userId: Int
+    ): Response<RetrofitClient.ChallengeProgressResponse>
 
 //    @POST("/api/challenge/attendance/{userId}")
 //    suspend fun markAttendance(@Path("userId") userId: Int): Response<ResponseBody>

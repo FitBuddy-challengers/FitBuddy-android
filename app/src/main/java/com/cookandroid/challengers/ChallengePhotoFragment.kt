@@ -16,6 +16,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -87,8 +88,19 @@ class ChallengePhotoFragment : Fragment() {
     // ★★★ observeViewModel 수정
     private fun observeViewModel() {
         viewModel.weeklyPhotos.observe(viewLifecycleOwner) { photoListWithNulls ->
-            //photoAdapter.submitList(photoListWithNulls) //최신이 오른쪽으로 가면 어색함.
-            photoAdapter.submitList(photoListWithNulls.reversed()) //최신이 왼쪽으로 가야 자연스러움.
+
+            // 1️⃣ null 제외 + 최신순 정렬 (날짜 기준)
+            val orderedPhotos = photoListWithNulls
+                .filterNotNull()
+                .sortedByDescending { it.date }   // 최신 → 오래된 순
+
+            // 2️⃣ 나머지를 null 로 채워서 총 7개 유지
+            val filled = orderedPhotos + List(7 - orderedPhotos.size) { null }
+
+            // 3️⃣ RecyclerView 에 반영
+            photoAdapter.submitList(filled)
+
+            // 하단 grid(도장판)는 날짜 관계없이 업로드된 리스트만 유지
             val completedList = photoListWithNulls.filterNotNull()
             stampGridAdapter.submitList(completedList)
         }
@@ -96,7 +108,7 @@ class ChallengePhotoFragment : Fragment() {
         // 월간 운동 횟수 LiveData를 관찰하여 TextView 업데이트
         viewModel.monthlyWorkoutCount.observe(viewLifecycleOwner) { count ->
 //            binding.exerciseCountTextView.text = "${count}일째 운동 중"
-            binding.exerciseCountTextView.text = "2일째 운동 중"
+            binding.exerciseCountTextView.text = "4일째 운동 중"
 
         }
 
@@ -110,7 +122,9 @@ class ChallengePhotoFragment : Fragment() {
     private fun setupPhotoRecyclerView() {
         photoAdapter = PhotoAdapter()
         binding.photoRecyclerView.apply {
-            layoutManager = GridLayoutManager(context, 1, GridLayoutManager.HORIZONTAL, false)
+            layoutManager = LinearLayoutManager(
+                context, LinearLayoutManager.HORIZONTAL, false
+            )
             adapter = photoAdapter
         }
     }

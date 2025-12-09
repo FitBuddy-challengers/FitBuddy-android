@@ -333,6 +333,9 @@ class MainActivity : AppCompatActivity() {
     fun setBottomNavSelected(menuItemId: Int) {
         binding.mainBnv.selectedItemId = menuItemId
     }
+    fun switchToExerciseTab() {
+        binding.mainBnv.selectedItemId = R.id.exerciseFragment
+    }
 }
 
 
